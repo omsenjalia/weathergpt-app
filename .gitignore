@@ -2,6 +2,7 @@
 .packages
 .pub/
 build/
+flutter_*.log
 .idea/
 .vscode/
 *.iml
@@ -11,3 +12,4 @@ build/
 google-services.json
 GoogleService-Info.plist
 **/android/key.properties
+**/android/local.properties

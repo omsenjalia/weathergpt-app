@@ -1,17 +1,22 @@
-# weathergpt_mobile
+# WeatherGPT Mobile
 
-A new Flutter project.
+WeatherGPT is a multilingual, voice-first weather companion for **SIH 2026**, problem statement **SIH26068** under the Disaster Management theme.
 
-## Getting Started
+## Run locally
 
-This project is a starting point for a Flutter application.
+1. Start the API: follow `Web App/backend/README.md`.
+2. Create `Mobile App/weathergpt_mobile/.env` (ignored by Git): `BACKEND_URL=http://10.0.2.2:8888`.
+   Use `http://localhost:8888` for iOS simulator/desktop Flutter, or your computer's LAN IP for a physical device.
+3. Run `flutter pub get` then `flutter run` in this directory.
 
-A few resources to get you started if this is your first Flutter project:
+For Render, deploy the backend first, then replace `BACKEND_URL` with its `https://…onrender.com` URL. API keys belong only in Render environment variables, never in the Flutter app.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Stack and release
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Flutter, Riverpod, Dio, Hive, Easy Localization, FL Chart, Open-Meteo, FastAPI, and Groq. Run `flutter test`, `flutter analyze`, then `flutter build apk --release` (output: `build/app/outputs/flutter-apk/app-release.apk`).
+
+Set the `BACKEND_URL` repository secret in **Settings → Secrets and variables → Actions** for the Android build workflow.
+
+## Team
+
+Om Senjalia — mobile + backend; Om Vaghela — frontend/UI reference; Chaitanya Ghodasara — beta testing; Nidhi Patel — data curation; Vishrut Gandhi — presentations; Prachi — research.

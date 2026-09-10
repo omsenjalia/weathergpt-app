@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/theme/app_theme.dart';
+import 'core/services/api_client.dart';
 import 'router/app_router.dart';
 
 Future<void> main() async {
@@ -13,6 +14,10 @@ Future<void> main() async {
   await dotenv.load(fileName: '.env');
   await Hive.initFlutter();
   await Hive.openBox('settings');
+  ApiClient.instance.setLanguage(
+      Hive.box('settings').get('language', defaultValue: 'en') as String);
+  await Hive.openBox('farm_profile');
+  await Hive.openBox('saved_locations');
   runApp(
     EasyLocalization(
       supportedLocales: const [

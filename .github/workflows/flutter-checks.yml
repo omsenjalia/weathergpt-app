@@ -1,0 +1,14 @@
+name: Flutter Checks
+on: [pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: {flutter-version: '3.24.0', channel: stable, cache: true}
+      - run: echo "BACKEND_URL=https://placeholder.onrender.com" > .env
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build apk --debug
