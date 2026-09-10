@@ -9,24 +9,24 @@ class PersonaBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: 20,
-        height: 20,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.farmerGreen : Colors.transparent,
-          shape: BoxShape.circle,
-          border: selected
-              ? null
-              : Border.all(color: AppColors.borderSubtle, width: 1.5),
-        ),
-        child: selected
-            ? const Icon(Icons.check, size: 14, color: Colors.white)
-            : null,
-      ),
-      const SizedBox(width: 8),
-      Text(label),
-    ],
-  );
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.farmerGreen : Colors.transparent,
+              shape: BoxShape.circle,
+              border: selected
+                  ? null
+                  : Border.all(color: AppColors.borderSubtle, width: 1.5),
+            ),
+            child: selected
+                ? const Icon(Icons.check, size: 14, color: Colors.white)
+                : null,
+          ),
+          const SizedBox(width: 8),
+          Text(label),
+        ],
+      );
 }

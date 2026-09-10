@@ -11,8 +11,9 @@ final GoRouter appRouter = GoRouter(
     final completed = Hive.box(
       'settings',
     ).get('onboarding_complete', defaultValue: false) as bool;
-    if (state.matchedLocation == '/')
+    if (state.matchedLocation == '/') {
       return completed ? '/home' : '/onboarding/splash';
+    }
     return null;
   },
   routes: [
@@ -49,31 +50,31 @@ class SplashPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'WeatherGPT',
-              style: Theme.of(context).textTheme.headlineSmall,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'WeatherGPT',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 12),
+                const Text('Onboarding placeholder'),
+                const Spacer(),
+                PrimaryButton(
+                  label: 'Continue',
+                  onPressed: () async {
+                    await Hive.box('settings').put('onboarding_complete', true);
+                    if (context.mounted) context.go('/home');
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            const Text('Onboarding placeholder'),
-            const Spacer(),
-            PrimaryButton(
-              label: 'Continue',
-              onPressed: () async {
-                await Hive.box('settings').put('onboarding_complete', true);
-                if (context.mounted) context.go('/home');
-              },
-            ),
-          ],
+          ),
         ),
-      ),
-    ),
-  );
+      );
 }
 
 class PlaceholderTab extends StatelessWidget {
@@ -82,10 +83,10 @@ class PlaceholderTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: Center(
-      child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
-    ),
-  );
+        body: Center(
+          child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
+        ),
+      );
 }
 
 class NavigationShell extends StatelessWidget {
@@ -102,11 +103,9 @@ class NavigationShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-    final currentIndex =
-        _items
-                .indexWhere((item) => item.path == location)
-                .clamp(0, _items.length - 1)
-            as int;
+    final currentIndex = _items
+        .indexWhere((item) => item.path == location)
+        .clamp(0, _items.length - 1);
     return Scaffold(
       body: child,
       bottomNavigationBar: SafeArea(
@@ -122,9 +121,8 @@ class NavigationShell extends StatelessWidget {
             labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
             destinations: _items.map((item) {
               final active = _items.indexOf(item) == currentIndex;
-              final color = active
-                  ? AppColors.textPrimary
-                  : AppColors.textTertiary;
+              final color =
+                  active ? AppColors.textPrimary : AppColors.textTertiary;
               return NavigationDestination(
                 icon: Icon(item.icon, color: color),
                 selectedIcon: Column(

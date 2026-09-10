@@ -38,12 +38,12 @@ class WeatherGptApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp.router(
-    title: 'WeatherGPT',
-    debugShowCheckedModeBanner: false,
-    theme: AppTheme.dark,
-    routerConfig: appRouter,
-    localizationsDelegates: context.localizationDelegates,
-    supportedLocales: context.supportedLocales,
-    locale: context.locale,
-  );
+        title: 'WeatherGPT',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.dark,
+        routerConfig: appRouter,
+        localizationsDelegates: context.localizationDelegates,
+        supportedLocales: context.supportedLocales,
+        locale: context.locale,
+      );
 }

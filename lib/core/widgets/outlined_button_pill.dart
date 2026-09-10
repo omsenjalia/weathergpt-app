@@ -9,16 +9,16 @@ class OutlinedButtonPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    height: 54,
-    child: OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.textPrimary,
-        side: const BorderSide(color: AppColors.borderSubtle),
-        shape: const StadiumBorder(),
-      ),
-      child: Text(label),
-    ),
-  );
+        width: double.infinity,
+        height: 54,
+        child: OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.textPrimary,
+            side: const BorderSide(color: AppColors.borderSubtle),
+            shape: const StadiumBorder(),
+          ),
+          child: Text(label),
+        ),
+      );
 }

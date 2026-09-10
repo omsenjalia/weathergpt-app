@@ -15,21 +15,21 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Opacity(
-    opacity: disabled ? .4 : 1,
-    child: SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: ElevatedButton(
-        onPressed: disabled ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.ctaWhite,
-          foregroundColor: AppColors.ctaTextDark,
-          elevation: 0,
-          shape: const StadiumBorder(),
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        opacity: disabled ? .4 : 1,
+        child: SizedBox(
+          width: double.infinity,
+          height: 54,
+          child: ElevatedButton(
+            onPressed: disabled ? null : onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.ctaWhite,
+              foregroundColor: AppColors.ctaTextDark,
+              elevation: 0,
+              shape: const StadiumBorder(),
+              textStyle: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            child: Text(label),
+          ),
         ),
-        child: Text(label),
-      ),
-    ),
-  );
+      );
 }
