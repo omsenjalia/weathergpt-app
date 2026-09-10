@@ -36,7 +36,7 @@ jobs:
       - name: Run analyzer
         run: flutter analyze --no-fatal-infos
       - name: Run tests
-        run: flutter test
+        run: flutter test --timeout 30s
       - name: Build debug APK
         run: flutter build apk --debug
       - name: Build unsigned release APK

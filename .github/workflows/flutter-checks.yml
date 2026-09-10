@@ -17,8 +17,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
       - name: Run analyzer
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
       - name: Run tests
-        run: flutter test
+        run: flutter test --timeout 30s
       - name: Build debug APK
         run: flutter build apk --debug

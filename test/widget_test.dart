@@ -13,7 +13,6 @@ import 'package:weathergpt_mobile/features/home/screens/home_researcher_screen.d
 import 'package:weathergpt_mobile/features/voice/providers/voice_provider.dart';
 import 'package:weathergpt_mobile/features/voice/screens/conversational_result_screen.dart';
 import 'package:weathergpt_mobile/features/voice/screens/voice_listening_screen.dart';
-// ResultType, ResultStat, ForecastDay, VoiceResponse come from voice_provider
 import 'package:weathergpt_mobile/features/farmer/screens/action_windows_screen.dart';
 import 'package:weathergpt_mobile/features/farmer/screens/farm_profile_screen.dart';
 import 'package:weathergpt_mobile/features/researcher/screens/anomaly_trends_screen.dart';
@@ -22,32 +21,26 @@ import 'package:weathergpt_mobile/features/researcher/screens/historical_data_sc
 import 'package:weathergpt_mobile/features/settings/screens/settings_screen.dart';
 
 Future<void> _setupHive() async {
-  // Use in-memory / temp for tests
   Hive.init('test_hive');
-  if (!Hive.isBoxOpen('settings')) {
-    await Hive.openBox('settings');
-  }
-  if (!Hive.isBoxOpen('farm_profile')) {
-    await Hive.openBox('farm_profile');
-  }
-  if (!Hive.isBoxOpen('saved_locations')) {
-    await Hive.openBox('saved_locations');
-  }
+  if (!Hive.isBoxOpen('settings')) await Hive.openBox('settings');
+  if (!Hive.isBoxOpen('farm_profile')) await Hive.openBox('farm_profile');
+  if (!Hive.isBoxOpen('saved_locations')) await Hive.openBox('saved_locations');
 }
 
-Future<void> _pumpLocalizedApp(WidgetTester tester, Widget child,
-    {bool withProviderScope = true, bool settle = true}) async {
+/// Pumps a few frames only — avoids hanging on continuous animations
+/// (LinearProgressIndicator, shimmer, etc.).
+Future<void> _pumpLocalizedApp(
+  WidgetTester tester,
+  Widget child, {
+  bool withProviderScope = true,
+}) async {
   await EasyLocalization.ensureInitialized();
   await _setupHive();
 
   final router = GoRouter(
     initialLocation: '/',
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) => child,
-      ),
-      // Dummy routes so context.go does not crash
+      GoRoute(path: '/', builder: (context, state) => child),
       GoRoute(path: '/home', builder: (_, __) => const SizedBox()),
       GoRoute(path: '/onboarding/language', builder: (_, __) => const SizedBox()),
       GoRoute(path: '/onboarding/focus', builder: (_, __) => const SizedBox()),
@@ -70,63 +63,51 @@ Future<void> _pumpLocalizedApp(WidgetTester tester, Widget child,
   );
 
   await tester.pumpWidget(withProviderScope ? ProviderScope(child: app) : app);
-  if (settle) {
-    await tester.pumpAndSettle(const Duration(milliseconds: 100));
-  } else {
-    await tester.pump();
-  }
+  // Fixed pumps instead of pumpAndSettle to avoid timeout on ongoing animations.
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
+  await tester.pump(const Duration(milliseconds: 100));
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('splash renders WeatherGPT wordmark',
-      (WidgetTester tester) async {
-    await _pumpLocalizedApp(tester, const SplashScreen(),
-        withProviderScope: false, settle: false);
-    // Allow one frame for build; avoid full settle so timer navigation does not run fully
-    await tester.pump(const Duration(milliseconds: 50));
+  testWidgets('splash renders WeatherGPT wordmark', (tester) async {
+    await _pumpLocalizedApp(tester, const SplashScreen(), withProviderScope: false);
     expect(find.text('WeatherGPT'), findsOneWidget);
   });
 
-  testWidgets('language selection renders headline',
-      (WidgetTester tester) async {
+  testWidgets('language selection renders headline', (tester) async {
     await _pumpLocalizedApp(tester, const LanguageSelectScreen());
     expect(find.text('Choose your language'), findsOneWidget);
   });
 
-  testWidgets('focus selection renders preselected farmer',
-      (WidgetTester tester) async {
+  testWidgets('focus selection renders preselected farmer', (tester) async {
     await _pumpLocalizedApp(tester, const FocusSelectScreen());
     expect(find.text('What best describes you?'), findsOneWidget);
   });
 
-  testWidgets('everyone home shows everyday metrics and prompts',
-      (WidgetTester tester) async {
+  testWidgets('everyone home shows everyday metrics and prompts', (tester) async {
     await _pumpLocalizedApp(tester, const HomeEveryoneScreen());
     expect(find.text('Ask WeatherGPT anything...'), findsOneWidget);
   });
 
-  testWidgets('farmer home shows farm-specific content',
-      (WidgetTester tester) async {
+  testWidgets('farmer home shows farm-specific content', (tester) async {
     await _pumpLocalizedApp(tester, const HomeFarmerScreen());
     expect(find.text('Soil moisture'), findsOneWidget);
   });
 
-  testWidgets('researcher home shows analytical content',
-      (WidgetTester tester) async {
+  testWidgets('researcher home shows analytical content', (tester) async {
     await _pumpLocalizedApp(tester, const HomeResearcherScreen());
     expect(find.text('Pressure'), findsOneWidget);
   });
 
-  testWidgets('voice listening screen renders the waveform and mic',
-      (WidgetTester tester) async {
+  testWidgets('voice listening screen renders the waveform and mic', (tester) async {
     await _pumpLocalizedApp(tester, const VoiceListeningScreen());
     expect(find.text('Listening...'), findsOneWidget);
   });
 
-  testWidgets('result screen renders a reusable irrigation card',
-      (WidgetTester tester) async {
+  testWidgets('result screen renders a reusable irrigation card', (tester) async {
     const response = VoiceResponse(
       transcript: 'Should I irrigate?',
       type: ResultType.irrigation,
@@ -144,7 +125,7 @@ void main() {
       ctaLabel: 'View Detailed Forecast',
     );
     await _pumpLocalizedApp(
-        tester, ConversationalResultScreen(response: response));
+        tester, const ConversationalResultScreen(response: response));
     expect(find.text('Not recommended today'), findsOneWidget);
   });
 
@@ -155,7 +136,8 @@ void main() {
     expect(find.text('Edit Farm Profile'), findsOneWidget);
 
     await tester.tap(find.text('Crops'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Flowering stage'), findsOneWidget);
   });
 
@@ -167,6 +149,7 @@ void main() {
 
     await tester.tap(find.text('Tomorrow'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
     expect(find.text('A workable day with caution'), findsOneWidget);
     expect(find.text('Plan for afternoon'), findsOneWidget);
   });
@@ -200,7 +183,8 @@ void main() {
       expect(find.text(label), findsOneWidget);
     }
     await tester.drag(find.byType(ListView), const Offset(0, -800));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
     for (final label in [
       'Notifications',
       'Data & Export',
