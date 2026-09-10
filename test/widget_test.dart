@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,51 +18,64 @@ import 'package:weathergpt_mobile/features/researcher/screens/comparison_screen.
 import 'package:weathergpt_mobile/features/researcher/screens/historical_data_screen.dart';
 import 'package:weathergpt_mobile/features/settings/screens/settings_screen.dart';
 
+Future<void> _pumpLocalizedApp(WidgetTester tester, Widget child,
+    {bool withProviderScope = true}) async {
+  final app = EasyLocalization(
+    supportedLocales: const [Locale('en')],
+    path: 'assets/translations',
+    fallbackLocale: const Locale('en'),
+    startLocale: const Locale('en'),
+    child: Builder(
+      builder: (context) => MaterialApp(
+        localizationsDelegates: context.localizationDelegates,
+        supportedLocales: context.supportedLocales,
+        locale: context.locale,
+        home: child,
+      ),
+    ),
+  );
+
+  await tester.pumpWidget(withProviderScope ? ProviderScope(child: app) : app);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('splash renders WeatherGPT wordmark',
       (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: SplashScreen()),
-    );
+    await _pumpLocalizedApp(tester, const SplashScreen(),
+        withProviderScope: false);
     expect(find.text('WeatherGPT'), findsOneWidget);
   });
 
   testWidgets('language selection renders headline',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(home: LanguageSelectScreen()),
-    ));
+    await _pumpLocalizedApp(tester, const LanguageSelectScreen());
     expect(find.text('Choose your language'), findsOneWidget);
   });
 
   testWidgets('focus selection renders preselected farmer',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(home: FocusSelectScreen()),
-    ));
+    await _pumpLocalizedApp(tester, const FocusSelectScreen());
     expect(find.text('What best describes you?'), findsOneWidget);
     expect(find.text('Farmer'), findsOneWidget);
   });
 
   testWidgets('everyone home shows everyday metrics and prompts',
       (tester) async {
-    await tester.pumpWidget(
-        const ProviderScope(child: MaterialApp(home: HomeEveryoneScreen())));
+    await _pumpLocalizedApp(tester, const HomeEveryoneScreen());
     expect(find.text('Ask WeatherGPT anything...'), findsOneWidget);
     expect(find.text('Will it rain tomorrow?'), findsOneWidget);
     expect(find.text('AQI'), findsOneWidget);
   });
 
   testWidgets('farmer home shows farm-specific content', (tester) async {
-    await tester.pumpWidget(
-        const ProviderScope(child: MaterialApp(home: HomeFarmerScreen())));
+    await _pumpLocalizedApp(tester, const HomeFarmerScreen());
     expect(find.text('Soil moisture'), findsOneWidget);
     expect(find.text('How is my wheat crop doing?'), findsOneWidget);
   });
 
   testWidgets('researcher home shows analytical content', (tester) async {
-    await tester.pumpWidget(
-        const ProviderScope(child: MaterialApp(home: HomeResearcherScreen())));
+    await _pumpLocalizedApp(tester, const HomeResearcherScreen());
     expect(find.text('Pressure'), findsOneWidget);
     expect(find.text('Find extreme weather events'), findsOneWidget);
     expect(find.text('Ask something else...'), findsOneWidget);
@@ -69,9 +83,7 @@ void main() {
 
   testWidgets('voice listening screen renders the waveform and mic',
       (tester) async {
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(home: VoiceListeningScreen(autoStart: false)),
-    ));
+    await _pumpLocalizedApp(tester, const VoiceListeningScreen(autoStart: false));
     expect(find.text('Listening...'), findsOneWidget);
     expect(find.byIcon(Icons.mic_rounded), findsOneWidget);
   });
@@ -89,17 +101,14 @@ void main() {
       forecast: [ForecastDay('Tue', Icons.wb_sunny_outlined, '24°', '0 mm')],
       ctaLabel: 'View Detailed Forecast',
     );
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(home: ConversationalResultScreen(response: response)),
-    ));
+    await _pumpLocalizedApp(
+        tester, const ConversationalResultScreen(response: response));
     expect(find.text('Not recommended today'), findsOneWidget);
     expect(find.text('Next 3 Days'), findsOneWidget);
   });
 
   testWidgets('farm profile shows farm details and crop tab', (tester) async {
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(home: FarmProfileScreen()),
-    ));
+    await _pumpLocalizedApp(tester, const FarmProfileScreen());
     expect(find.text('My Farm'), findsOneWidget);
     expect(find.text('Anand, Gujarat'), findsOneWidget);
     expect(find.text('Edit Farm Profile'), findsOneWidget);
@@ -110,9 +119,7 @@ void main() {
   });
 
   testWidgets('action windows updates when changing tabs', (tester) async {
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(home: ActionWindowsScreen()),
-    ));
+    await _pumpLocalizedApp(tester, const ActionWindowsScreen());
     expect(find.text('Farm Action Windows'), findsOneWidget);
     expect(find.text('Good day for field work'), findsOneWidget);
     expect(find.text('Best: 6–10 AM'), findsOneWidget);
@@ -125,27 +132,22 @@ void main() {
 
   testWidgets('researcher analytical screens render their charts and stats',
       (tester) async {
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(home: HistoricalDataScreen()),
-    ));
+    await _pumpLocalizedApp(tester, const HistoricalDataScreen());
     expect(find.text('Historical Weather'), findsOneWidget);
     expect(find.text('Total Rainfall (2026)'), findsOneWidget);
 
-    await tester.pumpWidget(const MaterialApp(home: ComparisonScreen()));
+    await _pumpLocalizedApp(tester, const ComparisonScreen(),
+        withProviderScope: false);
     expect(find.text('Compare Locations'), findsOneWidget);
     expect(find.text('Total Rainfall (mm)'), findsOneWidget);
 
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(home: AnomalyTrendsScreen()),
-    ));
+    await _pumpLocalizedApp(tester, const AnomalyTrendsScreen());
     expect(find.text('Anomaly & Trends'), findsOneWidget);
     expect(find.text('2026 Average'), findsOneWidget);
   });
 
   testWidgets('settings renders profile and every setting row', (tester) async {
-    await tester.pumpWidget(const ProviderScope(
-      child: MaterialApp(home: SettingsScreen()),
-    ));
+    await _pumpLocalizedApp(tester, const SettingsScreen());
     expect(find.text('Om Jalia'), findsOneWidget);
     for (final label in [
       'Language',
