@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/api_error_view.dart';
 import '../providers/weather_provider.dart';
 import '../widgets/home_scaffold.dart';
 
@@ -15,7 +16,10 @@ class HomeResearcherScreen extends ConsumerWidget {
     final weather = ref.watch(weatherProvider('researcher'));
     return weather.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, _) => Scaffold(body: Center(child: Text('$error'))),
+      error: (error, _) => ApiErrorView(
+        error: error,
+        onRetry: () => ref.invalidate(weatherProvider('researcher')),
+      ),
       data: (snapshot) => HomeScaffold(
         accentColor: AppColors.researcherBlue,
         metrics: snapshot.metrics,
