@@ -132,7 +132,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       );
       _restartSilenceTimer();
     } catch (e) {
-      state = VoiceState(
+      state = const VoiceState(
           status: VoiceStatus.error,
           errorMessage:
               'Could not start listening. Please try again.');

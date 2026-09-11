@@ -77,16 +77,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           Expanded(
             child: chat.messages.isEmpty
-                ? Center(
+                ? const Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(32),
+                      padding: EdgeInsets.all(32),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.chat_bubble_outline,
                               size: 40, color: AppColors.textTertiary),
-                          const SizedBox(height: 12),
-                          const Text(
+                          SizedBox(height: 12),
+                          Text(
                             'Ask about weather, forecasts, AQI, or farming tips.',
                             textAlign: TextAlign.center,
                             style: TextStyle(color: AppColors.textSecondary),

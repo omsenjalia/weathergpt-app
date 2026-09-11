@@ -4,11 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../core/theme/app_colors.dart';
-import '../features/home/screens/home_router_screen.dart';
 import '../features/home/screens/weather_home_screen.dart';
 import '../features/chat/screens/chat_screen.dart';
 import '../features/explore/screens/explore_screen.dart';
-import '../features/explore/screens/saved_locations_screen.dart';
 import '../features/onboarding/screens/focus_select_screen.dart';
 import '../features/onboarding/screens/language_select_screen.dart';
 import '../features/onboarding/screens/splash_screen.dart';
@@ -146,7 +144,7 @@ class NavigationShell extends StatelessWidget {
     var currentIndex = 0;
     for (var i = 0; i < _items.length; i++) {
       final path = _items[i].path;
-      if (location == path || location.startsWith(path + '/')) {
+      if (location == path || location.startsWith('$path/')) {
         currentIndex = i;
         break;
       }
