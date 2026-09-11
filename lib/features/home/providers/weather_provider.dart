@@ -4,6 +4,87 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/api_client.dart';
 import 'location_provider.dart';
 
+class HourlyPoint {
+  const HourlyPoint({required this.label, required this.tempC});
+  final String label;
+  final double tempC;
+}
+
+class DayForecast {
+  const DayForecast({
+    required this.date,
+    required this.highC,
+    required this.lowC,
+    required this.condition,
+    required this.rainProbability,
+  });
+  final String date;
+  final double? highC;
+  final double? lowC;
+  final String condition;
+  final num? rainProbability;
+}
+
+class WeatherSnapshot {
+  const WeatherSnapshot({
+    required this.temperatureC,
+    required this.feelsLikeC,
+    required this.condition,
+    required this.weatherCode,
+    required this.highC,
+    required this.lowC,
+    required this.humidity,
+    required this.windKmh,
+    required this.windDirection,
+    required this.pressureHpa,
+    required this.rainProbability,
+    required this.uvIndex,
+    required this.sunrise,
+    required this.sunset,
+    required this.aqi,
+    required this.pm25,
+    required this.hourly,
+    required this.forecast,
+    required this.cityName,
+  });
+
+  final double? temperatureC;
+  final double? feelsLikeC;
+  final String condition;
+  final int weatherCode;
+  final double? highC;
+  final double? lowC;
+  final num? humidity;
+  final num? windKmh;
+  final num? windDirection;
+  final num? pressureHpa;
+  final num? rainProbability;
+  final num? uvIndex;
+  final String? sunrise;
+  final String? sunset;
+  final num? aqi;
+  final num? pm25;
+  final List<HourlyPoint> hourly;
+  final List<DayForecast> forecast;
+  final String cityName;
+
+  // Back-compat for older home scaffolds
+  String get temperature =>
+      temperatureC == null ? '—' : '${temperatureC!.round()}°';
+  String get range =>
+      'H: ${highC?.round() ?? '—'}°  L: ${lowC?.round() ?? '—'}°';
+  List<WeatherMetric> get metrics => [
+        WeatherMetric(Icons.water_drop_outlined,
+            rainProbability == null ? '—' : '${rainProbability!.round()}%', 'Rain'),
+        WeatherMetric(Icons.air,
+            windKmh == null ? '—' : '${windKmh!.toStringAsFixed(0)} km/h', 'Wind'),
+        WeatherMetric(Icons.opacity_outlined,
+            humidity == null ? '—' : '${humidity!.round()}%', 'Humidity'),
+        WeatherMetric(Icons.compress_outlined,
+            pressureHpa == null ? '—' : '${pressureHpa!.round()} hPa', 'Pressure'),
+      ];
+}
+
 class WeatherMetric {
   const WeatherMetric(this.icon, this.value, this.label, {this.qualifier});
   final IconData icon;
@@ -12,24 +93,13 @@ class WeatherMetric {
   final String? qualifier;
 }
 
-class WeatherSnapshot {
-  const WeatherSnapshot({
-    required this.temperature,
-    required this.condition,
-    required this.range,
-    required this.metrics,
-  });
-  final String temperature;
-  final String condition;
-  final String range;
-  final List<WeatherMetric> metrics;
+String _hourLabel(String? iso) {
+  if (iso == null || iso.length < 13) return '';
+  final h = int.tryParse(iso.substring(11, 13)) ?? 0;
+  if (h == 0) return '12AM';
+  if (h == 12) return '12PM';
+  return h > 12 ? '${h - 12}PM' : '${h}AM';
 }
-
-String _fmtTemp(num? v) => v == null ? '—' : '${v.round()}°';
-String _fmtInt(num? v, {String suffix = ''}) =>
-    v == null ? '—' : '${v.round()}$suffix';
-String _fmtOne(num? v, {String suffix = ''}) =>
-    v == null ? '—' : '${v.toStringAsFixed(v % 1 == 0 ? 0 : 1)}$suffix';
 
 final weatherProvider =
     FutureProvider.family<WeatherSnapshot, String>((ref, persona) async {
@@ -39,34 +109,50 @@ final weatherProvider =
     query: {'lat': location.lat, 'lon': location.lon},
   );
 
-  final rain = data['rain_probability'];
-  final wind = data['wind_kmh'];
-  final humidity = data['humidity'];
-  final pressure = data['pressure_hpa'];
+  final hourlyRaw = (data['hourly'] as List?) ?? const [];
+  final hourly = <HourlyPoint>[];
+  for (final item in hourlyRaw.take(12)) {
+    if (item is! Map) continue;
+    final t = item['temperature_c'];
+    if (t is! num) continue;
+    hourly.add(HourlyPoint(
+      label: _hourLabel('${item['time']}'),
+      tempC: t.toDouble(),
+    ));
+  }
+
+  final forecastRaw = (data['forecast'] as List?) ?? const [];
+  final forecast = <DayForecast>[];
+  for (final item in forecastRaw) {
+    if (item is! Map) continue;
+    forecast.add(DayForecast(
+      date: '${item['date'] ?? ''}',
+      highC: (item['high_c'] as num?)?.toDouble(),
+      lowC: (item['low_c'] as num?)?.toDouble(),
+      condition: '${item['condition'] ?? ''}',
+      rainProbability: item['rain_probability'] as num?,
+    ));
+  }
 
   return WeatherSnapshot(
-    temperature: _fmtTemp(data['temperature_c'] as num?),
+    temperatureC: (data['temperature_c'] as num?)?.toDouble(),
+    feelsLikeC: (data['feels_like_c'] as num?)?.toDouble(),
     condition: '${data['condition'] ?? '—'}',
-    range:
-        'H: ${_fmtTemp(data['high_c'] as num?)}  L: ${_fmtTemp(data['low_c'] as num?)}',
-    metrics: persona == 'farmer'
-        ? [
-            WeatherMetric(
-                Icons.water_drop_outlined, _fmtInt(rain as num?, suffix: '%'), 'Rain'),
-            WeatherMetric(Icons.air, _fmtOne(wind as num?, suffix: ' km/h'), 'Wind'),
-            WeatherMetric(Icons.opacity_outlined,
-                _fmtInt(humidity as num?, suffix: '%'), 'Humidity'),
-            const WeatherMetric(
-                Icons.water_outlined, 'Advisory', 'Soil'),
-          ]
-        : [
-            WeatherMetric(
-                Icons.water_drop_outlined, _fmtInt(rain as num?, suffix: '%'), 'Rain'),
-            WeatherMetric(Icons.air, _fmtOne(wind as num?, suffix: ' km/h'), 'Wind'),
-            WeatherMetric(Icons.opacity_outlined,
-                _fmtInt(humidity as num?, suffix: '%'), 'Humidity'),
-            WeatherMetric(Icons.compress_outlined,
-                _fmtInt(pressure as num?, suffix: ' hPa'), 'Pressure'),
-          ],
+    weatherCode: (data['weather_code'] as num?)?.toInt() ?? 0,
+    highC: (data['high_c'] as num?)?.toDouble(),
+    lowC: (data['low_c'] as num?)?.toDouble(),
+    humidity: data['humidity'] as num?,
+    windKmh: data['wind_kmh'] as num?,
+    windDirection: data['wind_direction'] as num?,
+    pressureHpa: data['pressure_hpa'] as num?,
+    rainProbability: data['rain_probability'] as num?,
+    uvIndex: data['uv_index'] as num?,
+    sunrise: data['sunrise'] as String?,
+    sunset: data['sunset'] as String?,
+    aqi: data['aqi'] as num?,
+    pm25: data['pm2_5'] as num?,
+    hourly: hourly,
+    forecast: forecast,
+    cityName: location.name.split(',').first,
   );
 });
