@@ -42,6 +42,9 @@ class _VoiceListeningScreenState extends ConsumerState<VoiceListeningScreen>
   @override
   void dispose() {
     _animation.dispose();
+    try {
+      ref.read(voiceProvider.notifier).cancel();
+    } catch (_) {}
     super.dispose();
   }
 

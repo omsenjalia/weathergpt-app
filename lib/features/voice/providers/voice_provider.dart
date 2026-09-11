@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -10,6 +9,8 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/api_client.dart';
+import '../../../core/utils/markdown_utils.dart';
+import '../../home/providers/location_provider.dart';
 import '../../settings/providers/settings_provider.dart';
 
 enum VoiceStatus { idle, listening, processing, speaking, done, error }
@@ -85,20 +86,27 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   Future<void> startListening() async {
     state = const VoiceState(status: VoiceStatus.processing);
     try {
-      if (!(await Permission.microphone.request()).isGranted) {
+      final mic = await Permission.microphone.request();
+      if (!mic.isGranted) {
         state = const VoiceState(
             status: VoiceStatus.error,
             errorMessage:
                 'Microphone access is needed to listen. You can still use a suggested question.');
         return;
       }
-      final available = await _speech.initialize(onStatus: (status) {
-        if (status == 'done' && state.status == VoiceStatus.listening) {
-          stopListening();
-        }
-      }, onError: (_) {
-        if (state.status == VoiceStatus.listening) stopListening();
-      });
+
+      // Prefer speech-to-text only. Dual record+STT is a common crash source
+      // on Android when the temp path is invalid or the plugin races.
+      final available = await _speech.initialize(
+        onStatus: (status) {
+          if (status == 'done' && state.status == VoiceStatus.listening) {
+            stopListening();
+          }
+        },
+        onError: (_) {
+          if (state.status == VoiceStatus.listening) stopListening();
+        },
+      );
       if (!available) {
         state = const VoiceState(
             status: VoiceStatus.error,
@@ -106,25 +114,28 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
                 'Speech recognition is not available on this device.');
         return;
       }
-      if (await _recorder.hasPermission()) {
-        await _recorder.start(const RecordConfig(), path: 'weather_query.m4a');
-      }
+
       state = const VoiceState(status: VoiceStatus.listening);
       await _speech.listen(
-          onResult: (result) {
-            state = state.copyWith(transcript: result.recognizedWords);
-            _restartSilenceTimer();
-            if (result.finalResult) {
-              stopListening();
-            }
-          },
-          listenOptions: stt.SpeechListenOptions(
-              partialResults: true, listenMode: stt.ListenMode.confirmation));
+        onResult: (result) {
+          state = state.copyWith(transcript: result.recognizedWords);
+          _restartSilenceTimer();
+          if (result.finalResult) {
+            stopListening();
+          }
+        },
+        listenOptions: stt.SpeechListenOptions(
+          partialResults: true,
+          listenMode: stt.ListenMode.confirmation,
+          cancelOnError: true,
+        ),
+      );
       _restartSilenceTimer();
-    } catch (_) {
-      state = const VoiceState(
+    } catch (e) {
+      state = VoiceState(
           status: VoiceStatus.error,
-          errorMessage: 'Could not start listening. Please try again.');
+          errorMessage:
+              'Could not start listening. Please try again.');
     }
   }
 
@@ -136,10 +147,17 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   Future<void> stopListening() async {
     if (state.status != VoiceStatus.listening) return;
     _silenceTimer?.cancel();
-    await _speech.stop();
-    final audioPath = await _recorder.isRecording() ? await _recorder.stop() : null;
+    try {
+      await _speech.stop();
+    } catch (_) {}
+    // Best-effort stop recorder if it was ever started
+    try {
+      if (await _recorder.isRecording()) {
+        await _recorder.stop();
+      }
+    } catch (_) {}
     state = state.copyWith(status: VoiceStatus.processing);
-    await submitToBackend(audioPath: audioPath);
+    await submitToBackend();
   }
 
   Future<void> submitQuery(String text) async {
@@ -151,41 +169,68 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   Future<void> submitToBackend({String? audioPath}) async {
     try {
       final settings = _ref.read(settingsProvider);
-      final payload = <String, dynamic>{
-        'message': state.transcript,
-        'location': 'Ahmedabad, Gujarat',
+      final location = _ref.read(locationProvider);
+      final transcript = state.transcript.trim();
+      if (transcript.isEmpty) {
+        state = const VoiceState(
+            status: VoiceStatus.error,
+            errorMessage: 'No speech detected. Try again or pick a suggestion.');
+        return;
+      }
+
+      // Always use /chat — /voice multipart is optional and often unavailable.
+      final result = await ApiClient.instance.post('/chat', data: {
+        'message': transcript,
+        'location': location.name,
         'language': settings.language,
         'farmer_mode': settings.userPersona == 'farmer',
         'crop': settings.userPersona == 'farmer' ? 'Wheat' : '',
-      };
-      final result = audioPath == null
-          ? await ApiClient.instance.post('/chat', data: payload)
-          : await ApiClient.instance.post('/voice', data: FormData.fromMap({
-              'audio': await MultipartFile.fromFile(audioPath),
-              'transcript': state.transcript,
-              'language': settings.language,
-              'lat': 23.0225,
-              'lon': 72.5714,
-              'crop': settings.userPersona == 'farmer' ? 'Wheat' : '',
-            }));
-      state = state.copyWith(status: VoiceStatus.done,
-          response: _responseFromBackend(state.transcript, '${result['response'] ?? ''}'));
+      });
+      final responseText = '${result['response'] ?? ''}';
+      state = state.copyWith(
+        status: VoiceStatus.done,
+        response: _responseFromBackend(transcript, responseText),
+      );
     } on AppApiError catch (error) {
-      state = state.copyWith(status: VoiceStatus.error, errorMessage: error.message);
+      state = state.copyWith(
+          status: VoiceStatus.error, errorMessage: error.message);
+    } catch (e) {
+      state = state.copyWith(
+          status: VoiceStatus.error,
+          errorMessage: 'Something went wrong. Please try again.');
     }
   }
 
   /// Explicit backend-to-UI mapping. The text response does not coerce enum values.
   VoiceResponse _responseFromBackend(String query, String response) {
     final normalized = query.toLowerCase();
-    final type = normalized.contains('irrigat') ? ResultType.irrigation
-        : normalized.contains('rain') || normalized.contains('forecast') ? ResultType.rainForecast
-        : normalized.contains('crop') || normalized.contains('wheat') ? ResultType.cropStatus
-        : ResultType.general;
+    final type = normalized.contains('irrigat')
+        ? ResultType.irrigation
+        : normalized.contains('rain') || normalized.contains('forecast')
+            ? ResultType.rainForecast
+            : normalized.contains('crop') || normalized.contains('wheat')
+                ? ResultType.cropStatus
+                : ResultType.general;
     final base = _responseFor(query);
-    return VoiceResponse(transcript: query, type: type, accent: base.accent,
-        label: base.label, verdict: base.verdict, explanation: response.isEmpty ? base.explanation : response,
-        stats: base.stats, forecast: base.forecast, ctaLabel: base.ctaLabel);
+    final body = response.trim().isEmpty ? base.explanation : response.trim();
+    // First meaningful line as short verdict; full body kept for markdown UI
+    final plain = MarkdownUtils.forSpeech(body);
+    final firstLine = plain.split(RegExp(r'[.!?\n]')).map((s) => s.trim()).firstWhere(
+          (s) => s.isNotEmpty,
+          orElse: () => base.verdict,
+        );
+    final verdict = firstLine.length > 90 ? '${firstLine.substring(0, 90)}…' : firstLine;
+    return VoiceResponse(
+      transcript: query,
+      type: type,
+      accent: base.accent,
+      label: base.label,
+      verdict: verdict.isEmpty ? base.verdict : verdict,
+      explanation: body,
+      stats: base.stats,
+      forecast: base.forecast,
+      ctaLabel: base.ctaLabel,
+    );
   }
 
   VoiceResponse _responseFor(String query) {
@@ -277,16 +322,23 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       final voice = _ref.read(settingsProvider);
       final tts = FlutterTts();
       await tts.setLanguage(voice.ttsVoiceLocale);
-      await tts.setSpeechRate(voice.ttsSpeed);
-      await tts.speak(text);
+      await tts.setSpeechRate(voice.ttsSpeed.clamp(0.2, 1.5));
+      final clean = MarkdownUtils.forSpeech(text);
+      if (clean.isNotEmpty) {
+        await tts.speak(clean);
+      }
     } catch (_) {}
     state = state.copyWith(status: VoiceStatus.done);
   }
 
   void cancel() {
     _silenceTimer?.cancel();
-    _speech.stop();
-    _recorder.stop();
+    try {
+      _speech.stop();
+    } catch (_) {}
+    try {
+      _recorder.stop();
+    } catch (_) {}
     state = const VoiceState();
   }
 

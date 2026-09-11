@@ -3,6 +3,8 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/api_error_view.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/weather_provider.dart';
 import '../widgets/home_scaffold.dart';
 
@@ -15,12 +17,18 @@ class HomeEveryoneScreen extends ConsumerWidget {
     final weather = ref.watch(weatherProvider('everyone'));
     return weather.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, _) => Scaffold(body: Center(child: Text('$error'))),
+      error: (error, _) => ApiErrorView(
+        error: error,
+        onRetry: () => ref.invalidate(weatherProvider('everyone')),
+      ),
       data: (snapshot) => HomeScaffold(
         accentColor: AppColors.statusAmber,
         metrics: snapshot.metrics,
         weather: snapshot,
-        topRightAction: const Icon(Icons.settings_outlined),
+        topRightAction: IconButton(
+          onPressed: () => context.push('/settings'),
+          icon: const Icon(Icons.settings_outlined),
+        ),
         micIdleAccent: null,
         micHintText: 'home.everyone_hint'.tr(),
         suggestedPrompts: [
