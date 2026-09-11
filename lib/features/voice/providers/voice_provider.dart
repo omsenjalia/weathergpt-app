@@ -197,7 +197,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     } catch (e) {
       state = state.copyWith(
           status: VoiceStatus.error,
-          errorMessage: 'Something went wrong. Please try again.');
+          errorMessage: 'WeatherGPT took too long to answer. Please try again.');
     }
   }
 
