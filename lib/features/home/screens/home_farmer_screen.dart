@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/api_error_view.dart';
 import '../../../core/widgets/app_card.dart';
 import '../providers/weather_provider.dart';
 import '../widgets/home_scaffold.dart';
@@ -16,23 +17,9 @@ class HomeFarmerScreen extends ConsumerWidget {
     final weather = ref.watch(weatherProvider('farmer'));
     return weather.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, _) => Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('$error', textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => ref.invalidate(weatherProvider('farmer')),
-                  child: const Text('Try again'),
-                ),
-              ],
-            ),
-          ),
-        ),
+      error: (error, _) => ApiErrorView(
+        error: error,
+        onRetry: () => ref.invalidate(weatherProvider('farmer')),
       ),
       data: (snapshot) => HomeScaffold(
         accentColor: AppColors.farmerGreen,

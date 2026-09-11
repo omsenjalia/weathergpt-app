@@ -88,6 +88,18 @@ class HomeScaffold extends ConsumerWidget {
                   ),
                 ),
               ),
+              ListTile(
+                leading: Icon(Icons.my_location, color: accentColor),
+                title: const Text('Use my location'),
+                subtitle: const Text('GPS'),
+                onTap: () async {
+                  final loc = await ref.read(locationProvider.notifier).selectFromGps();
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx, loc);
+                  }
+                },
+              ),
+              const Divider(height: 1),
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
@@ -116,8 +128,14 @@ class HomeScaffold extends ConsumerWidget {
       },
     );
     if (selected != null) {
-      await ref.read(locationProvider.notifier).select(selected);
+      // GPS path already persisted; presets need select()
+      if (selected.name != 'Current location' ||
+          ref.read(locationProvider).name != selected.name) {
+        await ref.read(locationProvider.notifier).select(selected);
+      }
       ref.invalidate(weatherProvider);
+    } else {
+      // user dismissed or GPS failed when they expected a result — no-op
     }
   }
 

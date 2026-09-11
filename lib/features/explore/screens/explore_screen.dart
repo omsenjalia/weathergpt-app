@@ -6,6 +6,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
 import '../providers/map_provider.dart';
+import '../../home/providers/location_provider.dart';
 
 /// Explore map powered by Windy's official embed (same approach as the web app).
 ///
@@ -114,6 +115,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   @override
   Widget build(BuildContext context) {
     final map = ref.watch(mapProvider);
+    final homeLoc = ref.watch(locationProvider);
+    // Keep Windy embed aligned with the location chosen on Home.
+    if ((map.lat - homeLoc.lat).abs() > 0.01 ||
+        (map.lon - homeLoc.lon).abs() > 0.01) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(mapProvider.notifier).setCenter(homeLoc.lat, homeLoc.lon, zoom: 8);
+      });
+    }
     _ensureController(map);
 
     return Scaffold(
