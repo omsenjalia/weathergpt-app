@@ -121,9 +121,6 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
     });
   }
 
-  void _openChat([String? prompt]) {
-    context.go('/chat', extra: prompt);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -199,17 +196,13 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                               onLocationTap: _pickLocation,
                             ),
                             const SizedBox(height: 12),
-                            if (_tab == 0) ...[
-                              _MetricGrid(weather: w),
-                              const SizedBox(height: 16),
-                              _PromptChips(
-                                onPrompt: (p) => _openChat(p),
-                              ),
-                            ] else if (_tab == 1)
+                            if (_tab == 0)
+                              _MetricGrid(weather: w)
+                            else if (_tab == 1)
                               _HourlyList(points: w.hourly)
                             else
                               _SevenDayList(days: w.forecast),
-                            const SizedBox(height: 100),
+                            const SizedBox(height: 120),
                           ],
                         ),
                       ),
@@ -217,10 +210,8 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                   ],
                 ),
               ),
-              _AskBar(
-                onAsk: () => _openChat(),
-                onMic: () => _openVoice(),
-              ),
+              // Large animated mic only — chat lives in the Chat tab.
+              _VoiceFab(onTap: () => _openVoice()),
             ],
           ),
         ),
@@ -308,7 +299,7 @@ class _TabRow extends StatelessWidget {
   final ValueChanged<int> onChanged;
   @override
   Widget build(BuildContext context) {
-    const labels = ['Overview', '24-Hour\nHourly', '7-Day\nOutlook'];
+    const labels = ['Overview', 'Hourly', '7-Day'];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -333,12 +324,12 @@ class _TabRow extends StatelessWidget {
                       : null,
                 ),
                 child: Text(
-                  labels[i].replaceAll('\n', ' '),
+                  labels[i],
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected
                         ? AppColors.textPrimary
@@ -486,11 +477,19 @@ class _HeroCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: weather.hourly.take(7).map((h) {
-                return Text('${h.tempC.round()}°c',
+                return Expanded(
+                  child: Text(
+                    '${h.tempC.round()}°',
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 10, color: AppColors.textSecondary));
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                );
               }).toList(),
             ),
           ],
@@ -593,9 +592,10 @@ class _MetricGrid extends StatelessWidget {
     if (uv == null) return '—';
     final v = uv.toDouble();
     if (v <= 2) return 'LOW';
-    if (v <= 5) return 'MODERATE';
+    if (v <= 5) return 'MOD';
     if (v <= 7) return 'HIGH';
-    return 'VERY HIGH';
+    if (v <= 10) return 'V.HIGH';
+    return 'EXT';
   }
 
   String _cardinal(num? deg) {
@@ -640,8 +640,7 @@ class _MetricGrid extends StatelessWidget {
                 value: weather.uvIndex == null
                     ? '—'
                     : weather.uvIndex!.toStringAsFixed(1),
-                subtitle: '/ 12',
-                valueSuffix: true,
+                subtitle: 'Max scale 12',
               ),
             ),
           ],
@@ -745,25 +744,44 @@ class _InfoCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(title,
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontSize: 11,
-                      letterSpacing: 0.6,
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w600)),
-              const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(8),
+                    fontSize: 11,
+                    letterSpacing: 0.6,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                child: Text(badge,
-                    style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: badgeColor)),
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: badgeColor.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        badge,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: badgeColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -804,41 +822,6 @@ class _InfoCard extends StatelessWidget {
                     color: AppColors.textSecondary, fontSize: 12)),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _PromptChips extends StatelessWidget {
-  const _PromptChips({required this.onPrompt});
-  final ValueChanged<String> onPrompt;
-  static const prompts = [
-    'Will it rain in Delhi this week?',
-    'Air quality index in Chennai',
-    'Is it safe to go outside in Jaipur?',
-    'Should I carry an umbrella today?',
-  ];
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: prompts.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
-          return OutlinedButton(
-            onPressed: () => onPrompt(prompts[i]),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.borderSubtle),
-              foregroundColor: AppColors.textSecondary,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-            ),
-            child: Text(prompts[i], style: const TextStyle(fontSize: 12)),
-          );
-        },
       ),
     );
   }
@@ -931,60 +914,67 @@ class _SevenDayList extends StatelessWidget {
   }
 }
 
-class _AskBar extends StatelessWidget {
-  const _AskBar({required this.onAsk, required this.onMic});
-  final VoidCallback onAsk;
-  final VoidCallback onMic;
+
+class _VoiceFab extends StatefulWidget {
+  const _VoiceFab({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  State<_VoiceFab> createState() => _VoiceFabState();
+}
+
+class _VoiceFabState extends State<_VoiceFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-      decoration: const BoxDecoration(
-        color: AppColors.bgPrimary,
-        border: Border(top: BorderSide(color: AppColors.borderSubtle)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Material(
-              color: AppColors.surfaceCardAlt,
-              borderRadius: BorderRadius.circular(28),
-              child: InkWell(
-                onTap: onAsk,
-                borderRadius: BorderRadius.circular(28),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final pulse = 0.85 + (_controller.value * 0.15);
+            final glow = 0.18 + (_controller.value * 0.22);
+            return Transform.scale(
+              scale: pulse,
+              child: GestureDetector(
+                onTap: widget.onTap,
                 child: Container(
-                  height: 50,
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  alignment: Alignment.centerLeft,
-                  child: const Row(
-                    children: [
-                      Expanded(
-                        child: Text('Ask WeatherGPT anything',
-                            style: TextStyle(color: AppColors.textTertiary)),
+                  width: 84,
+                  height: 84,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.surfaceCardAlt,
+                    border: Border.all(color: AppColors.borderSubtle, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.statusAmber.withValues(alpha: glow),
+                        blurRadius: 28,
+                        spreadRadius: 4,
                       ),
-                      Icon(Icons.arrow_forward,
-                          size: 18, color: AppColors.textTertiary),
                     ],
+                  ),
+                  child: const Icon(
+                    Icons.mic_rounded,
+                    size: 36,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Material(
-            color: AppColors.surfaceCardAlt,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onMic,
-              child: const SizedBox(
-                width: 50,
-                height: 50,
-                child: Icon(Icons.mic_none_rounded),
-              ),
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
