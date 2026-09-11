@@ -4,6 +4,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 sealed class AppApiError implements Exception {
   const AppApiError(this.message);
   final String message;
+  @override
+  String toString() => message;
 }
 
 class NetworkError extends AppApiError { const NetworkError(super.message); }

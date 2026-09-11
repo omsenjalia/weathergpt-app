@@ -15,7 +15,24 @@ class HomeResearcherScreen extends ConsumerWidget {
     final weather = ref.watch(weatherProvider('researcher'));
     return weather.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, _) => Scaffold(body: Center(child: Text('$error'))),
+      error: (error, _) => Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('$error', textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => ref.invalidate(weatherProvider('researcher')),
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
       data: (snapshot) => HomeScaffold(
         accentColor: AppColors.researcherBlue,
         metrics: snapshot.metrics,
