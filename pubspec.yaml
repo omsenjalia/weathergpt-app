@@ -15,8 +15,7 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_animate: ^4.5.0
   fl_chart: ^0.68.0
-  flutter_map: ^7.0.2
-  latlong2: ^0.9.1
+  webview_flutter: ^4.10.0
   speech_to_text: ^7.4.0
   flutter_tts: ^4.0.2
   record: ^6.2.1
