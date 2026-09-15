@@ -11,7 +11,7 @@ import '../../settings/providers/settings_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/atmosphere_theme.dart';
-import '../widgets/atmosphere_background.dart';
+import '../widgets/atmosphere_video_background.dart';
 
 class WeatherHomeScreen extends ConsumerStatefulWidget {
   const WeatherHomeScreen({super.key});
@@ -139,7 +139,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
           return Stack(
             children: [
               Positioned.fill(
-                child: AtmosphereBackground(
+                child: AtmosphereVideoBackground(
                   palette: palette,
                   sky: sky,
                   period: period,

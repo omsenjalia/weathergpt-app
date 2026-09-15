@@ -19,6 +19,7 @@ class _VoiceListeningScreenState extends ConsumerState<VoiceListeningScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
   var _started = false;
+  var _navigated = false;
 
   Color get _accent => widget.accent ?? AppColors.accent;
 
@@ -30,7 +31,7 @@ class _VoiceListeningScreenState extends ConsumerState<VoiceListeningScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_started) return;
+      if (_started || !mounted) return;
       _started = true;
       final p = widget.prompt?.trim();
       if (p != null && p.isNotEmpty) {
@@ -50,7 +51,11 @@ class _VoiceListeningScreenState extends ConsumerState<VoiceListeningScreen>
   @override
   Widget build(BuildContext context) {
     ref.listen<VoiceState>(voiceProvider, (_, next) {
-      if (next.status == VoiceStatus.done && next.response != null && mounted) {
+      if (!_navigated &&
+          next.status == VoiceStatus.done &&
+          next.response != null &&
+          mounted) {
+        _navigated = true;
         context.pushReplacement('/voice/result', extra: next.response);
       }
     });
@@ -61,148 +66,133 @@ class _VoiceListeningScreenState extends ConsumerState<VoiceListeningScreen>
     final error = state.status == VoiceStatus.error;
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.center,
-                  radius: 0.9,
-                  colors: [
-                    _accent.withValues(alpha: 0.16),
-                    AppColors.bgPrimary,
-                  ],
+      backgroundColor: const Color(0xFF0B1220),
+      body: Material(
+        color: const Color(0xFF0B1220),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  onPressed: () {
+                    ref.read(voiceProvider.notifier).cancel();
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/home');
+                    }
+                  },
+                  icon: const Icon(Icons.close_rounded),
                 ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    onPressed: () {
-                      ref.read(voiceProvider.notifier).cancel();
-                      context.pop();
-                    },
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ),
-                const Spacer(),
-                AnimatedBuilder(
-                  animation: _pulse,
-                  builder: (_, __) {
-                    return SizedBox(
-                      width: 200,
-                      height: 200,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          for (var i = 0; i < 3; i++)
-                            Transform.scale(
-                              scale: 0.55 + ((_pulse.value + i * 0.3) % 1) * 0.7,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: _accent.withValues(
-                                      alpha: listening
-                                          ? (1 - ((_pulse.value + i * 0.3) % 1)) *
-                                              0.4
-                                          : 0.08,
-                                    ),
-                                    width: 2,
+              const Spacer(),
+              AnimatedBuilder(
+                animation: _pulse,
+                builder: (_, __) {
+                  final t = _pulse.value;
+                  return SizedBox(
+                    width: 200,
+                    height: 200,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        for (var i = 0; i < 3; i++)
+                          Transform.scale(
+                            scale: 0.55 + ((t + i * 0.3) % 1) * 0.7,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: _accent.withValues(
+                                    alpha: listening
+                                        ? (1 - ((t + i * 0.3) % 1)) * 0.4
+                                        : 0.08,
                                   ),
+                                  width: 2,
                                 ),
                               ),
-                            ),
-                          Container(
-                            width: 88,
-                            height: 88,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                colors: [_accent, AppColors.sky],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _accent.withValues(alpha: 0.4),
-                                  blurRadius: 28,
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              error
-                                  ? Icons.error_outline
-                                  : processing
-                                      ? Icons.hourglass_top_rounded
-                                      : Icons.mic_rounded,
-                              size: 36,
-                              color: Colors.black87,
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  },
+                        Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [_accent, const Color(0xFF38BDF8)],
+                            ),
+                          ),
+                          child: Icon(
+                            error
+                                ? Icons.error_outline
+                                : processing
+                                    ? Icons.hourglass_top_rounded
+                                    : Icons.mic_rounded,
+                            size: 36,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              Text(
+                error
+                    ? (state.errorMessage ?? 'Error')
+                    : processing
+                        ? 'Thinking…'
+                        : listening
+                            ? 'Listening…'
+                            : 'Ready',
+                style: const TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  state.transcript.isEmpty
+                      ? 'Ask about weather, rain, or farming'
+                      : state.transcript,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: state.transcript.isEmpty
+                        ? const Color(0xFF64748B)
+                        : Colors.white,
+                    height: 1.4,
+                  ),
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  error
-                      ? (state.errorMessage ?? 'Error')
-                      : processing
-                          ? 'Thinking…'
-                          : listening
-                              ? 'Listening…'
-                              : 'Ready',
-                  style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.w600),
+              ),
+              const Spacer(),
+              if (listening)
+                TextButton(
+                  onPressed: () =>
+                      ref.read(voiceProvider.notifier).stopListening(),
+                  child: const Text('Done speaking'),
                 ),
-                const SizedBox(height: 12),
+              if (error)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Text(
-                    state.transcript.isEmpty
-                        ? 'Ask about weather, rain, or farming'
-                        : state.transcript,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: state.transcript.isEmpty
-                          ? AppColors.textTertiary
-                          : AppColors.textPrimary,
-                      height: 1.4,
+                  padding: const EdgeInsets.all(24),
+                  child: FilledButton(
+                    onPressed: () {
+                      _navigated = false;
+                      ref.read(voiceProvider.notifier).startListening();
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _accent,
+                      foregroundColor: Colors.black87,
+                      minimumSize: const Size.fromHeight(48),
                     ),
+                    child: const Text('Try again'),
                   ),
                 ),
-                const Spacer(),
-                if (listening)
-                  TextButton(
-                    onPressed: () =>
-                        ref.read(voiceProvider.notifier).stopListening(),
-                    child: const Text('Done speaking'),
-                  ),
-                if (error)
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: FilledButton(
-                      onPressed: () =>
-                          ref.read(voiceProvider.notifier).startListening(),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: Colors.black87,
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      child: const Text('Try again'),
-                    ),
-                  ),
-                const SizedBox(height: 24),
-              ],
-            ),
+              const SizedBox(height: 24),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

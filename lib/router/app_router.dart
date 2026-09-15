@@ -22,7 +22,10 @@ import '../features/researcher/screens/historical_data_screen.dart';
 import '../features/researcher/providers/anomaly_trends_provider.dart';
 import '../features/settings/screens/settings_screen.dart';
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final GoRouter appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   redirect: (context, state) {
     final completed = Hive.box(
@@ -48,6 +51,7 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/voice/listening',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (_, state) {
         final extra = state.extra as Map<String, dynamic>?;
         return VoiceListeningScreen(
@@ -58,6 +62,7 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/voice/result',
+      parentNavigatorKey: rootNavigatorKey,
       builder: (_, state) => ConversationalResultScreen(
         response: state.extra! as VoiceResponse,
       ),
