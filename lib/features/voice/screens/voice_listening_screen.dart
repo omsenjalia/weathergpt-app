@@ -1,22 +1,16 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../conversation/widgets/conversation_chrome.dart';
 import '../providers/voice_provider.dart';
 
 class VoiceListeningScreen extends ConsumerStatefulWidget {
-  const VoiceListeningScreen(
-      {super.key,
-      this.prompt,
-      this.accent = AppColors.farmerGreen,
-      this.autoStart = true});
+  const VoiceListeningScreen({super.key, this.accent, this.prompt});
+  final Color? accent;
   final String? prompt;
-  final Color accent;
-  final bool autoStart;
+
   @override
   ConsumerState<VoiceListeningScreen> createState() =>
       _VoiceListeningScreenState();
@@ -24,158 +18,228 @@ class VoiceListeningScreen extends ConsumerStatefulWidget {
 
 class _VoiceListeningScreenState extends ConsumerState<VoiceListeningScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _animation = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1500))
-    ..repeat();
+  late final AnimationController _pulse;
+  var _started = false;
+
+  Color get _accent => widget.accent ?? AppColors.statusAmber;
+
   @override
   void initState() {
     super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.prompt?.isNotEmpty == true) {
-        ref.read(voiceProvider.notifier).submitQuery(widget.prompt!);
-      } else if (widget.autoStart) {
-        ref.read(voiceProvider.notifier).startListening();
+      if (!_started) {
+        _started = true;
+        final prompt = widget.prompt?.trim();
+        if (prompt != null && prompt.isNotEmpty) {
+          ref.read(voiceProvider.notifier).submitQuery(prompt);
+        } else {
+          ref.read(voiceProvider.notifier).startListening();
+        }
       }
     });
   }
 
   @override
   void dispose() {
-    _animation.dispose();
-    try {
-      ref.read(voiceProvider.notifier).cancel();
-    } catch (_) {}
+    _pulse.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    ref.listen(voiceProvider, (_, next) {
-      if (next.status == VoiceStatus.done && next.response != null) {
-        context.go('/voice/result', extra: next.response);
-      }
-    });
-    final state = ref.watch(voiceProvider);
-    final processing = state.status == VoiceStatus.processing;
-    return Scaffold(
-        body: SafeArea(
-            child: AnimatedBuilder(
-                animation: _animation,
-                builder: (_, __) => Column(children: [
-                      const Spacer(flex: 2),
-                      Text(processing ? 'voice.thinking'.tr() : 'voice.listening'.tr(),
-                          style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 26),
-                      SizedBox(
-                          height: 205,
-                          child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _WaveBars(
-                                    progress: _animation.value,
-                                    accent: widget.accent),
-                                const SizedBox(width: 10),
-                                GestureDetector(
-                                    onTap: processing
-                                        ? null
-                                        : () => ref
-                                            .read(voiceProvider.notifier)
-                                            .stopListening(),
-                                    child: Container(
-                                        width: 184,
-                                        height: 184,
-                                        decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: widget.accent
-                                                .withValues(alpha: .15),
-                                            border: Border.all(
-                                                color: widget.accent, width: 2),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                  color: widget.accent
-                                                      .withValues(alpha: .55),
-                                                  blurRadius: 38,
-                                                  spreadRadius:
-                                                      processing ? 8 : 2)
-                                            ]),
-                                        child: Icon(
-                                            processing
-                                                ? Icons.more_horiz_rounded
-                                                : Icons.mic_rounded,
-                                            size: 58,
-                                            color: AppColors.textPrimary))),
-                                const SizedBox(width: 10),
-                                Transform.flip(
-                                    flipX: true,
-                                    child: _WaveBars(
-                                        progress: _animation.value,
-                                        accent: widget.accent)),
-                              ])),
-                      const SizedBox(height: 24),
-                      Text(
-                          state.transcript.isNotEmpty
-                              ? '“${state.transcript}”'
-                              : processing
-                                  ? 'voice.finding_answer'.tr()
-                                  : 'voice.speak_now'.tr(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: AppColors.textSecondary, fontSize: 15)),
-                      if (state.errorMessage != null)
-                        Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-                            child: Text(state.errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                    color: AppColors.statusAmber))),
-                      const Spacer(flex: 3),
-                      OutlinedButton(
-                          onPressed: () {
-                            ref.read(voiceProvider.notifier).cancel();
-                            context.go('/home');
-                          },
-                          style: OutlinedButton.styleFrom(
-                              shape: const CircleBorder(),
-                              side: const BorderSide(
-                                  color: AppColors.borderSubtle),
-                              fixedSize: const Size(50, 50)),
-                          child: const Icon(Icons.close,
-                              color: AppColors.textPrimary)),
-                      const SizedBox(height: 26),
-                    ]))));
-  }
-}
-
-class _WaveBars extends StatelessWidget {
-  const _WaveBars({required this.progress, required this.accent});
-  final double progress;
-  final Color accent;
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-      size: const Size(42, 78), painter: _WavePainter(progress, accent));
-}
-
-class _WavePainter extends CustomPainter {
-  _WavePainter(this.progress, this.accent);
-  final double progress;
-  final Color accent;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = accent
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.round;
-    for (var i = 0; i < 6; i++) {
-      final wave = (math.sin((progress * math.pi * 2) + i * .8) + 1) / 2;
-      final height = 14.0 + wave * 45;
-      final x = i * 8.0 + 2;
-      canvas.drawLine(Offset(x, (size.height - height) / 2),
-          Offset(x, (size.height + height) / 2), paint);
+  void _onDone(VoiceState state) {
+    final response = state.response;
+    if (response != null && mounted) {
+      context.pushReplacement('/voice/result', extra: response);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _WavePainter old) =>
-      old.progress != progress || old.accent != accent;
+  Widget build(BuildContext context) {
+    ref.listen<VoiceState>(voiceProvider, (prev, next) {
+      if (next.status == VoiceStatus.done && next.response != null) {
+        _onDone(next);
+      }
+    });
+
+    final state = ref.watch(voiceProvider);
+    final isListening = state.status == VoiceStatus.listening;
+    final isProcessing = state.status == VoiceStatus.processing;
+    final isError = state.status == VoiceStatus.error;
+
+    final statusLabel = isError
+        ? (state.errorMessage ?? 'Something went wrong')
+        : isProcessing
+            ? 'Thinking…'
+            : isListening
+                ? 'Listening…'
+                : 'Ready';
+
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: Stack(
+        children: [
+          ConversationBackdrop(accent: _accent),
+          SafeArea(
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    onPressed: () {
+                      ref.read(voiceProvider.notifier).cancel();
+                      context.pop();
+                    },
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ),
+                const Spacer(flex: 2),
+                AnimatedBuilder(
+                  animation: _pulse,
+                  builder: (context, _) {
+                    return SizedBox(
+                      height: 220,
+                      width: 220,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          for (var i = 0; i < 3; i++)
+                            _PulseRing(
+                              progress: (_pulse.value + i * 0.28) % 1.0,
+                              accent: _accent,
+                              active: isListening,
+                            ),
+                          Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [
+                                  _accent,
+                                  _accent.withValues(alpha: 0.7),
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _accent.withValues(alpha: 0.45),
+                                  blurRadius: 28,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              isProcessing
+                                  ? Icons.hourglass_top_rounded
+                                  : isError
+                                      ? Icons.error_outline_rounded
+                                      : Icons.mic_rounded,
+                              size: 40,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  statusLabel,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 36),
+                  child: Text(
+                    state.transcript.isEmpty
+                        ? (isListening
+                            ? 'Ask about weather, rain, or your farm'
+                            : '')
+                        : state.transcript,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      height: 1.4,
+                      color: state.transcript.isEmpty
+                          ? AppColors.textTertiary
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                const Spacer(flex: 3),
+                if (isListening)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 28),
+                    child: TextButton(
+                      onPressed: () =>
+                          ref.read(voiceProvider.notifier).stopListening(),
+                      child: const Text(
+                        'I’m done speaking',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (isError)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+                    child: FilledButton(
+                      onPressed: () =>
+                          ref.read(voiceProvider.notifier).startListening(),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _accent,
+                        foregroundColor: Colors.black87,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text('Try again'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PulseRing extends StatelessWidget {
+  const _PulseRing({
+    required this.progress,
+    required this.accent,
+    required this.active,
+  });
+  final double progress;
+  final Color accent;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = 0.55 + progress * 0.7;
+    final opacity = active ? (1 - progress) * 0.45 : 0.08;
+    return Transform.scale(
+      scale: scale,
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: accent.withValues(alpha: opacity),
+            width: 2,
+          ),
+        ),
+      ),
+    );
+  }
 }
