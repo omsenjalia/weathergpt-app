@@ -1,4 +1,12 @@
-Weather background videos are free stock footage from Pexels
-(https://www.pexels.com), licensed under the Pexels License
-(free for commercial and personal use, no attribution required
-but appreciated). Clips are compressed/trimmed for mobile.
+Weather background videos: free stock from Pexels (pexels.com).
+Pexels License — free for commercial/personal use.
+Clips compressed/trimmed for mobile (6s loops, ~480p).
+
+Situations (22):
+  clear, mainly_clear, partly_cloudy, overcast,
+  fog, rime_fog,
+  light_drizzle, drizzle, heavy_drizzle,
+  light_rain, rain, heavy_rain, freezing_rain,
+  light_snow, snow, heavy_snow, snow_grains,
+  rain_shower, heavy_shower, snow_shower,
+  thunderstorm, thunderstorm_hail

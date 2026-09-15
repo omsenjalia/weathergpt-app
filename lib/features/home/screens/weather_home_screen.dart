@@ -128,7 +128,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
           children: [
             // Real looping weather video (condition-matched)
             Positioned.fill(
-              child: WeatherVideoBackground(condition: w.condition),
+              child: WeatherVideoBackground(condition: w.condition, weatherCode: w.weatherCode),
             ),
             SafeArea(
               bottom: false,
