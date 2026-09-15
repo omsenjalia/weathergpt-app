@@ -14,7 +14,7 @@ class AtmosphereBackground extends StatefulWidget {
 
   final AtmospherePalette palette;
   final SkyCondition sky;
-  final DayPeriod period;
+  final SkyPeriod period;
 
   @override
   State<AtmosphereBackground> createState() => _AtmosphereBackgroundState();
@@ -92,7 +92,7 @@ class _SkyPainter extends CustomPainter {
 
   final AtmospherePalette palette;
   final SkyCondition sky;
-  final DayPeriod period;
+  final SkyPeriod period;
   final double drift;
   final double pulse;
   final double rainT;
@@ -178,11 +178,11 @@ class _SkyPainter extends CustomPainter {
   }
 
   void _paintStars(Canvas canvas, Size size) {
-    final night = period == DayPeriod.night ||
-        period == DayPeriod.midnight ||
-        period == DayPeriod.evening ||
-        period == DayPeriod.dusk ||
-        period == DayPeriod.predawn;
+    final night = period == SkyPeriod.night ||
+        period == SkyPeriod.midnight ||
+        period == SkyPeriod.evening ||
+        period == SkyPeriod.dusk ||
+        period == SkyPeriod.predawn;
     if (!night) return;
     if (sky == SkyCondition.overcast ||
         sky == SkyCondition.fog ||
@@ -190,7 +190,7 @@ class _SkyPainter extends CustomPainter {
       return;
     }
 
-    final count = period == DayPeriod.midnight ? 70 : 45;
+    final count = period == SkyPeriod.midnight ? 70 : 45;
     final rnd = math.Random(42);
     for (var i = 0; i < count; i++) {
       final x = rnd.nextDouble() * size.width;
@@ -215,9 +215,9 @@ class _SkyPainter extends CustomPainter {
     final core = 26.0 + pulse * 5;
 
     // God rays at sunrise/golden hour
-    if (period == DayPeriod.sunrise ||
-        period == DayPeriod.goldenHour ||
-        period == DayPeriod.sunset) {
+    if (period == SkyPeriod.sunrise ||
+        period == SkyPeriod.goldenHour ||
+        period == SkyPeriod.sunset) {
       final rayPaint = Paint()
         ..shader = RadialGradient(
           colors: [
@@ -278,7 +278,7 @@ class _SkyPainter extends CustomPainter {
       Paint()..color = const Color(0xFFCBD5E1).withValues(alpha: 0.35),
     );
     // crescent shadow for predawn / thin moon feel
-    if (period == DayPeriod.predawn || period == DayPeriod.dusk) {
+    if (period == SkyPeriod.predawn || period == SkyPeriod.dusk) {
       canvas.drawCircle(
         moon.translate(r * 0.4, -r * 0.05),
         r * 0.9,

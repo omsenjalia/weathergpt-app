@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../providers/weather_provider.dart';
 
-enum DayPeriod {
+enum SkyPeriod {
   midnight,
   predawn,
   night,
@@ -67,23 +67,23 @@ class AtmospherePalette {
   final double horizonWarmth;
 }
 
-DayPeriod periodFromLocalTime(DateTime now, DateTime? sunrise, DateTime? sunset) {
+SkyPeriod periodFromLocalTime(DateTime now, DateTime? sunrise, DateTime? sunset) {
   final minutes = now.hour * 60 + now.minute;
   final rise = sunrise != null ? sunrise.hour * 60 + sunrise.minute : 6 * 60;
   final set = sunset != null ? sunset.hour * 60 + sunset.minute : 18 * 60 + 30;
 
-  if (minutes < 75) return DayPeriod.midnight;
-  if (minutes < rise - 60) return DayPeriod.night;
-  if (minutes < rise - 25) return DayPeriod.predawn;
-  if (minutes < rise + 35) return DayPeriod.sunrise;
-  if (minutes < rise + 150) return DayPeriod.morning;
-  if (minutes < 13 * 60) return DayPeriod.midday;
-  if (minutes < set - 90) return DayPeriod.afternoon;
-  if (minutes < set - 25) return DayPeriod.goldenHour;
-  if (minutes < set + 25) return DayPeriod.sunset;
-  if (minutes < set + 55) return DayPeriod.dusk;
-  if (minutes < 22 * 60 + 30) return DayPeriod.evening;
-  return DayPeriod.night;
+  if (minutes < 75) return SkyPeriod.midnight;
+  if (minutes < rise - 60) return SkyPeriod.night;
+  if (minutes < rise - 25) return SkyPeriod.predawn;
+  if (minutes < rise + 35) return SkyPeriod.sunrise;
+  if (minutes < rise + 150) return SkyPeriod.morning;
+  if (minutes < 13 * 60) return SkyPeriod.midday;
+  if (minutes < set - 90) return SkyPeriod.afternoon;
+  if (minutes < set - 25) return SkyPeriod.goldenHour;
+  if (minutes < set + 25) return SkyPeriod.sunset;
+  if (minutes < set + 55) return SkyPeriod.dusk;
+  if (minutes < 22 * 60 + 30) return SkyPeriod.evening;
+  return SkyPeriod.night;
 }
 
 SkyCondition conditionFromWeather(WeatherSnapshot w) {
@@ -114,9 +114,9 @@ SkyCondition conditionFromWeather(WeatherSnapshot w) {
   return SkyCondition.clear;
 }
 
-AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
+AtmospherePalette paletteFor(SkyPeriod period, SkyCondition sky) {
   AtmospherePalette base = switch (period) {
-    DayPeriod.midnight => const AtmospherePalette(
+    SkyPeriod.midnight => const AtmospherePalette(
         top: Color(0xFF01030A),
         mid: Color(0xFF060B18),
         bottom: Color(0xFF0C1222),
@@ -132,7 +132,7 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         sunY: 1.3,
         moonY: 0.20,
       ),
-    DayPeriod.predawn => const AtmospherePalette(
+    SkyPeriod.predawn => const AtmospherePalette(
         top: Color(0xFF0B1225),
         mid: Color(0xFF1E293B),
         bottom: Color(0xFF334155),
@@ -149,7 +149,7 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         moonY: 0.18,
         horizonWarmth: 0.25,
       ),
-    DayPeriod.night => const AtmospherePalette(
+    SkyPeriod.night => const AtmospherePalette(
         top: Color(0xFF070B16),
         mid: Color(0xFF0F172A),
         bottom: Color(0xFF1A2438),
@@ -165,7 +165,7 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         sunY: 1.3,
         moonY: 0.26,
       ),
-    DayPeriod.sunrise => const AtmospherePalette(
+    SkyPeriod.sunrise => const AtmospherePalette(
         top: Color(0xFF1E3A5F),
         mid: Color(0xFFC2410C),
         bottom: Color(0xFFFDBA74),
@@ -182,7 +182,7 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         moonY: 1.3,
         horizonWarmth: 0.7,
       ),
-    DayPeriod.morning => const AtmospherePalette(
+    SkyPeriod.morning => const AtmospherePalette(
         top: Color(0xFF38BDF8),
         mid: Color(0xFF7DD3FC),
         bottom: Color(0xFFE0F2FE),
@@ -198,7 +198,7 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         sunY: 0.38,
         moonY: 1.3,
       ),
-    DayPeriod.midday => const AtmospherePalette(
+    SkyPeriod.midday => const AtmospherePalette(
         top: Color(0xFF0284C7),
         mid: Color(0xFF38BDF8),
         bottom: Color(0xFFBAE6FD),
@@ -214,7 +214,7 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         sunY: 0.14,
         moonY: 1.3,
       ),
-    DayPeriod.afternoon => const AtmospherePalette(
+    SkyPeriod.afternoon => const AtmospherePalette(
         top: Color(0xFF0369A1),
         mid: Color(0xFF0EA5E9),
         bottom: Color(0xFF7DD3FC),
@@ -230,7 +230,7 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         sunY: 0.40,
         moonY: 1.3,
       ),
-    DayPeriod.goldenHour => const AtmospherePalette(
+    SkyPeriod.goldenHour => const AtmospherePalette(
         top: Color(0xFF1D4ED8),
         mid: Color(0xFFFB923C),
         bottom: Color(0xFFFDE68A),
@@ -247,7 +247,7 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         moonY: 1.3,
         horizonWarmth: 0.55,
       ),
-    DayPeriod.sunset => const AtmospherePalette(
+    SkyPeriod.sunset => const AtmospherePalette(
         top: Color(0xFF312E81),
         mid: Color(0xFFEA580C),
         bottom: Color(0xFFFBBF24),
@@ -264,7 +264,7 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         moonY: 0.22,
         horizonWarmth: 0.85,
       ),
-    DayPeriod.dusk => const AtmospherePalette(
+    SkyPeriod.dusk => const AtmospherePalette(
         top: Color(0xFF1E1B4B),
         mid: Color(0xFF4C1D95),
         bottom: Color(0xFF7C2D12),
@@ -281,7 +281,7 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         moonY: 0.28,
         horizonWarmth: 0.35,
       ),
-    DayPeriod.evening => const AtmospherePalette(
+    SkyPeriod.evening => const AtmospherePalette(
         top: Color(0xFF0F172A),
         mid: Color(0xFF1E1B4B),
         bottom: Color(0xFF1E3A5F),
@@ -305,12 +305,12 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
 AtmospherePalette _applyWeather(
   AtmospherePalette base,
   SkyCondition sky,
-  DayPeriod period,
+  SkyPeriod period,
 ) {
-  final night = period == DayPeriod.night ||
-      period == DayPeriod.midnight ||
-      period == DayPeriod.evening ||
-      period == DayPeriod.dusk;
+  final night = period == SkyPeriod.night ||
+      period == SkyPeriod.midnight ||
+      period == SkyPeriod.evening ||
+      period == SkyPeriod.dusk;
 
   switch (sky) {
     case SkyCondition.thunder:
