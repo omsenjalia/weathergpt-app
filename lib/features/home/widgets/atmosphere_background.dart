@@ -10,11 +10,14 @@ class AtmosphereBackground extends StatefulWidget {
     required this.palette,
     required this.sky,
     required this.period,
+    this.particlesOnly = false,
   });
 
   final AtmospherePalette palette;
   final SkyCondition sky;
   final SkyPeriod period;
+  /// When true, skip base gradient (for use as overlay on video).
+  final bool particlesOnly;
 
   @override
   State<AtmosphereBackground> createState() => _AtmosphereBackgroundState();
@@ -71,6 +74,7 @@ class _AtmosphereBackgroundState extends State<AtmosphereBackground>
             pulse: _pulse.value,
             rainT: _rain.value,
             flashT: _flash.value,
+            particlesOnly: widget.particlesOnly,
           ),
           size: Size.infinite,
         );
@@ -88,6 +92,7 @@ class _SkyPainter extends CustomPainter {
     required this.pulse,
     required this.rainT,
     required this.flashT,
+    this.particlesOnly = false,
   });
 
   final AtmospherePalette palette;
@@ -97,10 +102,24 @@ class _SkyPainter extends CustomPainter {
   final double pulse;
   final double rainT;
   final double flashT;
+  final bool particlesOnly;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
+
+    if (particlesOnly) {
+      _paintStars(canvas, size);
+      _paintSun(canvas, size);
+      _paintMoon(canvas, size);
+      _paintClouds(canvas, size);
+      _paintFog(canvas, size);
+      _paintRain(canvas, size);
+      _paintSnow(canvas, size);
+      _paintWind(canvas, size);
+      _paintThunder(canvas, size);
+      return;
+    }
 
     // --- Base gradient sky ---
     final colors = <Color>[palette.top, palette.mid, palette.bottom];
