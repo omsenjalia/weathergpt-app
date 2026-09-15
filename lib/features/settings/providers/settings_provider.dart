@@ -13,7 +13,7 @@ class SettingsState {
     this.userPersona = 'everyone',
     this.units = TemperatureUnit.celsius,
     this.ttsVoiceLocale = 'en-US',
-    this.ttsSpeed = 1.0,
+    this.ttsSpeed = 0.85,
     this.notificationsEnabled = const {
       'weather_alerts': true,
       'imd_warnings': true,
@@ -76,7 +76,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
               : TemperatureUnit.celsius,
       ttsVoiceLocale:
           box.get('tts_voice_locale', defaultValue: 'en-US') as String,
-      ttsSpeed: (box.get('tts_speed', defaultValue: 1.0) as num).toDouble(),
+      ttsSpeed: (box.get('tts_speed', defaultValue: 0.85) as num).toDouble(),
       notificationsEnabled: notifications,
     );
   }
@@ -100,9 +100,22 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     await (await _box).put('user_persona', persona);
   }
 
-  Future<void> updateUnits(TemperatureUnit unit) async {
-    state = state.copyWith(units: unit);
-    await (await _box).put('temperature_unit', unit.name);
+  Future<void> updateUnits(TemperatureUnit units) async {
+    state = state.copyWith(units: units);
+    await (await _box).put(
+      'temperature_unit',
+      units == TemperatureUnit.fahrenheit ? 'fahrenheit' : 'celsius',
+    );
+  }
+
+  Future<void> updateTtsSpeed(double speed) async {
+    state = state.copyWith(ttsSpeed: speed);
+    await (await _box).put('tts_speed', speed);
+  }
+
+  Future<void> updateTtsVoiceLocale(String locale) async {
+    state = state.copyWith(ttsVoiceLocale: locale);
+    await (await _box).put('tts_voice_locale', locale);
   }
 
   Future<void> updateVoiceSettings(String locale, double speed) async {

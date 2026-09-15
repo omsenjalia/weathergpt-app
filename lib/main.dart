@@ -14,8 +14,9 @@ Future<void> main() async {
   await dotenv.load(fileName: '.env');
   await Hive.initFlutter();
   await Hive.openBox('settings');
-  ApiClient.instance.setLanguage(
-      Hive.box('settings').get('language', defaultValue: 'en') as String);
+  final savedLang =
+      Hive.box('settings').get('language', defaultValue: 'en') as String;
+  ApiClient.instance.setLanguage(savedLang);
   await Hive.openBox('farm_profile');
   await Hive.openBox('saved_locations');
   runApp(
@@ -33,6 +34,7 @@ Future<void> main() async {
       ],
       path: 'assets/translations',
       fallbackLocale: const Locale('en'),
+      startLocale: Locale(savedLang),
       child: const ProviderScope(child: WeatherGptApp()),
     ),
   );

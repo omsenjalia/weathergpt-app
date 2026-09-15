@@ -7,6 +7,7 @@ import '../core/theme/app_colors.dart';
 import '../features/home/screens/weather_home_screen.dart';
 import '../features/chat/screens/chat_screen.dart';
 import '../features/explore/screens/explore_screen.dart';
+import '../features/explore/screens/saved_locations_screen.dart';
 import '../features/onboarding/screens/focus_select_screen.dart';
 import '../features/onboarding/screens/language_select_screen.dart';
 import '../features/onboarding/screens/splash_screen.dart';
@@ -105,6 +106,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/explore',
           builder: (_, __) => const ExploreScreen(),
+        ),
+        GoRoute(
+          path: '/saved',
+          builder: (_, __) => const SavedLocationsScreen(),
         ),
         GoRoute(
           path: '/profile',

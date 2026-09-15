@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -58,7 +59,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        title: const Text('WeatherGPT Chat'),
+        title: Text('chat.title'.tr()),
         actions: [
           IconButton(
             tooltip: 'Clear',
@@ -77,7 +78,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           Expanded(
             child: chat.messages.isEmpty
-                ? const Center(
+                ? Center(
                     child: Padding(
                       padding: EdgeInsets.all(32),
                       child: Column(
@@ -165,7 +166,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       minLines: 1,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        hintText: 'Ask WeatherGPT anything…',
+                        hintText: 'chat.hint'.tr(),
                         filled: true,
                         fillColor: AppColors.surfaceCardAlt,
                         border: OutlineInputBorder(

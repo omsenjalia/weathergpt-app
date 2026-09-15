@@ -10,39 +10,57 @@ enum MapLayer {
   radar,
   waves,
   pressure,
+  thunder,
+  snow,
+  humidity,
+  cape,
 }
+
+enum MapProduct { ecmwf, gfs, icon, nems }
 
 class MapState {
   const MapState({
     this.activeLayer = MapLayer.wind,
+    this.product = MapProduct.ecmwf,
     this.lat = 23.0225,
     this.lon = 72.5714,
     this.zoom = 6,
+    this.showMenu = false,
+    this.showMarker = true,
     this.currentLocation,
     this.isLoadingLocation = false,
   });
 
   final MapLayer activeLayer;
+  final MapProduct product;
   final double lat;
   final double lon;
   final int zoom;
+  final bool showMenu;
+  final bool showMarker;
   final ({double lat, double lon})? currentLocation;
   final bool isLoadingLocation;
 
   MapState copyWith({
     MapLayer? activeLayer,
+    MapProduct? product,
     double? lat,
     double? lon,
     int? zoom,
+    bool? showMenu,
+    bool? showMarker,
     ({double lat, double lon})? currentLocation,
     bool? isLoadingLocation,
     bool clearLocation = false,
   }) =>
       MapState(
         activeLayer: activeLayer ?? this.activeLayer,
+        product: product ?? this.product,
         lat: lat ?? this.lat,
         lon: lon ?? this.lon,
         zoom: zoom ?? this.zoom,
+        showMenu: showMenu ?? this.showMenu,
+        showMarker: showMarker ?? this.showMarker,
         currentLocation:
             clearLocation ? null : (currentLocation ?? this.currentLocation),
         isLoadingLocation: isLoadingLocation ?? this.isLoadingLocation,
@@ -54,13 +72,27 @@ class MapNotifier extends StateNotifier<MapState> {
 
   void setLayer(MapLayer layer) => state = state.copyWith(activeLayer: layer);
 
+  void setProduct(MapProduct product) =>
+      state = state.copyWith(product: product);
+
+  void setZoom(int zoom) =>
+      state = state.copyWith(zoom: zoom.clamp(3, 12));
+
+  void zoomIn() => setZoom(state.zoom + 1);
+
+  void zoomOut() => setZoom(state.zoom - 1);
+
+  void toggleMenu() => state = state.copyWith(showMenu: !state.showMenu);
+
+  void toggleMarker() =>
+      state = state.copyWith(showMarker: !state.showMarker);
+
   void setCenter(double lat, double lon, {int? zoom}) => state = state.copyWith(
         lat: lat,
         lon: lon,
         zoom: zoom ?? state.zoom,
       );
 
-  /// Returns detected position when permission and location services allow it.
   Future<({double lat, double lon})?> detectCurrentLocation() async {
     state = state.copyWith(isLoadingLocation: true);
     try {

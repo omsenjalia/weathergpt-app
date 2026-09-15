@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -65,7 +66,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                   padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('Choose location',
+                    child: Text('home.choose_location'.tr(),
                         style: TextStyle(
                             fontSize: 17, fontWeight: FontWeight.w700)),
                   ),
@@ -73,7 +74,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                 ListTile(
                   leading: const Icon(Icons.my_location,
                       color: AppColors.statusAmber),
-                  title: const Text('Use my location'),
+                  title: const Text('home.use_my_location'.tr()),
                   onTap: () async {
                     final loc =
                         await ref.read(locationProvider.notifier).selectFromGps();
@@ -152,7 +153,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'your weather, always clear.',
+                              'home.tagline'.tr(),
                               style: TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w500,
@@ -164,19 +165,26 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                             _SearchField(
                               controller: _searchCtrl,
                               onSubmit: (q) async {
-                                // Simple preset match; full geocode can come later
+                                final query = q.trim();
+                                if (query.isEmpty) {
+                                  _pickLocation();
+                                  return;
+                                }
                                 final match = kPresetLocations.where((l) =>
-                                    l.name.toLowerCase().contains(q.toLowerCase()));
-                                if (match.isNotEmpty) {
+                                    l.name.toLowerCase().contains(query.toLowerCase()));
+                                AppLocation? loc =
+                                    match.isNotEmpty ? match.first : null;
+                                loc ??= await geocodePlaceName(query);
+                                if (loc != null) {
                                   await ref
                                       .read(locationProvider.notifier)
-                                      .select(match.first);
+                                      .select(loc);
                                   ref.invalidate(weatherProvider);
-                                } else {
+                                } else if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
-                                          'Try a major city name, or pick from the list.'),
+                                          'Place not found. Try another name.'),
                                     ),
                                   );
                                   _pickLocation();
@@ -278,7 +286,7 @@ class _SearchField extends StatelessWidget {
               controller: controller,
               style: const TextStyle(fontSize: 14),
               decoration: const InputDecoration(
-                hintText: 'Search location...',
+                hintText: 'home.search_hint'.tr(),
                 hintStyle: TextStyle(color: AppColors.textTertiary),
                 border: InputBorder.none,
                 isDense: true,
@@ -299,7 +307,7 @@ class _TabRow extends StatelessWidget {
   final ValueChanged<int> onChanged;
   @override
   Widget build(BuildContext context) {
-    const labels = ['Overview', 'Hourly', '7-Day'];
+    final labels = ['home.tab_overview'.tr(), 'home.tab_hourly'.tr(), 'home.tab_7day'.tr()];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(

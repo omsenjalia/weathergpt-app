@@ -20,13 +20,11 @@ class MarkdownUtils {
     return text;
   }
 
-  /// Prefer a short spoken summary: first non-empty sentence-ish chunk.
+  /// Speak the body only (not the short title/verdict).
   static String spokenSummary(String verdict, String explanation) {
-    final combined = forSpeech(
-      explanation.trim().isEmpty ? verdict : '$verdict. $explanation',
-    );
-    if (combined.length <= 280) return combined;
-    final cut = combined.substring(0, 280);
+    final body = forSpeech(explanation.trim().isEmpty ? verdict : explanation);
+    if (body.length <= 320) return body;
+    final cut = body.substring(0, 320);
     final lastStop = cut.lastIndexOf(RegExp(r'[.!?]'));
     return lastStop > 40 ? cut.substring(0, lastStop + 1) : '$cut…';
   }

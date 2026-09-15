@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../core/theme/app_colors.dart';
@@ -80,7 +79,16 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   VoiceNotifier(this._ref) : super(const VoiceState());
   final Ref _ref;
   final _speech = stt.SpeechToText();
-  final _recorder = AudioRecorder();
+
+  String _sttLocale() {
+    final lang = _ref.read(settingsProvider).language.toLowerCase();
+    const map = {
+      'en': 'en_US', 'hi': 'hi_IN', 'gu': 'gu_IN', 'mr': 'mr_IN',
+      'ta': 'ta_IN', 'te': 'te_IN', 'kn': 'kn_IN', 'ml': 'ml_IN', 'bn': 'bn_IN',
+    };
+    return map[lang] ?? 'en_US';
+  }
+
   Timer? _silenceTimer;
 
   Future<void> startListening() async {
@@ -116,7 +124,9 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       }
 
       state = const VoiceState(status: VoiceStatus.listening);
+      final localeId = _sttLocale();
       await _speech.listen(
+        localeId: localeId,
         onResult: (result) {
           state = state.copyWith(transcript: result.recognizedWords);
           _restartSilenceTimer();
@@ -149,12 +159,6 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     _silenceTimer?.cancel();
     try {
       await _speech.stop();
-    } catch (_) {}
-    // Best-effort stop recorder if it was ever started
-    try {
-      if (await _recorder.isRecording()) {
-        await _recorder.stop();
-      }
     } catch (_) {}
     state = state.copyWith(status: VoiceStatus.processing);
     await submitToBackend();
@@ -322,7 +326,9 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       final voice = _ref.read(settingsProvider);
       final tts = FlutterTts();
       await tts.setLanguage(voice.ttsVoiceLocale);
-      await tts.setSpeechRate(voice.ttsSpeed.clamp(0.2, 1.5));
+      // FlutterTts: ~0.5 is natural on Android; UI stores 0.3–1.0.
+      final rate = (voice.ttsSpeed * 0.55).clamp(0.25, 0.75);
+      await tts.setSpeechRate(rate);
       final clean = MarkdownUtils.forSpeech(text);
       if (clean.isNotEmpty) {
         await tts.speak(clean);
@@ -336,9 +342,6 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     try {
       _speech.stop();
     } catch (_) {}
-    try {
-      _recorder.stop();
-    } catch (_) {}
     state = const VoiceState();
   }
 
@@ -346,7 +349,6 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   void dispose() {
     _silenceTimer?.cancel();
     _speech.stop();
-    _recorder.dispose();
     super.dispose();
   }
 }
