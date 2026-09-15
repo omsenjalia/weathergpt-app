@@ -9,6 +9,7 @@ import '../../../core/widgets/api_error_view.dart';
 import '../../explore/providers/saved_locations_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/weather_provider.dart';
+import '../widgets/weather_video_background.dart';
 import '../../settings/providers/settings_provider.dart';
 
 class WeatherHomeScreen extends ConsumerStatefulWidget {
@@ -125,23 +126,9 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
         ),
         data: (w) => Stack(
           children: [
-            // soft sky wash
-            Positioned(
-              top: -80,
-              left: -40,
-              right: -40,
-              height: 360,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.sky.withValues(alpha: 0.22),
-                      AppColors.accent.withValues(alpha: 0.08),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
+            // Real looping weather video (condition-matched)
+            Positioned.fill(
+              child: WeatherVideoBackground(condition: w.condition),
             ),
             SafeArea(
               bottom: false,
