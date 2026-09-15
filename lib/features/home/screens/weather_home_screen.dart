@@ -191,11 +191,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
-<<<<<<< HEAD
-                                          'Place not found. Try another name.'),
-=======
                                           'Place not found. Try another name or pick from the list.'),
->>>>>>> origin/main
                                     ),
                                   );
                                   _pickLocation();
