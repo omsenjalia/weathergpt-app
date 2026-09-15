@@ -9,6 +9,7 @@ import '../../../core/widgets/api_error_view.dart';
 import '../../explore/providers/saved_locations_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/weather_provider.dart';
+import '../../settings/providers/settings_provider.dart';
 
 class WeatherHomeScreen extends ConsumerStatefulWidget {
   const WeatherHomeScreen({super.key});
@@ -101,14 +102,15 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
     );
     if (selected != null) {
       await ref.read(locationProvider.notifier).select(selected);
-      ref.invalidate(weatherProvider);
+      ref.invalidate(weatherProvider(ref.read(settingsProvider).userPersona));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final location = ref.watch(locationProvider);
-    final weatherAsync = ref.watch(weatherProvider);
+    final persona = ref.watch(settingsProvider).userPersona;
+    final weatherAsync = ref.watch(weatherProvider(persona));
     final bottomInset = MediaQuery.paddingOf(context).bottom + 80;
 
     return Scaffold(
@@ -118,8 +120,8 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
           child: CircularProgressIndicator(color: AppColors.accent),
         ),
         error: (e, _) => ApiErrorView(
-          message: e.toString(),
-          onRetry: () => ref.invalidate(weatherProvider),
+          error: e,
+          onRetry: () => ref.invalidate(weatherProvider(persona)),
         ),
         data: (w) => Stack(
           children: [
