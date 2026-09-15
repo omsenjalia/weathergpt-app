@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -61,19 +62,19 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('Choose location',
-                        style: TextStyle(
+                    child: Text('home.choose_location'.tr(),
+                        style: const TextStyle(
                             fontSize: 17, fontWeight: FontWeight.w700)),
                   ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.my_location,
                       color: AppColors.statusAmber),
-                  title: const Text('Use my location'),
+                  title: Text('home.use_my_location'.tr()),
                   onTap: () async {
                     final loc =
                         await ref.read(locationProvider.notifier).selectFromGps();
@@ -151,9 +152,9 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'your weather, always clear.',
-                              style: TextStyle(
+                            Text(
+                              'home.tagline'.tr(),
+                              style: const TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w500,
                                 fontStyle: FontStyle.italic,
@@ -291,9 +292,9 @@ class _SearchField extends StatelessWidget {
             child: TextField(
               controller: controller,
               style: const TextStyle(fontSize: 14),
-              decoration: const InputDecoration(
-                hintText: 'Search location...',
-                hintStyle: TextStyle(color: AppColors.textTertiary),
+              decoration: InputDecoration(
+                hintText: 'home.search_hint'.tr(),
+                hintStyle: const TextStyle(color: AppColors.textTertiary),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -313,7 +314,7 @@ class _TabRow extends StatelessWidget {
   final ValueChanged<int> onChanged;
   @override
   Widget build(BuildContext context) {
-    const labels = ['Overview', 'Hourly', '7-Day'];
+    final labels = ['home.tab_overview'.tr(), 'home.tab_hourly'.tr(), 'home.tab_7day'.tr()];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -993,3 +994,4 @@ class _VoiceFabState extends State<_VoiceFab>
     );
   }
 }
+

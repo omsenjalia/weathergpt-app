@@ -25,11 +25,25 @@ class LanguageSelectScreen extends ConsumerWidget {
   ];
 
   Future<void> _continue(BuildContext context, WidgetRef ref) async {
-    await Hive.box('settings').put(
-      'language',
-      ref.read(onboardingProvider).selectedLanguage,
-    );
-    if (context.mounted) context.go('/onboarding/focus');
+    final code = ref.read(onboardingProvider).selectedLanguage;
+    await Hive.box('settings').put('language', code);
+    // Map language → TTS voice locale for later speech
+    const ttsMap = {
+      'en': 'en-US',
+      'hi': 'hi-IN',
+      'gu': 'gu-IN',
+      'mr': 'mr-IN',
+      'ta': 'ta-IN',
+      'te': 'te-IN',
+      'kn': 'kn-IN',
+      'ml': 'ml-IN',
+      'bn': 'bn-IN',
+    };
+    await Hive.box('settings').put('tts_voice_locale', ttsMap[code] ?? 'en-US');
+    if (context.mounted) {
+      await context.setLocale(Locale(code));
+      context.go('/onboarding/focus');
+    }
   }
 
   @override

@@ -135,6 +135,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       state = const VoiceState(status: VoiceStatus.listening);
       final localeId = _sttLocale();
       await _speech.listen(
+        localeId: localeId,
         onResult: (result) {
           state = state.copyWith(transcript: result.recognizedWords);
           _restartSilenceTimer();
@@ -142,7 +143,6 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
             stopListening();
           }
         },
-        localeId: localeId,
         listenOptions: stt.SpeechListenOptions(
           partialResults: true,
           listenMode: stt.ListenMode.confirmation,
@@ -335,7 +335,9 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       final voice = _ref.read(settingsProvider);
       final tts = FlutterTts();
       await tts.setLanguage(voice.ttsVoiceLocale);
-      await tts.setSpeechRate(voice.ttsSpeed.clamp(0.2, 1.5));
+      // FlutterTts: ~0.5 is natural on Android; UI stores 0.3–1.0.
+      final rate = (voice.ttsSpeed * 0.55).clamp(0.25, 0.75);
+      await tts.setSpeechRate(rate);
       final clean = MarkdownUtils.forSpeech(text);
       if (clean.isNotEmpty) {
         await tts.speak(clean);

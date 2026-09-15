@@ -24,8 +24,9 @@ class _ConversationalResultScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Body text only — skip the card title/verdict.
       final spoken = MarkdownUtils.spokenSummary(
-        widget.response.verdict,
+        '',
         widget.response.explanation,
       );
       ref.read(voiceProvider.notifier).speak(spoken);

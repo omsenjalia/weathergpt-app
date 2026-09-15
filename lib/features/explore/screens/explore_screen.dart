@@ -1,17 +1,13 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_card.dart';
-import '../providers/map_provider.dart';
 import '../../home/providers/location_provider.dart';
+import '../../settings/providers/settings_provider.dart';
+import '../providers/map_provider.dart';
 
-/// Explore map powered by Windy's official embed (same approach as the web app).
-///
-/// Uses [https://embed.windy.com/embed2.html] inside a [WebView], with in-app
-/// layer chips that change the `overlay=` query parameter.
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
 
@@ -25,18 +21,28 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   String? _lastUrl;
 
   static const _layerMeta = <MapLayer, (IconData, Color, String)>{
-    MapLayer.wind: (Icons.air, Color(0xFF38BDF8), 'Wind'),
-    MapLayer.rain: (Icons.water_drop_outlined, Color(0xFF60A5FA), 'Rain'),
-    MapLayer.temp: (Icons.thermostat, Color(0xFFF59E0B), 'Temp'),
-    MapLayer.clouds: (Icons.cloud_outlined, Color(0xFF94A3B8), 'Clouds'),
-    MapLayer.radar: (Icons.radar, Color(0xFF10B981), 'Radar'),
-    MapLayer.waves: (Icons.waves, Color(0xFF06B6D4), 'Waves'),
-    MapLayer.pressure: (Icons.speed, Color(0xFFEC4899), 'Pressure'),
+    MapLayer.wind: (Icons.air, Color(0xFF38BDF8), 'map.layer_wind'),
+    MapLayer.rain: (Icons.water_drop_outlined, Color(0xFF60A5FA), 'map.layer_rain'),
+    MapLayer.temp: (Icons.thermostat, Color(0xFFF59E0B), 'map.layer_temp'),
+    MapLayer.clouds: (Icons.cloud_outlined, Color(0xFF94A3B8), 'map.layer_clouds'),
+    MapLayer.radar: (Icons.radar, Color(0xFF10B981), 'map.layer_radar'),
+    MapLayer.waves: (Icons.waves, Color(0xFF06B6D4), 'map.layer_waves'),
+    MapLayer.pressure: (Icons.speed, Color(0xFFEC4899), 'map.layer_pressure'),
+    MapLayer.thunder: (Icons.thunderstorm_outlined, Color(0xFFA78BFA), 'map.layer_thunder'),
+    MapLayer.snow: (Icons.ac_unit, Color(0xFFE0F2FE), 'map.layer_snow'),
+    MapLayer.humidity: (Icons.opacity, Color(0xFF34D399), 'map.layer_humidity'),
+    MapLayer.cape: (Icons.bolt, Color(0xFFF97316), 'map.layer_cape'),
+  };
+
+  static const _productLabels = <MapProduct, String>{
+    MapProduct.ecmwf: 'ECMWF',
+    MapProduct.gfs: 'GFS',
+    MapProduct.icon: 'ICON',
+    MapProduct.nems: 'NEMS',
   };
 
   Color get _accent {
-    final persona = Hive.box('settings')
-        .get('user_persona', defaultValue: 'everyone') as String;
+    final persona = ref.watch(settingsProvider).userPersona;
     return switch (persona) {
       'farmer' => AppColors.farmerGreen,
       'researcher' => AppColors.researcherBlue,
@@ -45,26 +51,26 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 
   String _embedUrl(MapState map) {
-    final lat = map.lat;
-    final lon = map.lon;
-    final zoom = map.zoom;
     final overlay = map.activeLayer.name;
+    final product = map.product.name;
+    final menu = map.showMenu ? 'true' : '';
+    final marker = map.showMarker ? 'true' : '';
     return 'https://embed.windy.com/embed2.html'
-        '?lat=$lat&lon=$lon'
-        '&detailLat=$lat&detailLon=$lon'
+        '?lat=${map.lat}&lon=${map.lon}'
+        '&detailLat=${map.lat}&detailLon=${map.lon}'
         '&width=100%25&height=100%25'
-        '&zoom=$zoom'
+        '&zoom=${map.zoom}'
         '&level=surface'
         '&overlay=$overlay'
-        '&product=ecmwf'
-        '&menu='
+        '&product=$product'
+        '&menu=$menu'
         '&message=true'
-        '&marker=true'
+        '&marker=$marker'
         '&calendar=now'
         '&pressure='
         '&type=map'
         '&location=coordinates'
-        '&detail='
+        '&detail=true'
         '&metricWind=default'
         '&metricTemp=default'
         '&radarRange=-1';
@@ -105,10 +111,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         await ref.read(mapProvider.notifier).detectCurrentLocation();
     if (!mounted) return;
     if (location == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text(
-            'Enable location permission and services to center the map.'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('map.location_denied'.tr())),
+      );
     }
   }
 
@@ -116,27 +121,122 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   Widget build(BuildContext context) {
     final map = ref.watch(mapProvider);
     final homeLoc = ref.watch(locationProvider);
-    // Keep Windy embed aligned with the location chosen on Home.
+    final persona = ref.watch(settingsProvider).userPersona;
+    final isResearcher = persona == 'researcher';
+
     if ((map.lat - homeLoc.lat).abs() > 0.01 ||
         (map.lon - homeLoc.lon).abs() > 0.01) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.read(mapProvider.notifier).setCenter(homeLoc.lat, homeLoc.lon, zoom: 8);
+        ref
+            .read(mapProvider.notifier)
+            .setCenter(homeLoc.lat, homeLoc.lon, zoom: map.zoom < 7 ? 8 : map.zoom);
       });
     }
     _ensureController(map);
 
+    final layers = isResearcher
+        ? _layerMeta.keys.toList()
+        : [
+            MapLayer.wind,
+            MapLayer.rain,
+            MapLayer.temp,
+            MapLayer.clouds,
+            MapLayer.radar,
+            MapLayer.pressure,
+          ];
+
     return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            _LayerBar(
-              active: map.activeLayer,
-              accent: _accent,
-              meta: _layerMeta,
-              onSelect: (layer) =>
-                  ref.read(mapProvider.notifier).setLayer(layer),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+              child: Row(
+                children: [
+                  Text(
+                    'map.title'.tr(),
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  const Spacer(),
+                  if (isResearcher)
+                    Text(
+                      'map.researcher_mode'.tr(),
+                      style: const TextStyle(
+                          fontSize: 11, color: AppColors.researcherBlue),
+                    ),
+                ],
+              ),
             ),
+            // Layer chips
+            SizedBox(
+              height: 44,
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                scrollDirection: Axis.horizontal,
+                itemCount: layers.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) {
+                  final layer = layers[i];
+                  final meta = _layerMeta[layer]!;
+                  final selected = map.activeLayer == layer;
+                  return FilterChip(
+                    selected: selected,
+                    showCheckmark: false,
+                    avatar: Icon(meta.$1,
+                        size: 16,
+                        color: selected ? Colors.white : meta.$2),
+                    label: Text(meta.$3.tr()),
+                    selectedColor: _accent.withValues(alpha: 0.35),
+                    backgroundColor: AppColors.surfaceCard,
+                    side: BorderSide(
+                      color: selected
+                          ? _accent.withValues(alpha: 0.7)
+                          : AppColors.borderSubtle,
+                    ),
+                    labelStyle: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: selected
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ),
+                    onSelected: (_) =>
+                        ref.read(mapProvider.notifier).setLayer(layer),
+                  );
+                },
+              ),
+            ),
+            if (isResearcher) ...[
+              const SizedBox(height: 6),
+              SizedBox(
+                height: 36,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  children: [
+                    for (final p in MapProduct.values) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(_productLabels[p]!),
+                          selected: map.product == p,
+                          onSelected: (_) =>
+                              ref.read(mapProvider.notifier).setProduct(p),
+                          selectedColor:
+                              AppColors.researcherBlue.withValues(alpha: 0.3),
+                          labelStyle: const TextStyle(fontSize: 11),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 6),
             Expanded(
               child: Stack(
                 children: [
@@ -148,11 +248,25 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       child: Center(child: CircularProgressIndicator()),
                     ),
                   Positioned(
-                    right: 16,
-                    bottom: 24,
+                    right: 12,
+                    bottom: 20,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        _MapFab(
+                          icon: Icons.add,
+                          color: _accent,
+                          onTap: () =>
+                              ref.read(mapProvider.notifier).zoomIn(),
+                        ),
+                        const SizedBox(height: 8),
+                        _MapFab(
+                          icon: Icons.remove,
+                          color: _accent,
+                          onTap: () =>
+                              ref.read(mapProvider.notifier).zoomOut(),
+                        ),
+                        const SizedBox(height: 8),
                         _MapFab(
                           icon: map.isLoadingLocation
                               ? null
@@ -161,21 +275,49 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                           color: _accent,
                           onTap: _locate,
                         ),
-                        const SizedBox(height: 10),
-                        const AppCard(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          radius: 10,
-                          child: Text(
-                            'Windy · ECMWF',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        if (isResearcher) ...[
+                          const SizedBox(height: 8),
+                          _MapFab(
+                            icon: map.showMenu
+                                ? Icons.menu_open
+                                : Icons.menu,
+                            color: _accent,
+                            onTap: () =>
+                                ref.read(mapProvider.notifier).toggleMenu(),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          _MapFab(
+                            icon: map.showMarker
+                                ? Icons.location_on
+                                : Icons.location_off_outlined,
+                            color: _accent,
+                            onTap: () => ref
+                                .read(mapProvider.notifier)
+                                .toggleMarker(),
+                          ),
+                        ],
                       ],
+                    ),
+                  ),
+                  Positioned(
+                    left: 12,
+                    bottom: 20,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.borderSubtle),
+                      ),
+                      child: Text(
+                        'Windy · ${_productLabels[map.product]} · z${map.zoom}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -188,112 +330,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 }
 
-class _LayerBar extends StatelessWidget {
-  const _LayerBar({
-    required this.active,
-    required this.accent,
-    required this.meta,
-    required this.onSelect,
-  });
-
-  final MapLayer active;
-  final Color accent;
-  final Map<MapLayer, (IconData, Color, String)> meta;
-  final ValueChanged<MapLayer> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: const BoxDecoration(
-        color: AppColors.bgPrimary,
-        border: Border(
-          bottom: BorderSide(color: AppColors.borderSubtle),
-        ),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final entry in meta.entries) ...[
-              _LayerChip(
-                label: entry.value.$3,
-                icon: entry.value.$1,
-                color: entry.value.$2,
-                selected: active == entry.key,
-                accent: accent,
-                onTap: () => onSelect(entry.key),
-              ),
-              const SizedBox(width: 8),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LayerChip extends StatelessWidget {
-  const _LayerChip({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.selected,
-    required this.accent,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final Color color;
-  final bool selected;
-  final Color accent;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: selected ? accent.withValues(alpha: 0.28) : AppColors.surfaceCard,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected ? accent.withValues(alpha: 0.7) : AppColors.borderSubtle,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 14, color: selected ? Colors.white : color),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Colors.white : AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _MapFab extends StatelessWidget {
   const _MapFab({
-    required this.icon,
-    required this.loading,
     required this.color,
     required this.onTap,
+    this.icon,
+    this.loading = false,
   });
 
   final IconData? icon;
@@ -311,19 +353,17 @@ class _MapFab extends StatelessWidget {
         customBorder: const CircleBorder(),
         onTap: loading ? null : onTap,
         child: SizedBox(
-          width: 48,
-          height: 48,
+          width: 44,
+          height: 44,
           child: Center(
             child: loading
                 ? SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: color,
-                    ),
+                        strokeWidth: 2, color: color),
                   )
-                : Icon(icon, color: color, size: 22),
+                : Icon(icon, color: color, size: 20),
           ),
         ),
       ),
