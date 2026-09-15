@@ -164,19 +164,33 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                             _SearchField(
                               controller: _searchCtrl,
                               onSubmit: (q) async {
-                                // Simple preset match; full geocode can come later
+                                final query = q.trim();
+                                if (query.isEmpty) {
+                                  _pickLocation();
+                                  return;
+                                }
+                                // Prefer local presets, then Open-Meteo geocode
                                 final match = kPresetLocations.where((l) =>
-                                    l.name.toLowerCase().contains(q.toLowerCase()));
-                                if (match.isNotEmpty) {
+                                    l.name.toLowerCase().contains(query.toLowerCase()));
+                                AppLocation? loc =
+                                    match.isNotEmpty ? match.first : null;
+                                loc ??= await geocodePlaceName(query);
+                                if (loc != null) {
                                   await ref
                                       .read(locationProvider.notifier)
-                                      .select(match.first);
+                                      .select(loc);
                                   ref.invalidate(weatherProvider);
-                                } else {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text('Location: ${loc.name}')),
+                                    );
+                                  }
+                                } else if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
-                                          'Try a major city name, or pick from the list.'),
+                                          'Place not found. Try another name or pick from the list.'),
                                     ),
                                   );
                                   _pickLocation();
