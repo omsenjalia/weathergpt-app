@@ -7,10 +7,13 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/api_error_view.dart';
 import '../../explore/providers/saved_locations_provider.dart';
+import '../../settings/providers/settings_provider.dart';
+import '../../settings/providers/developer_options_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/weather_provider.dart';
+import '../theme/atmosphere_theme.dart';
+import '../widgets/atmosphere_video_background.dart';
 
-/// Web-parity weather landing page (Overview / metrics / prompts / voice).
 class WeatherHomeScreen extends ConsumerStatefulWidget {
   const WeatherHomeScreen({super.key});
 
@@ -19,14 +22,7 @@ class WeatherHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
-  int _tab = 0; // 0 overview, 1 hourly, 2 7-day
-  final _searchCtrl = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
+  int _tab = 0;
 
   Future<void> _pickLocation() async {
     final current = ref.read(locationProvider);
@@ -36,12 +32,13 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
       backgroundColor: AppColors.surfaceCard,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         final options = <AppLocation>[
           ...kPresetLocations,
-          ...saved.map((s) => AppLocation(name: s.name, lat: s.lat, lon: s.lon)),
+          ...saved
+              .map((s) => AppLocation(name: s.name, lat: s.lat, lon: s.lon)),
         ];
         final seen = <String>{};
         final unique = <AppLocation>[];
@@ -50,38 +47,38 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
         }
         return SafeArea(
           child: SizedBox(
-            height: MediaQuery.of(ctx).size.height * 0.65,
+            height: MediaQuery.of(ctx).size.height * 0.6,
             child: Column(
               children: [
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Container(
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.borderSubtle,
+                    color: AppColors.borderStrong,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('home.choose_location'.tr(),
-                        style: const TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    'home.choose_location'.tr(),
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.my_location,
-                      color: AppColors.statusAmber),
+                  leading:
+                      const Icon(Icons.my_location, color: AppColors.accent),
                   title: Text('home.use_my_location'.tr()),
                   onTap: () async {
-                    final loc =
-                        await ref.read(locationProvider.notifier).selectFromGps();
+                    final loc = await ref
+                        .read(locationProvider.notifier)
+                        .selectFromGps();
                     if (ctx.mounted) Navigator.pop(ctx, loc);
                   },
                 ),
-                const Divider(height: 1),
+                const Divider(height: 1, color: AppColors.borderSubtle),
                 Expanded(
                   child: ListView.builder(
                     itemCount: unique.length,
@@ -89,14 +86,15 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                       final loc = unique[i];
                       final sel = loc.name == current.name;
                       return ListTile(
-                        leading: Icon(Icons.location_on_outlined,
-                            color: sel
-                                ? AppColors.statusAmber
-                                : AppColors.textSecondary),
+                        leading: Icon(
+                          Icons.place_outlined,
+                          color:
+                              sel ? AppColors.accent : AppColors.textSecondary,
+                        ),
                         title: Text(loc.name),
                         trailing: sel
-                            ? const Icon(Icons.check,
-                                color: AppColors.statusAmber, size: 20)
+                            ? const Icon(Icons.check_circle,
+                                color: AppColors.accent, size: 20)
                             : null,
                         onTap: () => Navigator.pop(ctx, loc),
                       );
@@ -111,244 +109,442 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
     );
     if (selected != null) {
       await ref.read(locationProvider.notifier).select(selected);
-      ref.invalidate(weatherProvider);
+      ref.invalidate(weatherProvider(ref.read(settingsProvider).userPersona));
     }
   }
 
-  void _openVoice([String? prompt]) {
-    context.push('/voice/listening', extra: {
-      'prompt': prompt,
-      'accent': AppColors.statusAmber,
-    });
-  }
-
-
   @override
   Widget build(BuildContext context) {
-    final weatherAsync = ref.watch(weatherProvider('everyone'));
     final location = ref.watch(locationProvider);
+    final persona = ref.watch(settingsProvider).userPersona;
+    final weatherAsync = ref.watch(weatherProvider(persona));
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final bottomInset = bottomPad + 100; // space for nav + mic
 
-    return weatherAsync.when(
-      loading: () => const Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => ApiErrorView(
-        error: e,
-        onRetry: () => ref.invalidate(weatherProvider('everyone')),
-      ),
-      data: (w) => Scaffold(
-        backgroundColor: AppColors.bgPrimary,
-        body: SafeArea(
-          child: Column(
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: weatherAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.accent),
+        ),
+        error: (e, _) => ApiErrorView(
+          error: e,
+          onRetry: () => ref.invalidate(weatherProvider(persona)),
+        ),
+        data: (w) {
+          final sunrise = parseWeatherTime(w.sunrise);
+          final sunset = parseWeatherTime(w.sunset);
+          final dev = ref.watch(developerOptionsProvider);
+          final period = (dev.enabled && dev.forcePeriod != null)
+              ? dev.forcePeriod!
+              : periodFromLocalTime(DateTime.now(), sunrise, sunset);
+          final sky = (dev.enabled && dev.forceSky != null)
+              ? dev.forceSky!
+              : conditionFromWeather(w);
+          final palette = paletteFor(period, sky);
+
+          return Stack(
             children: [
-              Expanded(
+              Positioned.fill(
+                child: (dev.enabled && dev.disableVideoSky)
+                    ? DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [palette.top, palette.mid, palette.bottom],
+                          ),
+                        ),
+                      )
+                    : AtmosphereVideoBackground(
+                        palette: palette,
+                        sky: sky,
+                        period: period,
+                      ),
+              ),
+              // readability veil over lower content
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: MediaQuery.sizeOf(context).height * 0.55,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        palette.bottom.withValues(alpha: 0.55),
+                        const Color(0xFF0B1220).withValues(alpha: 0.92),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SafeArea(
+                bottom: false,
                 child: CustomScrollView(
                   slivers: [
-                    SliverToBoxAdapter(child: _Header(onMenu: () {})),
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
+                        child: Row(
                           children: [
-                            Text(
-                              'home.tagline'.tr(),
-                              style: const TextStyle(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w500,
-                                fontStyle: FontStyle.italic,
-                                height: 1.25,
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: _pickLocation,
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.near_me_rounded,
+                                        size: 18, color: palette.accent),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        location.name.split(',').first,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: palette.text,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Icon(Icons.keyboard_arrow_down_rounded,
+                                        color: palette.textMuted),
+                                  ],
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 18),
-                            _SearchField(
-                              controller: _searchCtrl,
-                              onSubmit: (q) async {
-                                final query = q.trim();
-                                if (query.isEmpty) {
-                                  _pickLocation();
-                                  return;
-                                }
-                                // Prefer local presets, then Open-Meteo geocode
-                                final match = kPresetLocations.where((l) =>
-                                    l.name.toLowerCase().contains(query.toLowerCase()));
-                                AppLocation? loc =
-                                    match.isNotEmpty ? match.first : null;
-                                loc ??= await geocodePlaceName(query);
-                                if (loc != null) {
-                                  await ref
-                                      .read(locationProvider.notifier)
-                                      .select(loc);
-                                  ref.invalidate(weatherProvider);
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                          content: Text('Location: ${loc.name}')),
-                                    );
-                                  }
-                                } else if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                          'Place not found. Try another name or pick from the list.'),
-                                    ),
-                                  );
-                                  _pickLocation();
-                                }
-                              },
-                              onTapIcon: _pickLocation,
+                            IconButton(
+                              onPressed: () => context.go('/profile'),
+                              icon: Icon(Icons.settings_outlined,
+                                  color: palette.text),
                             ),
-                            const SizedBox(height: 14),
-                            _TabRow(
-                              index: _tab,
-                              onChanged: (i) => setState(() => _tab = i),
-                            ),
-                            const SizedBox(height: 14),
-                            _HeroCard(
-                              weather: w,
-                              locationLabel: location.name.split(',').first,
-                              onLocationTap: _pickLocation,
-                            ),
-                            const SizedBox(height: 12),
-                            if (_tab == 0)
-                              _MetricGrid(weather: w)
-                            else if (_tab == 1)
-                              _HourlyList(points: w.hourly)
-                            else
-                              _SevenDayList(days: w.forecast),
-                            const SizedBox(height: 120),
                           ],
                         ),
                       ),
                     ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                        child: _HeroCard(weather: w, palette: palette),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                        child: _MetricStrip(weather: w, palette: palette),
+                      ),
+                    ),
+                    const Spacerv(height: 18),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _SegmentTabs(
+                          index: _tab,
+                          onChanged: (i) => setState(() => _tab = i),
+                          palette: palette,
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                        child: _tab == 0
+                            ? _OverviewGrid(weather: w, palette: palette)
+                            : _tab == 1
+                                ? _HourlyPanel(weather: w, palette: palette)
+                                : _DailyPanel(weather: w, palette: palette),
+                      ),
+                    ),
+                    SliverToBoxAdapter(child: SizedBox(height: bottomInset + 24)),
                   ],
                 ),
               ),
-              // Large animated mic only — chat lives in the Chat tab.
-              _VoiceFab(onTap: () => _openVoice()),
+              // Mic FAB — above floating nav bar (classic position)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: bottomPad + 78,
+                child: Center(
+                  child: _VoiceOrb(
+                    palette: palette,
+                    onTap: () => context.push('/voice/listening', extra: {
+                      'accent': palette.accent,
+                    }),
+                  ),
+                ),
+              ),
             ],
-          ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class Spacerv extends StatelessWidget {
+  const Spacerv({super.key, required this.height});
+  final double height;
+  @override
+  Widget build(BuildContext context) =>
+      SliverToBoxAdapter(child: SizedBox(height: height));
+}
+
+class _HeroCard extends StatelessWidget {
+  const _HeroCard({required this.weather, required this.palette});
+  final WeatherSnapshot weather;
+  final AtmospherePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = DateFormat('EEEE, MMM d').format(DateTime.now());
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 700),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(
+          offset: Offset(0, 16 * (1 - t)),
+          child: child,
+        ),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
+        decoration: BoxDecoration(
+          color: palette.card,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: palette.glow.withValues(alpha: 0.25),
+              blurRadius: 28,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(date,
+                style: TextStyle(
+                    color: palette.textMuted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500)),
+            const SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    weather.temperatureC == null
+                        ? '—'
+                        : '${weather.temperatureC!.round()}°',
+                    style: TextStyle(
+                      fontSize: 72,
+                      height: 0.95,
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: -2,
+                      color: palette.text,
+                    ),
+                  ),
+                ),
+                Icon(_iconFor(weather.condition),
+                    size: 48, color: palette.accent),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(weather.condition,
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: palette.text)),
+            if (weather.feelsLikeC != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                '${'home.feels_like'.tr()} ${weather.feelsLikeC!.round()}°',
+                style: TextStyle(color: palette.textMuted),
+              ),
+            ],
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                _pill('H ${weather.highC?.round() ?? '—'}°', palette),
+                const SizedBox(width: 8),
+                _pill('L ${weather.lowC?.round() ?? '—'}°', palette),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
-}
 
-class _Header extends StatelessWidget {
-  const _Header({required this.onMenu});
-  final VoidCallback onMenu;
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 12, 0),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => context.push('/settings'),
-            icon: const Icon(Icons.menu),
-          ),
-          const Expanded(
-            child: Text(
-              'WeatherGPT',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(width: 48),
-        ],
-      ),
-    );
+  Widget _pill(String t, AtmospherePalette p) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(t,
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: p.textMuted)),
+      );
+
+  IconData _iconFor(String c) {
+    final s = c.toLowerCase();
+    if (s.contains('thunder')) return Icons.thunderstorm_rounded;
+    if (s.contains('rain') || s.contains('drizzle')) {
+      return Icons.water_drop_rounded;
+    }
+    if (s.contains('cloud') || s.contains('overcast')) return Icons.cloud_rounded;
+    if (s.contains('clear') || s.contains('sun')) return Icons.wb_sunny_rounded;
+    return Icons.wb_cloudy_rounded;
   }
 }
 
-class _SearchField extends StatelessWidget {
-  const _SearchField({
-    required this.controller,
-    required this.onSubmit,
-    required this.onTapIcon,
-  });
-  final TextEditingController controller;
-  final ValueChanged<String> onSubmit;
-  final VoidCallback onTapIcon;
+class _MetricStrip extends StatelessWidget {
+  const _MetricStrip({required this.weather, required this.palette});
+  final WeatherSnapshot weather;
+  final AtmospherePalette palette;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCardAlt,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.borderSubtle),
+    final items = [
+      (
+        Icons.water_drop_outlined,
+        weather.rainProbability == null
+            ? '—'
+            : '${weather.rainProbability!.round()}%',
+        'Rain'
       ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onTapIcon,
-            child: const Icon(Icons.search, size: 20, color: AppColors.textTertiary),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              style: const TextStyle(fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'home.search_hint'.tr(),
-                hintStyle: const TextStyle(color: AppColors.textTertiary),
-                border: InputBorder.none,
-                isDense: true,
+      (
+        Icons.air,
+        weather.windKmh == null
+            ? '—'
+            : '${weather.windKmh!.toStringAsFixed(0)}',
+        'Wind km/h'
+      ),
+      (
+        Icons.opacity,
+        weather.humidity == null ? '—' : '${weather.humidity!.round()}%',
+        'Humidity'
+      ),
+      (
+        Icons.compress,
+        weather.pressureHpa == null
+            ? '—'
+            : '${weather.pressureHpa!.round()}',
+        'hPa'
+      ),
+      (
+        Icons.explore_outlined,
+        windDirLabel(weather.windDirection),
+        'Direction'
+      ),
+    ];
+    return SizedBox(
+      height: 96,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) {
+          final it = items[i];
+          return TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: Duration(milliseconds: 400 + i * 80),
+            curve: Curves.easeOut,
+            builder: (context, t, child) => Opacity(
+              opacity: t,
+              child: Transform.translate(
+                offset: Offset(0, 12 * (1 - t)),
+                child: child,
               ),
-              textInputAction: TextInputAction.search,
-              onSubmitted: onSubmit,
             ),
-          ),
-        ],
+            child: Container(
+              width: 102,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: palette.card,
+                borderRadius: BorderRadius.circular(18),
+                border:
+                    Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(it.$1, size: 18, color: palette.accent),
+                  const Spacer(),
+                  Text(it.$2,
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: palette.text)),
+                  Text(it.$3,
+                      style: TextStyle(
+                          fontSize: 11, color: palette.textMuted)),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 }
 
-class _TabRow extends StatelessWidget {
-  const _TabRow({required this.index, required this.onChanged});
+class _SegmentTabs extends StatelessWidget {
+  const _SegmentTabs({
+    required this.index,
+    required this.onChanged,
+    required this.palette,
+  });
   final int index;
   final ValueChanged<int> onChanged;
+  final AtmospherePalette palette;
+
   @override
   Widget build(BuildContext context) {
-    final labels = ['home.tab_overview'.tr(), 'home.tab_hourly'.tr(), 'home.tab_7day'.tr()];
+    final labels = [
+      'home.tab_overview'.tr(),
+      'home.tab_hourly'.tr(),
+      'home.tab_7day'.tr(),
+    ];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.borderSubtle),
+        color: palette.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
-        children: List.generate(3, (i) {
-          final selected = index == i;
+        children: List.generate(labels.length, (i) {
+          final sel = i == index;
           return Expanded(
             child: GestureDetector(
               onTap: () => onChanged(i),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
+                duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: selected ? AppColors.surfaceCardAlt : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                  border: selected
-                      ? Border.all(color: AppColors.borderSubtle)
-                      : null,
+                  color: sel
+                      ? palette.accent.withValues(alpha: 0.22)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                alignment: Alignment.center,
                 child: Text(
                   labels[i],
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: sel ? palette.accent : palette.textMuted,
                   ),
                 ),
               ),
@@ -360,567 +556,168 @@ class _TabRow extends StatelessWidget {
   }
 }
 
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({
-    required this.weather,
-    required this.locationLabel,
-    required this.onLocationTap,
-  });
+class _OverviewGrid extends StatelessWidget {
+  const _OverviewGrid({required this.weather, required this.palette});
   final WeatherSnapshot weather;
-  final String locationLabel;
-  final VoidCallback onLocationTap;
-
-  IconData get _icon {
-    final c = weather.weatherCode;
-    if (c == 0 || c == 1) return Icons.wb_sunny_outlined;
-    if (c == 2) return Icons.cloud_queue;
-    if (c == 3) return Icons.cloud_outlined;
-    if (c >= 51 && c <= 67) return Icons.water_drop_outlined;
-    if (c >= 80) return Icons.thunderstorm_outlined;
-    return Icons.cloud_outlined;
-  }
+  final AtmospherePalette palette;
 
   @override
   Widget build(BuildContext context) {
-    final date = DateFormat('EEEE, MMM d').format(DateTime.now());
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderSubtle),
+    final tiles = [
+      ('AQI', weather.aqi?.toString() ?? '—', 'Air quality'),
+      (
+        'UV',
+        weather.uvIndex == null
+            ? '—'
+            : weather.uvIndex!.toStringAsFixed(
+                (weather.uvIndex! % 1 == 0) ? 0 : 1),
+        'Index'
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: onLocationTap,
-            child: Row(
-              children: [
-                const Icon(Icons.location_on, size: 16, color: AppColors.statusAmber),
-                const SizedBox(width: 6),
-                Text(locationLabel,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 15)),
-                const SizedBox(width: 8),
-                Text('|  $date',
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13)),
-              ],
-            ),
+      ('Sunrise', formatClock(weather.sunrise), 'Morning'),
+      ('Sunset', formatClock(weather.sunset), 'Evening'),
+      (
+        'PM2.5',
+        weather.pm25 == null ? '—' : weather.pm25!.toStringAsFixed(0),
+        'µg/m³'
+      ),
+      (
+        'Pressure',
+        weather.pressureHpa == null
+            ? '—'
+            : '${weather.pressureHpa!.round()}',
+        'hPa'
+      ),
+    ];
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: tiles.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 1.35,
+      ),
+      itemBuilder: (_, i) {
+        final t = tiles[i];
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: palette.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
-          const SizedBox(height: 14),
-          Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                weather.temperatureC == null
-                    ? '—'
-                    : '${weather.temperatureC!.round()}°',
-                style: const TextStyle(
-                  fontSize: 64,
-                  fontWeight: FontWeight.w600,
-                  height: 0.95,
-                  letterSpacing: -1.5,
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text('C',
-                    style: TextStyle(
-                        fontSize: 22, color: AppColors.textSecondary)),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    Text(weather.condition,
-                        style: const TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    Text(
-                      weather.feelsLikeC == null
-                          ? ''
-                          : 'Feels Like ${weather.feelsLikeC!.round()}°c',
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(_icon, size: 36, color: AppColors.statusAmber),
+              Text(t.$1,
+                  style: TextStyle(fontSize: 12, color: palette.textMuted)),
+              const Spacer(),
+              Text(t.$2,
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: palette.text)),
+              const SizedBox(height: 4),
+              Text(t.$3,
+                  style: TextStyle(fontSize: 12, color: palette.textMuted)),
             ],
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _Pill(
-                title: 'HIGH / LOW',
-                value:
-                    '${weather.highC?.round() ?? '—'}° / ${weather.lowC?.round() ?? '—'}°',
-              ),
-              const SizedBox(width: 8),
-              _Pill(
-                title: 'HUMIDITY',
-                value: weather.humidity == null
-                    ? '—'
-                    : '${weather.humidity!.round()}%',
-              ),
-              const SizedBox(width: 8),
-              _Pill(
-                title: 'WIND',
-                value: weather.windKmh == null
-                    ? '—'
-                    : '${weather.windKmh!.round()} km/h',
-              ),
-            ],
-          ),
-          if (weather.hourly.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 56,
-              child: CustomPaint(
-                painter: _SparklinePainter(
-                  weather.hourly.map((e) => e.tempC).toList(),
-                ),
-                child: const SizedBox.expand(),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: weather.hourly.take(7).map((h) {
-                return Expanded(
-                  child: Text(
-                    '${h.tempC.round()}°',
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-class _Pill extends StatelessWidget {
-  const _Pill({required this.title, required this.value});
-  final String title;
-  final String value;
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCardAlt,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 9,
-                    letterSpacing: 0.4,
-                    color: AppColors.textTertiary)),
-            const SizedBox(height: 4),
-            Text(value,
-                style:
-                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SparklinePainter extends CustomPainter {
-  _SparklinePainter(this.values);
-  final List<double> values;
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (values.length < 2) return;
-    final minV = values.reduce((a, b) => a < b ? a : b);
-    final maxV = values.reduce((a, b) => a > b ? a : b);
-    final range = (maxV - minV).abs() < 0.1 ? 1.0 : maxV - minV;
-    final path = Path();
-    for (var i = 0; i < values.length; i++) {
-      final x = size.width * i / (values.length - 1);
-      final y = size.height - ((values[i] - minV) / range) * (size.height - 8) - 4;
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.85)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(path, paint);
-    // last point
-    final lastX = size.width;
-    final lastY = size.height -
-        ((values.last - minV) / range) * (size.height - 8) -
-        4;
-    canvas.drawCircle(Offset(lastX, lastY), 3.2, Paint()..color = Colors.white);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SparklinePainter old) => old.values != values;
-}
-
-class _MetricGrid extends StatelessWidget {
-  const _MetricGrid({required this.weather});
+class _HourlyPanel extends StatelessWidget {
+  const _HourlyPanel({required this.weather, required this.palette});
   final WeatherSnapshot weather;
+  final AtmospherePalette palette;
 
-  String _aqiLabel(num? aqi) {
-    if (aqi == null) return '—';
-    final v = aqi.toDouble();
-    if (v <= 40) return 'GOOD';
-    if (v <= 80) return 'MODERATE';
-    if (v <= 120) return 'POOR';
-    return 'BAD';
-  }
-
-  Color _aqiColor(num? aqi) {
-    if (aqi == null) return AppColors.textSecondary;
-    final v = aqi.toDouble();
-    if (v <= 40) return AppColors.statusGreenText;
-    if (v <= 80) return AppColors.statusAmber;
-    return AppColors.statusRed;
-  }
-
-  String _uvLabel(num? uv) {
-    if (uv == null) return '—';
-    final v = uv.toDouble();
-    if (v <= 2) return 'LOW';
-    if (v <= 5) return 'MOD';
-    if (v <= 7) return 'HIGH';
-    if (v <= 10) return 'V.HIGH';
-    return 'EXT';
-  }
-
-  String _cardinal(num? deg) {
-    if (deg == null) return '—';
-    const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-    return dirs[((deg / 45).round()) % 8];
-  }
-
-  String _timeOnly(String? iso) {
-    if (iso == null || iso.length < 16) return '--:--';
-    try {
-      final dt = DateTime.parse(iso);
-      return DateFormat('hh:mm a').format(dt);
-    } catch (_) {
-      return iso.substring(11, 16);
+  @override
+  Widget build(BuildContext context) {
+    final hours = weather.hourly;
+    if (hours.isEmpty) {
+      return Text('Hourly data unavailable',
+          style: TextStyle(color: palette.textMuted));
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: _InfoCard(
-                title: 'AQI',
-                badge: _aqiLabel(weather.aqi),
-                badgeColor: _aqiColor(weather.aqi),
-                value: weather.aqi?.round().toString() ?? '—',
-                subtitle: weather.pm25 == null
-                    ? 'PM2.5 —'
-                    : 'PM2.5: ${weather.pm25!.toStringAsFixed(1)} µg/m³',
-              ),
+    return SizedBox(
+      height: 120,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: hours.length.clamp(0, 24),
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) {
+          final h = hours[i];
+          return Container(
+            width: 72,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            decoration: BoxDecoration(
+              color: palette.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _InfoCard(
-                title: 'UV INDEX',
-                badge: _uvLabel(weather.uvIndex),
-                badgeColor: AppColors.statusAmber,
-                value: weather.uvIndex == null
-                    ? '—'
-                    : weather.uvIndex!.toStringAsFixed(1),
-                subtitle: 'Max scale 12',
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _InfoCard(
-                title: 'WIND',
-                badge: _cardinal(weather.windDirection),
-                badgeColor: AppColors.researcherBlue,
-                value: weather.windKmh?.round().toString() ?? '—',
-                subtitle: weather.windDirection == null
-                    ? '—'
-                    : 'Bearing ${weather.windDirection!.round()}°',
-                unit: 'km/h',
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _InfoCard(
-                title: 'DAYLIGHT',
-                badge: 'SUN',
-                badgeColor: AppColors.statusAmber,
-                value: '',
-                customBody: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${_timeOnly(weather.sunrise)}  –  ${_timeOnly(weather.sunset)}',
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      height: 5,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4),
-                        gradient: const LinearGradient(colors: [
-                          Color(0xFFFBBF24),
-                          Color(0xFFF97316),
-                          Color(0xFF374151),
-                        ]),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        _InfoCard(
-          title: 'PRESSURE',
-          badge: 'HPA',
-          badgeColor: AppColors.statusGreenText,
-          value: weather.pressureHpa?.round().toString() ?? '—',
-          subtitle: 'Standard Pressure',
-          fullWidth: true,
-        ),
-      ],
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.title,
-    required this.badge,
-    required this.badgeColor,
-    required this.value,
-    this.subtitle = '',
-    this.unit,
-    this.customBody,
-    this.fullWidth = false,
-    this.valueSuffix = false,
-  });
-  final String title;
-  final String badge;
-  final Color badgeColor;
-  final String value;
-  final String subtitle;
-  final String? unit;
-  final Widget? customBody;
-  final bool fullWidth;
-  final bool valueSuffix;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: fullWidth ? double.infinity : null,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Flexible(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    letterSpacing: 0.6,
-                    color: AppColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: badgeColor.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        badge,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: badgeColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (customBody != null)
-            customBody!
-          else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 32, fontWeight: FontWeight.w700, height: 1)),
-                if (unit != null) ...[
-                  const SizedBox(width: 4),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(unit!,
-                        style: const TextStyle(
-                            color: AppColors.textSecondary, fontSize: 12)),
-                  ),
-                ],
-                if (valueSuffix)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 4, bottom: 4),
-                    child: Text('/ 12',
-                        style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 12)),
-                  ),
+                Text(h.label,
+                    style:
+                        TextStyle(fontSize: 11, color: palette.textMuted)),
+                const SizedBox(height: 8),
+                Text('${h.tempC.round()}°',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: palette.text)),
               ],
             ),
-          if (subtitle.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: AppColors.textSecondary, fontSize: 12)),
-          ],
-        ],
+          );
+        },
       ),
     );
   }
 }
 
-class _HourlyList extends StatelessWidget {
-  const _HourlyList({required this.points});
-  final List<HourlyPoint> points;
-  @override
-  Widget build(BuildContext context) {
-    if (points.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: Text('Hourly data unavailable. Redeploy backend for full payload.',
-            style: TextStyle(color: AppColors.textSecondary)),
-      );
-    }
-    return Column(
-      children: points
-          .map((p) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceCard,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.borderSubtle),
-                ),
-                child: Row(
-                  children: [
-                    SizedBox(
-                        width: 56,
-                        child: Text(p.label,
-                            style: const TextStyle(
-                                color: AppColors.textSecondary))),
-                    const Spacer(),
-                    Text('${p.tempC.round()}°',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 16)),
-                  ],
-                ),
-              ))
-          .toList(),
-    );
-  }
-}
+class _DailyPanel extends StatelessWidget {
+  const _DailyPanel({required this.weather, required this.palette});
+  final WeatherSnapshot weather;
+  final AtmospherePalette palette;
 
-class _SevenDayList extends StatelessWidget {
-  const _SevenDayList({required this.days});
-  final List<DayForecast> days;
   @override
   Widget build(BuildContext context) {
+    final days = weather.forecast;
     if (days.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: Text('Forecast unavailable.',
-            style: TextStyle(color: AppColors.textSecondary)),
-      );
+      return Text('Forecast unavailable',
+          style: TextStyle(color: palette.textMuted));
     }
     return Column(
-      children: days.map((d) {
-        String label = d.date;
-        try {
-          label = DateFormat('EEE, MMM d').format(DateTime.parse(d.date));
-        } catch (_) {}
+      children: days.take(7).map((d) {
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
-            color: AppColors.surfaceCard,
+            color: palette.card,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.borderSubtle),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Row(
             children: [
+              SizedBox(
+                width: 56,
+                child: Text(d.date,
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600, color: palette.text)),
+              ),
               Expanded(
-                  child: Text(label,
-                      style: const TextStyle(fontWeight: FontWeight.w600))),
-              Text(d.condition,
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
-              const SizedBox(width: 12),
-              Text('${d.highC?.round() ?? '—'}° / ${d.lowC?.round() ?? '—'}°',
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
+                child: Text(d.condition,
+                    style:
+                        TextStyle(color: palette.textMuted, fontSize: 13)),
+              ),
+              Text(
+                '${d.highC?.round() ?? '—'}° / ${d.lowC?.round() ?? '—'}°',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600, color: palette.text),
+              ),
             ],
           ),
         );
@@ -929,69 +726,33 @@ class _SevenDayList extends StatelessWidget {
   }
 }
 
-
-class _VoiceFab extends StatefulWidget {
-  const _VoiceFab({required this.onTap});
+class _VoiceOrb extends StatelessWidget {
+  const _VoiceOrb({required this.palette, required this.onTap});
+  final AtmospherePalette palette;
   final VoidCallback onTap;
 
   @override
-  State<_VoiceFab> createState() => _VoiceFabState();
-}
-
-class _VoiceFabState extends State<_VoiceFab>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1800),
-  )..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Center(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            final pulse = 0.85 + (_controller.value * 0.15);
-            final glow = 0.18 + (_controller.value * 0.22);
-            return Transform.scale(
-              scale: pulse,
-              child: GestureDetector(
-                onTap: widget.onTap,
-                child: Container(
-                  width: 84,
-                  height: 84,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.surfaceCardAlt,
-                    border: Border.all(color: AppColors.borderSubtle, width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.statusAmber.withValues(alpha: glow),
-                        blurRadius: 28,
-                        spreadRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.mic_rounded,
-                    size: 36,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            );
-          },
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [palette.orbStart, palette.orbEnd],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: palette.accent.withValues(alpha: 0.5),
+              blurRadius: 28,
+              spreadRadius: 3,
+            ),
+          ],
         ),
+        child: const Icon(Icons.mic_rounded, color: Colors.black87, size: 32),
       ),
     );
   }
 }
-

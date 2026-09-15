@@ -51,6 +51,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
             .map((m) => {'role': m.role, 'content': m.content})
             .toList(),
         'location': location.name,
+        'lat': location.lat,
+        'lon': location.lon,
         'language': settings.language,
         'farmer_mode': settings.userPersona == 'farmer',
         'crop': settings.userPersona == 'farmer' ? 'Wheat' : '',

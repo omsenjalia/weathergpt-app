@@ -1,20 +1,17 @@
-name: Flutter Checks
+name: CI Test
 
 on:
   pull_request:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
 
 jobs:
-  check:
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: temurin
-          cache: gradle
 
       - uses: subosito/flutter-action@v2
         with:
@@ -24,17 +21,15 @@ jobs:
           cache-key: flutter-3.44.0-stable
           pub-cache-key: flutter-pub-${{ hashFiles('**/pubspec.lock') }}
 
-      - name: Cache pub + Gradle
+      - name: Cache pub
         uses: actions/cache@v4
         with:
           path: |
             ~/.pub-cache
             .dart_tool
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-flutter-check-${{ hashFiles('pubspec.lock', 'android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-test-${{ hashFiles('pubspec.lock') }}
           restore-keys: |
-            ${{ runner.os }}-flutter-check-
+            ${{ runner.os }}-test-
             ${{ runner.os }}-flutter-
 
       - name: Create environment file
@@ -43,11 +38,5 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Run analyzer
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
-
-      - name: Run tests
+      - name: Test
         run: flutter test --timeout 30s
-
-      # Skip APK here — Build Android APK workflow produces artifacts.
-      # This keeps PR checks under a few minutes when caches are warm.

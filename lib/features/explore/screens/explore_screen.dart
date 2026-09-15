@@ -46,7 +46,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     return switch (persona) {
       'farmer' => AppColors.farmerGreen,
       'researcher' => AppColors.researcherBlue,
-      _ => AppColors.statusAmber,
+      _ => AppColors.accent,
     };
   }
 
@@ -81,7 +81,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     if (_controller == null) {
       final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(const Color(0xFF0A0A0C))
+        ..setBackgroundColor(const Color(0xFF0B1220))
         ..setNavigationDelegate(
           NavigationDelegate(
             onPageStarted: (_) {
@@ -244,7 +244,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     WebViewWidget(controller: _controller!),
                   if (_loading)
                     const ColoredBox(
-                      color: Color(0xFF0A0A0C),
+                      color: Color(0xFF0B1220),
                       child: Center(child: CircularProgressIndicator()),
                     ),
                   Positioned(

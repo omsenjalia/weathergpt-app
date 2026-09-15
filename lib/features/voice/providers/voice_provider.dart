@@ -11,6 +11,7 @@ import '../../../core/services/api_client.dart';
 import '../../../core/utils/markdown_utils.dart';
 import '../../home/providers/location_provider.dart';
 import '../../settings/providers/settings_provider.dart';
+import '../../settings/providers/developer_options_provider.dart';
 
 enum VoiceStatus { idle, listening, processing, speaking, done, error }
 
@@ -79,6 +80,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   VoiceNotifier(this._ref) : super(const VoiceState());
   final Ref _ref;
   final _speech = stt.SpeechToText();
+  final FlutterTts _tts = FlutterTts();
 
   /// Map app language code → speech_to_text locale id.
   String _sttLocale() {
@@ -192,14 +194,33 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       }
 
       // Always use /chat — /voice multipart is optional and often unavailable.
-      final result = await ApiClient.instance.post('/chat', data: {
-        'message': transcript,
+      Future<Map<String, dynamic>> postChat(String msg) =>
+          ApiClient.instance.post('/chat', data: {
+        'message': msg,
         'location': location.name,
+        'lat': location.lat,
+        'lon': location.lon,
         'language': settings.language,
         'farmer_mode': settings.userPersona == 'farmer',
         'crop': settings.userPersona == 'farmer' ? 'Wheat' : '',
       });
-      final responseText = '${result['response'] ?? ''}';
+
+      var result = await postChat(transcript);
+      var responseText = '${result['response'] ?? ''}';
+      // Backend sometimes returns a generic empty-fail; retry with a simpler weather ask.
+      if (responseText.toLowerCase().contains("couldn't fetch live weather")) {
+        final city = location.name.split(',').first.trim();
+        final simplified =
+            'What is the weather forecast for $city including rain chances tomorrow?';
+        try {
+          result = await postChat(simplified);
+          final retry = '${result['response'] ?? ''}';
+          if (retry.isNotEmpty &&
+              !retry.toLowerCase().contains("couldn't fetch live weather")) {
+            responseText = retry;
+          }
+        } catch (_) {}
+      }
       state = state.copyWith(
         status: VoiceStatus.done,
         response: _responseFromBackend(transcript, responseText),
@@ -381,17 +402,30 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     state = state.copyWith(status: VoiceStatus.speaking);
     try {
       final voice = _ref.read(settingsProvider);
-      final tts = FlutterTts();
-      await tts.setLanguage(voice.ttsVoiceLocale);
+      final dev = _ref.read(developerOptionsProvider);
+      await _tts.stop();
+      final locale = (dev.enabled && dev.forceTtsLocale != null)
+          ? dev.forceTtsLocale!
+          : voice.ttsVoiceLocale;
+      await _tts.setLanguage(locale);
       // FlutterTts: ~0.5 is natural on Android; UI stores 0.3–1.0.
-      final rate = (voice.ttsSpeed * 0.55).clamp(0.25, 0.75);
-      await tts.setSpeechRate(rate);
+      final speed = (dev.enabled && dev.forceTtsSpeed != null)
+          ? dev.forceTtsSpeed!
+          : voice.ttsSpeed;
+      final rate = (speed * 0.55).clamp(0.25, 0.75);
+      await _tts.setSpeechRate(rate);
       final clean = MarkdownUtils.forSpeech(text);
       if (clean.isNotEmpty) {
-        await tts.speak(clean);
+        await _tts.speak(clean);
       }
     } catch (_) {}
     state = state.copyWith(status: VoiceStatus.done);
+  }
+
+  Future<void> stopSpeaking() async {
+    try {
+      await _tts.stop();
+    } catch (_) {}
   }
 
   void cancel() {
@@ -399,13 +433,21 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     try {
       _speech.stop();
     } catch (_) {}
+    try {
+      _tts.stop();
+    } catch (_) {}
     state = const VoiceState();
   }
 
   @override
   void dispose() {
     _silenceTimer?.cancel();
-    _speech.stop();
+    try {
+      _speech.stop();
+    } catch (_) {}
+    try {
+      _tts.stop();
+    } catch (_) {}
     super.dispose();
   }
 }

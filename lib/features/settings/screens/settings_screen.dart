@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../providers/settings_provider.dart';
+import '../providers/developer_options_provider.dart';
+import '../../home/theme/atmosphere_theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -36,185 +38,269 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    final notifier = ref.read(settingsProvider.notifier);
+    final n = ref.read(settingsProvider.notifier);
+    final dev = ref.watch(developerOptionsProvider);
+    final devN = ref.read(developerOptionsProvider.notifier);
+    final bottom = MediaQuery.paddingOf(context).bottom + 80;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(
-        title: Text('settings.title'.tr()),
-        backgroundColor: AppColors.bgPrimary,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          _SectionTitle('settings.section_language'.tr()),
-          _Card(
-            child: Column(
-              children: [
-                for (final (code, label) in _languages)
-                  RadioListTile<String>(
-                    value: code,
-                    groupValue: settings.language,
-                    title: Text(label),
-                    activeColor: AppColors.statusAmber,
-                    onChanged: (v) async {
-                      if (v == null) return;
-                      await notifier.updateLanguage(v);
-                      await notifier.updateTtsVoiceLocale(_ttsLocales[v] ?? 'en-US');
-                      if (context.mounted) {
-                        await context.setLocale(Locale(v));
-                      }
-                    },
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          _SectionTitle('settings.section_persona'.tr()),
-          _Card(
-            child: Column(
-              children: [
-                for (final (id, key) in [
-                  ('everyone', 'persona.everyone'),
-                  ('farmer', 'persona.farmer'),
-                  ('researcher', 'persona.researcher'),
-                ])
-                  RadioListTile<String>(
-                    value: id,
-                    groupValue: settings.userPersona,
-                    title: Text(key.tr()),
-                    activeColor: AppColors.statusAmber,
-                    onChanged: (v) {
-                      if (v != null) notifier.updatePersona(v);
-                    },
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          _SectionTitle('settings.section_units'.tr()),
-          _Card(
-            child: SwitchListTile(
-              title: Text('settings.use_fahrenheit'.tr()),
-              value: settings.units == TemperatureUnit.fahrenheit,
-              activeColor: AppColors.statusAmber,
-              onChanged: (v) => notifier.updateUnits(
-                v ? TemperatureUnit.fahrenheit : TemperatureUnit.celsius,
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, bottom),
+          children: [
+            const Text('Settings',
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            const Text('Language, voice, and experience',
+                style: TextStyle(color: AppColors.textSecondary)),
+            const SizedBox(height: 24),
+            _section('Language'),
+            _card(
+              child: Column(
+                children: [
+                  for (final (code, label) in _languages)
+                    RadioListTile<String>(
+                      value: code,
+                      groupValue: settings.language,
+                      activeColor: AppColors.accent,
+                      title: Text(label),
+                      onChanged: (v) async {
+                        if (v == null) return;
+                        await n.updateLanguage(v);
+                        await n.updateTtsVoiceLocale(_ttsLocales[v] ?? 'en-US');
+                        if (context.mounted) await context.setLocale(Locale(v));
+                      },
+                    ),
+                ],
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          _SectionTitle('settings.section_voice'.tr()),
-          _Card(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ListTile(
-                  title: Text('settings.tts_speed'.tr()),
-                  subtitle: Text(
-                    settings.ttsSpeed < 0.7
-                        ? 'settings.speed_slow'.tr()
-                        : settings.ttsSpeed > 1.0
-                            ? 'settings.speed_fast'.tr()
-                            : 'settings.speed_normal'.tr(),
-                  ),
-                ),
-                Slider(
-                  value: settings.ttsSpeed.clamp(0.4, 1.2),
-                  min: 0.4,
-                  max: 1.2,
-                  divisions: 8,
-                  label: settings.ttsSpeed.toStringAsFixed(2),
-                  activeColor: AppColors.statusAmber,
-                  onChanged: (v) => notifier.updateTtsSpeed(v),
-                ),
-                const SizedBox(height: 4),
-              ],
+            const SizedBox(height: 20),
+            _section('Experience'),
+            _card(
+              child: Column(
+                children: [
+                  for (final (id, key) in [
+                    ('everyone', 'persona.everyone'),
+                    ('farmer', 'persona.farmer'),
+                    ('researcher', 'persona.researcher'),
+                  ])
+                    RadioListTile<String>(
+                      value: id,
+                      groupValue: settings.userPersona,
+                      activeColor: AppColors.accent,
+                      title: Text(key.tr()),
+                      onChanged: (v) {
+                        if (v != null) n.updatePersona(v);
+                      },
+                    ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          _SectionTitle('settings.section_data'.tr()),
-          _Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.bookmark_outline),
-                  title: Text('settings.saved_locations'.tr()),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/saved'),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.map_outlined),
-                  title: Text('settings.open_map'.tr()),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.go('/explore'),
-                ),
-                if (settings.userPersona == 'farmer') ...[
-                  const Divider(height: 1),
+            const SizedBox(height: 20),
+            _section('Voice'),
+            _card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   ListTile(
-                    leading: const Icon(Icons.agriculture_outlined),
-                    title: Text('settings.farm_profile'.tr()),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/farmer/farm-profile'),
+                    title: const Text('Speech speed'),
+                    subtitle: Text(
+                      settings.ttsSpeed < 0.7
+                          ? 'Slow'
+                          : settings.ttsSpeed > 1.0
+                              ? 'Fast'
+                              : 'Normal',
+                    ),
+                  ),
+                  Slider(
+                    value: settings.ttsSpeed.clamp(0.4, 1.2),
+                    min: 0.4,
+                    max: 1.2,
+                    activeColor: AppColors.accent,
+                    onChanged: n.updateTtsSpeed,
                   ),
                 ],
-                if (settings.userPersona == 'researcher') ...[
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.insights_outlined),
-                    title: Text('settings.historical'.tr()),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/researcher/historical'),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.compare_arrows),
-                    title: Text('settings.comparison'.tr()),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/researcher/comparison'),
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 28),
-          Text(
-            'settings.footer'.tr(),
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textTertiary, fontSize: 12),
-          ),
-        ],
+            const SizedBox(height: 20),
+            _section('Tools'),
+            _card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.map_outlined, color: AppColors.sky),
+                    title: const Text('Weather map'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.go('/explore'),
+                  ),
+                  if (settings.userPersona == 'researcher') ...[
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.insights_outlined,
+                          color: AppColors.researcherBlue),
+                      title: const Text('Historical data'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/researcher/historical'),
+                    ),
+                  ],
+                  if (settings.userPersona == 'farmer') ...[
+                    const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.agriculture_outlined,
+                          color: AppColors.farmerGreen),
+                      title: const Text('Farm profile'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/farmer/farm-profile'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            _section('Developer'),
+            _card(
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('Enable developer options'),
+                    subtitle: const Text('Override sky, weather, TTS for testing'),
+                    value: dev.enabled,
+                    activeColor: AppColors.accent,
+                    onChanged: devN.setEnabled,
+                  ),
+                  if (dev.enabled) ...[
+                    const Divider(height: 1),
+                    ListTile(
+                      title: const Text('Force time of day'),
+                      subtitle: Text(dev.forcePeriod?.name ?? 'Auto (device time)'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: DropdownButtonFormField<String>(
+                        value: dev.forcePeriod?.name ?? 'auto',
+                        items: [
+                          const DropdownMenuItem(value: 'auto', child: Text('Auto')),
+                          ...SkyPeriod.values.map(
+                            (e) => DropdownMenuItem(value: e.name, child: Text(e.name)),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v == null || v == 'auto') {
+                            devN.setForcePeriod(null);
+                          } else {
+                            devN.setForcePeriod(SkyPeriod.values.byName(v));
+                          }
+                        },
+                      ),
+                    ),
+                    ListTile(
+                      title: const Text('Force weather condition'),
+                      subtitle: Text(dev.forceSky?.name ?? 'Auto (live weather)'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: DropdownButtonFormField<String>(
+                        value: dev.forceSky?.name ?? 'auto',
+                        items: [
+                          const DropdownMenuItem(value: 'auto', child: Text('Auto')),
+                          ...SkyCondition.values.map(
+                            (e) => DropdownMenuItem(value: e.name, child: Text(e.name)),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v == null || v == 'auto') {
+                            devN.setForceSky(null);
+                          } else {
+                            devN.setForceSky(SkyCondition.values.byName(v));
+                          }
+                        },
+                      ),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Disable video sky'),
+                      subtitle: const Text('Use gradient only'),
+                      value: dev.disableVideoSky,
+                      activeColor: AppColors.accent,
+                      onChanged: devN.setDisableVideoSky,
+                    ),
+                    ListTile(
+                      title: const Text('TTS locale override'),
+                      subtitle: Text(dev.forceTtsLocale ?? settings.ttsVoiceLocale),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: DropdownButtonFormField<String>(
+                        value: dev.forceTtsLocale ?? 'default',
+                        items: const [
+                          DropdownMenuItem(value: 'default', child: Text('Use app setting')),
+                          DropdownMenuItem(value: 'en-US', child: Text('en-US')),
+                          DropdownMenuItem(value: 'en-IN', child: Text('en-IN')),
+                          DropdownMenuItem(value: 'hi-IN', child: Text('hi-IN')),
+                          DropdownMenuItem(value: 'gu-IN', child: Text('gu-IN')),
+                          DropdownMenuItem(value: 'mr-IN', child: Text('mr-IN')),
+                          DropdownMenuItem(value: 'ta-IN', child: Text('ta-IN')),
+                          DropdownMenuItem(value: 'te-IN', child: Text('te-IN')),
+                          DropdownMenuItem(value: 'bn-IN', child: Text('bn-IN')),
+                        ],
+                        onChanged: (v) {
+                          if (v == null || v == 'default') {
+                            devN.setForceTtsLocale(null);
+                          } else {
+                            devN.setForceTtsLocale(v);
+                          }
+                        },
+                      ),
+                    ),
+                    ListTile(
+                      title: const Text('TTS speed override'),
+                      subtitle: Text(
+                        dev.forceTtsSpeed == null
+                            ? 'Use app setting (${settings.ttsSpeed.toStringAsFixed(2)})'
+                            : dev.forceTtsSpeed!.toStringAsFixed(2),
+                      ),
+                    ),
+                    Slider(
+                      value: (dev.forceTtsSpeed ?? settings.ttsSpeed).clamp(0.4, 1.2),
+                      min: 0.4,
+                      max: 1.2,
+                      activeColor: AppColors.accent,
+                      onChanged: (v) => devN.setForceTtsSpeed(v),
+                    ),
+                    TextButton(
+                      onPressed: () => devN.reset(),
+                      child: const Text('Reset developer overrides'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+          ],
+        ),
       ),
     );
   }
-}
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-  final String text;
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 4, bottom: 8),
+  Widget _section(String t) => Padding(
+        padding: const EdgeInsets.only(bottom: 8, left: 4),
         child: Text(
-          text,
+          t.toUpperCase(),
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: 11,
+            letterSpacing: 1.2,
             fontWeight: FontWeight.w700,
-            color: AppColors.textSecondary,
-            letterSpacing: 0.4,
+            color: AppColors.textTertiary,
           ),
         ),
       );
-}
 
-class _Card extends StatelessWidget {
-  const _Card({required this.child});
-  final Widget child;
-  @override
-  Widget build(BuildContext context) => Container(
+  Widget _card({required Widget child}) => Container(
         decoration: BoxDecoration(
           color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppColors.borderSubtle),
         ),
         clipBehavior: Clip.antiAlias,
