@@ -118,7 +118,8 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
     final location = ref.watch(locationProvider);
     final persona = ref.watch(settingsProvider).userPersona;
     final weatherAsync = ref.watch(weatherProvider(persona));
-    final bottomInset = MediaQuery.paddingOf(context).bottom + 80;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+    final bottomInset = bottomPad + 100; // space for nav + mic
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -261,10 +262,11 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                   ],
                 ),
               ),
+              // Mic FAB — above floating nav bar (classic position)
               Positioned(
                 left: 0,
                 right: 0,
-                bottom: bottomInset - 52,
+                bottom: bottomPad + 78,
                 child: Center(
                   child: _VoiceOrb(
                     palette: palette,
@@ -734,8 +736,8 @@ class _VoiceOrb extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 68,
-        height: 68,
+        width: 72,
+        height: 72,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(
@@ -743,13 +745,13 @@ class _VoiceOrb extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: palette.accent.withValues(alpha: 0.45),
-              blurRadius: 24,
-              spreadRadius: 2,
+              color: palette.accent.withValues(alpha: 0.5),
+              blurRadius: 28,
+              spreadRadius: 3,
             ),
           ],
         ),
-        child: const Icon(Icons.mic_rounded, color: Colors.black87, size: 30),
+        child: const Icon(Icons.mic_rounded, color: Colors.black87, size: 32),
       ),
     );
   }

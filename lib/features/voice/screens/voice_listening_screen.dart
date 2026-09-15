@@ -75,12 +75,15 @@ class _VoiceListeningScreenState extends ConsumerState<VoiceListeningScreen>
               Align(
                 alignment: Alignment.centerLeft,
                 child: IconButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    await ref.read(voiceProvider.notifier).stopSpeaking();
                     ref.read(voiceProvider.notifier).cancel();
-                    if (context.canPop()) {
-                      context.pop();
-                    } else {
-                      context.go('/home');
+                    if (context.mounted) {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/home');
+                      }
                     }
                   },
                   icon: const Icon(Icons.close_rounded),

@@ -123,7 +123,7 @@ class _AtmosphereVideoBackgroundState extends State<AtmosphereVideoBackground> {
         // Bundled looping video
         if (_ready && _controller != null && _controller!.value.isInitialized)
           Opacity(
-            opacity: 0.55,
+            opacity: 0.88,
             child: FittedBox(
               fit: BoxFit.cover,
               clipBehavior: Clip.hardEdge,
@@ -141,16 +141,16 @@ class _AtmosphereVideoBackgroundState extends State<AtmosphereVideoBackground> {
           sky: widget.sky,
           period: widget.period,
         ),
-        // Readability veil
+        // Light readability veil (keep video visible)
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withValues(alpha: 0.15),
+                Colors.black.withValues(alpha: 0.08),
                 Colors.transparent,
-                Colors.black.withValues(alpha: 0.45),
+                Colors.black.withValues(alpha: 0.35),
               ],
             ),
           ),

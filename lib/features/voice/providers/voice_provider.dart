@@ -194,8 +194,9 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       }
 
       // Always use /chat — /voice multipart is optional and often unavailable.
-      final result = await ApiClient.instance.post('/chat', data: {
-        'message': transcript,
+      Future<Map<String, dynamic>> postChat(String msg) =>
+          ApiClient.instance.post('/chat', data: {
+        'message': msg,
         'location': location.name,
         'lat': location.lat,
         'lon': location.lon,
@@ -203,7 +204,23 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
         'farmer_mode': settings.userPersona == 'farmer',
         'crop': settings.userPersona == 'farmer' ? 'Wheat' : '',
       });
-      final responseText = '${result['response'] ?? ''}';
+
+      var result = await postChat(transcript);
+      var responseText = '${result['response'] ?? ''}';
+      // Backend sometimes returns a generic empty-fail; retry with a simpler weather ask.
+      if (responseText.toLowerCase().contains("couldn't fetch live weather")) {
+        final city = location.name.split(',').first.trim();
+        final simplified =
+            'What is the weather forecast for $city including rain chances tomorrow?';
+        try {
+          result = await postChat(simplified);
+          final retry = '${result['response'] ?? ''}';
+          if (retry.isNotEmpty &&
+              !retry.toLowerCase().contains("couldn't fetch live weather")) {
+            responseText = retry;
+          }
+        } catch (_) {}
+      }
       state = state.copyWith(
         status: VoiceStatus.done,
         response: _responseFromBackend(transcript, responseText),
