@@ -111,7 +111,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
     final location = ref.watch(locationProvider);
     final persona = ref.watch(settingsProvider).userPersona;
     final weatherAsync = ref.watch(weatherProvider(persona));
-    final bottomInset = MediaQuery.paddingOf(context).bottom + 80;
+    final bottomInset = MediaQuery.paddingOf(context).bottom + 96;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -216,20 +216,18 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                               : _DailyPanel(weather: w),
                     ),
                   ),
-                  SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
+                  SliverToBoxAdapter(child: SizedBox(height: bottomInset + 72)),
                 ],
               ),
             ),
+            // Voice FAB — above floating nav, right side so it does not cover cards
             Positioned(
-              left: 0,
-              right: 0,
-              bottom: bottomInset - 56,
-              child: Center(
-                child: _VoiceOrb(
-                  onTap: () => context.push('/voice/listening', extra: {
-                    'accent': AppColors.accent,
-                  }),
-                ),
+              right: 20,
+              bottom: bottomInset - 12,
+              child: _VoiceOrb(
+                onTap: () => context.push('/voice/listening', extra: {
+                  'accent': AppColors.accent,
+                }),
               ),
             ),
           ],
@@ -359,7 +357,7 @@ class _MetricStrip extends StatelessWidget {
       (Icons.air,
           weather.windKmh == null
               ? '—'
-              : '${weather.windKmh!.toStringAsFixed(0)}',
+              : '${weather.windKmh!.toStringAsFixed(0)} km/h',
           'Wind'),
       (Icons.opacity,
           weather.humidity == null ? '—' : '${weather.humidity!.round()}%',
@@ -647,8 +645,8 @@ class _VoiceOrb extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 68,
-        height: 68,
+        width: 58,
+        height: 58,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: AppColors.gradientAccent,
@@ -660,7 +658,7 @@ class _VoiceOrb extends StatelessWidget {
             ),
           ],
         ),
-        child: const Icon(Icons.mic_rounded, color: Colors.black87, size: 30),
+        child: const Icon(Icons.mic_rounded, color: Colors.black87, size: 26),
       ),
     );
   }
