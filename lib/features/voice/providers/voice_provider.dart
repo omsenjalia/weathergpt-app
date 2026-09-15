@@ -216,33 +216,47 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
 
   /// Explicit backend-to-UI mapping. The text response does not coerce enum values.
   VoiceResponse _responseFromBackend(String query, String response) {
-    final normalized = query.toLowerCase();
-    final type = normalized.contains('irrigat')
-        ? ResultType.irrigation
-        : normalized.contains('rain') || normalized.contains('forecast')
-            ? ResultType.rainForecast
-            : normalized.contains('crop') || normalized.contains('wheat')
-                ? ResultType.cropStatus
-                : ResultType.general;
+    final normalized = query.toLowerCase().trim();
+    final bodyRaw = response.trim();
+    final lowerBody = bodyRaw.toLowerCase();
+    final isMeta = lowerBody.contains("i'm **weathergpt**") ||
+        lowerBody.contains('i am weathergpt') ||
+        lowerBody.contains("couldn't fetch live weather") ||
+        lowerBody.contains('try asking:') ||
+        normalized == 'hi' ||
+        normalized == 'hello' ||
+        normalized.startsWith('what do you') ||
+        normalized == 'help';
+
+    final type = isMeta
+        ? ResultType.general
+        : normalized.contains('irrigat')
+            ? ResultType.irrigation
+            : normalized.contains('rain') || normalized.contains('forecast')
+                ? ResultType.rainForecast
+                : normalized.contains('crop') || normalized.contains('wheat')
+                    ? ResultType.cropStatus
+                    : ResultType.general;
     final base = _responseFor(query);
-    final body = response.trim().isEmpty ? base.explanation : response.trim();
-    // First meaningful line as short verdict; full body kept for markdown UI
+    final body = bodyRaw.isEmpty ? base.explanation : bodyRaw;
     final plain = MarkdownUtils.forSpeech(body);
-    final firstLine = plain.split(RegExp(r'[.!?\n]')).map((s) => s.trim()).firstWhere(
-          (s) => s.isNotEmpty,
-          orElse: () => base.verdict,
-        );
-    final verdict = firstLine.length > 90 ? '${firstLine.substring(0, 90)}…' : firstLine;
+    final firstLine = plain
+        .split(RegExp(r'[.!?
+]'))
+        .map((s) => s.trim())
+        .firstWhere((s) => s.isNotEmpty, orElse: () => base.verdict);
+    final verdict =
+        firstLine.length > 90 ? '${firstLine.substring(0, 90)}…' : firstLine;
     return VoiceResponse(
       transcript: query,
       type: type,
       accent: base.accent,
-      label: base.label,
+      label: isMeta ? 'Assistant' : base.label,
       verdict: verdict.isEmpty ? base.verdict : verdict,
       explanation: body,
-      stats: base.stats,
-      forecast: base.forecast,
-      ctaLabel: base.ctaLabel,
+      stats: isMeta ? const [] : base.stats,
+      forecast: isMeta ? const [] : base.forecast,
+      ctaLabel: isMeta ? 'Ask about weather' : base.ctaLabel,
     );
   }
 
