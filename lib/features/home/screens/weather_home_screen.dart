@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/api_error_view.dart';
 import '../../explore/providers/saved_locations_provider.dart';
 import '../../settings/providers/settings_provider.dart';
+import '../../settings/providers/developer_options_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/atmosphere_theme.dart';
@@ -132,18 +133,33 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
         data: (w) {
           final sunrise = parseWeatherTime(w.sunrise);
           final sunset = parseWeatherTime(w.sunset);
-          final period = periodFromLocalTime(DateTime.now(), sunrise, sunset);
-          final sky = conditionFromWeather(w);
+          final dev = ref.watch(developerOptionsProvider);
+          final period = (dev.enabled && dev.forcePeriod != null)
+              ? dev.forcePeriod!
+              : periodFromLocalTime(DateTime.now(), sunrise, sunset);
+          final sky = (dev.enabled && dev.forceSky != null)
+              ? dev.forceSky!
+              : conditionFromWeather(w);
           final palette = paletteFor(period, sky);
 
           return Stack(
             children: [
               Positioned.fill(
-                child: AtmosphereVideoBackground(
-                  palette: palette,
-                  sky: sky,
-                  period: period,
-                ),
+                child: (dev.enabled && dev.disableVideoSky)
+                    ? DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [palette.top, palette.mid, palette.bottom],
+                          ),
+                        ),
+                      )
+                    : AtmosphereVideoBackground(
+                        palette: palette,
+                        sky: sky,
+                        period: period,
+                      ),
               ),
               // readability veil over lower content
               Positioned(

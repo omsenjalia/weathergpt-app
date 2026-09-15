@@ -44,7 +44,13 @@ class _ConversationalResultScreenState
   Widget build(BuildContext context) {
     final r = widget.response;
     // Opaque full-screen route — avoids shell bleed / multi-layer ghosting.
-    return Scaffold(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, _) async {
+        await ref.read(voiceProvider.notifier).stopSpeaking();
+        ref.read(voiceProvider.notifier).cancel();
+      },
+      child: Scaffold(
       backgroundColor: const Color(0xFF0B1220),
       body: Material(
         color: const Color(0xFF0B1220),
@@ -56,9 +62,10 @@ class _ConversationalResultScreenState
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () {
+                      onPressed: () async {
+                        await ref.read(voiceProvider.notifier).stopSpeaking();
                         ref.read(voiceProvider.notifier).cancel();
-                        context.go('/home');
+                        if (context.mounted) context.go('/home');
                       },
                       icon: const Icon(Icons.close_rounded),
                     ),
@@ -200,7 +207,11 @@ class _ConversationalResultScreenState
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => context.go('/chat'),
+                        onPressed: () async {
+                          await ref.read(voiceProvider.notifier).stopSpeaking();
+                          ref.read(voiceProvider.notifier).cancel();
+                          if (context.mounted) context.go('/chat');
+                        },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
                           side: const BorderSide(color: Color(0xFF334155)),
@@ -212,11 +223,14 @@ class _ConversationalResultScreenState
                     const SizedBox(width: 10),
                     Expanded(
                       child: FilledButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          await ref.read(voiceProvider.notifier).stopSpeaking();
                           ref.read(voiceProvider.notifier).cancel();
-                          context.pushReplacement('/voice/listening', extra: {
-                            'accent': AppColors.accent,
-                          });
+                          if (context.mounted) {
+                            context.pushReplacement('/voice/listening', extra: {
+                              'accent': AppColors.accent,
+                            });
+                          }
                         },
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFF2DD4BF),
@@ -233,6 +247,7 @@ class _ConversationalResultScreenState
           ),
         ),
       ),
+    ),
     );
   }
 }

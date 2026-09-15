@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../providers/settings_provider.dart';
+import '../providers/developer_options_provider.dart';
+import '../../home/theme/atmosphere_theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -37,6 +39,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final n = ref.read(settingsProvider.notifier);
+    final dev = ref.watch(developerOptionsProvider);
+    final devN = ref.read(developerOptionsProvider.notifier);
     final bottom = MediaQuery.paddingOf(context).bottom + 80;
 
     return Scaffold(
@@ -154,6 +158,126 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+
+            const SizedBox(height: 20),
+            _section('Developer'),
+            _card(
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('Enable developer options'),
+                    subtitle: const Text('Override sky, weather, TTS for testing'),
+                    value: dev.enabled,
+                    activeColor: AppColors.accent,
+                    onChanged: devN.setEnabled,
+                  ),
+                  if (dev.enabled) ...[
+                    const Divider(height: 1),
+                    ListTile(
+                      title: const Text('Force time of day'),
+                      subtitle: Text(dev.forcePeriod?.name ?? 'Auto (device time)'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: DropdownButtonFormField<String>(
+                        value: dev.forcePeriod?.name ?? 'auto',
+                        items: [
+                          const DropdownMenuItem(value: 'auto', child: Text('Auto')),
+                          ...SkyPeriod.values.map(
+                            (e) => DropdownMenuItem(value: e.name, child: Text(e.name)),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v == null || v == 'auto') {
+                            devN.setForcePeriod(null);
+                          } else {
+                            devN.setForcePeriod(SkyPeriod.values.byName(v));
+                          }
+                        },
+                      ),
+                    ),
+                    ListTile(
+                      title: const Text('Force weather condition'),
+                      subtitle: Text(dev.forceSky?.name ?? 'Auto (live weather)'),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: DropdownButtonFormField<String>(
+                        value: dev.forceSky?.name ?? 'auto',
+                        items: [
+                          const DropdownMenuItem(value: 'auto', child: Text('Auto')),
+                          ...SkyCondition.values.map(
+                            (e) => DropdownMenuItem(value: e.name, child: Text(e.name)),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v == null || v == 'auto') {
+                            devN.setForceSky(null);
+                          } else {
+                            devN.setForceSky(SkyCondition.values.byName(v));
+                          }
+                        },
+                      ),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Disable video sky'),
+                      subtitle: const Text('Use gradient only'),
+                      value: dev.disableVideoSky,
+                      activeColor: AppColors.accent,
+                      onChanged: devN.setDisableVideoSky,
+                    ),
+                    ListTile(
+                      title: const Text('TTS locale override'),
+                      subtitle: Text(dev.forceTtsLocale ?? settings.ttsVoiceLocale),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: DropdownButtonFormField<String>(
+                        value: dev.forceTtsLocale ?? 'default',
+                        items: const [
+                          DropdownMenuItem(value: 'default', child: Text('Use app setting')),
+                          DropdownMenuItem(value: 'en-US', child: Text('en-US')),
+                          DropdownMenuItem(value: 'en-IN', child: Text('en-IN')),
+                          DropdownMenuItem(value: 'hi-IN', child: Text('hi-IN')),
+                          DropdownMenuItem(value: 'gu-IN', child: Text('gu-IN')),
+                          DropdownMenuItem(value: 'mr-IN', child: Text('mr-IN')),
+                          DropdownMenuItem(value: 'ta-IN', child: Text('ta-IN')),
+                          DropdownMenuItem(value: 'te-IN', child: Text('te-IN')),
+                          DropdownMenuItem(value: 'bn-IN', child: Text('bn-IN')),
+                        ],
+                        onChanged: (v) {
+                          if (v == null || v == 'default') {
+                            devN.setForceTtsLocale(null);
+                          } else {
+                            devN.setForceTtsLocale(v);
+                          }
+                        },
+                      ),
+                    ),
+                    ListTile(
+                      title: const Text('TTS speed override'),
+                      subtitle: Text(
+                        dev.forceTtsSpeed == null
+                            ? 'Use app setting (${settings.ttsSpeed.toStringAsFixed(2)})'
+                            : dev.forceTtsSpeed!.toStringAsFixed(2),
+                      ),
+                    ),
+                    Slider(
+                      value: (dev.forceTtsSpeed ?? settings.ttsSpeed).clamp(0.4, 1.2),
+                      min: 0.4,
+                      max: 1.2,
+                      activeColor: AppColors.accent,
+                      onChanged: (v) => devN.setForceTtsSpeed(v),
+                    ),
+                    TextButton(
+                      onPressed: () => devN.reset(),
+                      child: const Text('Reset developer overrides'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
           ],
         ),
       ),
