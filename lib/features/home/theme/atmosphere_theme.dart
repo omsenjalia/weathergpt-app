@@ -4,23 +4,30 @@ import '../providers/weather_provider.dart';
 
 enum DayPeriod {
   midnight,
+  predawn,
   night,
   sunrise,
   morning,
   midday,
   afternoon,
+  goldenHour,
   sunset,
+  dusk,
   evening,
 }
 
 enum SkyCondition {
   clear,
+  partlyCloudy,
   cloudy,
   overcast,
-  rain,
-  thunder,
   fog,
+  drizzle,
+  rain,
+  heavyRain,
+  thunder,
   snow,
+  windy,
 }
 
 class AtmospherePalette {
@@ -37,8 +44,9 @@ class AtmospherePalette {
     required this.orbEnd,
     required this.showSun,
     required this.showMoon,
-    required this.sunY, // 0 top → 1 bottom of sky band
+    required this.sunY,
     required this.moonY,
+    this.horizonWarmth = 0.0,
   });
 
   final Color top;
@@ -55,6 +63,8 @@ class AtmospherePalette {
   final bool showMoon;
   final double sunY;
   final double moonY;
+  /// 0–1 extra warm band near horizon (sunset/sunrise).
+  final double horizonWarmth;
 }
 
 DayPeriod periodFromLocalTime(DateTime now, DateTime? sunrise, DateTime? sunset) {
@@ -62,25 +72,35 @@ DayPeriod periodFromLocalTime(DateTime now, DateTime? sunrise, DateTime? sunset)
   final rise = sunrise != null ? sunrise.hour * 60 + sunrise.minute : 6 * 60;
   final set = sunset != null ? sunset.hour * 60 + sunset.minute : 18 * 60 + 30;
 
-  if (minutes >= 0 && minutes < 90) return DayPeriod.midnight; // 0:00–1:30
-  if (minutes < rise - 45) return DayPeriod.night;
-  if (minutes < rise + 40) return DayPeriod.sunrise;
-  if (minutes < rise + 180) return DayPeriod.morning;
-  if (minutes < 12 * 60 + 30) return DayPeriod.midday;
-  if (minutes < set - 50) return DayPeriod.afternoon;
-  if (minutes < set + 35) return DayPeriod.sunset;
-  if (minutes < 22 * 60) return DayPeriod.evening;
+  if (minutes < 75) return DayPeriod.midnight;
+  if (minutes < rise - 60) return DayPeriod.night;
+  if (minutes < rise - 25) return DayPeriod.predawn;
+  if (minutes < rise + 35) return DayPeriod.sunrise;
+  if (minutes < rise + 150) return DayPeriod.morning;
+  if (minutes < 13 * 60) return DayPeriod.midday;
+  if (minutes < set - 90) return DayPeriod.afternoon;
+  if (minutes < set - 25) return DayPeriod.goldenHour;
+  if (minutes < set + 25) return DayPeriod.sunset;
+  if (minutes < set + 55) return DayPeriod.dusk;
+  if (minutes < 22 * 60 + 30) return DayPeriod.evening;
   return DayPeriod.night;
 }
 
 SkyCondition conditionFromWeather(WeatherSnapshot w) {
   final code = w.weatherCode;
   final c = w.condition.toLowerCase();
+  final wind = w.windKmh?.toDouble() ?? 0;
+
   if (code >= 95 || c.contains('thunder')) return SkyCondition.thunder;
-  if ((code >= 51 && code <= 67) ||
+  if (code == 65 || code == 67 || code == 82 || c.contains('heavy rain')) {
+    return SkyCondition.heavyRain;
+  }
+  if ((code >= 51 && code <= 57) || c.contains('drizzle')) {
+    return SkyCondition.drizzle;
+  }
+  if ((code >= 61 && code <= 67) ||
       (code >= 80 && code <= 82) ||
-      c.contains('rain') ||
-      c.contains('drizzle')) {
+      c.contains('rain')) {
     return SkyCondition.rain;
   }
   if ((code >= 71 && code <= 77) || c.contains('snow')) return SkyCondition.snow;
@@ -88,60 +108,79 @@ SkyCondition conditionFromWeather(WeatherSnapshot w) {
     return SkyCondition.fog;
   }
   if (code >= 3 || c.contains('overcast')) return SkyCondition.overcast;
-  if (code >= 1 || c.contains('cloud')) return SkyCondition.cloudy;
+  if (code == 2 || c.contains('partly')) return SkyCondition.partlyCloudy;
+  if (code == 1 || c.contains('cloud')) return SkyCondition.cloudy;
+  if (wind >= 35) return SkyCondition.windy;
   return SkyCondition.clear;
 }
 
 AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
-  // Base by time of day
   AtmospherePalette base = switch (period) {
     DayPeriod.midnight => const AtmospherePalette(
-        top: Color(0xFF020617),
-        mid: Color(0xFF0B1220),
-        bottom: Color(0xFF111827),
+        top: Color(0xFF01030A),
+        mid: Color(0xFF060B18),
+        bottom: Color(0xFF0C1222),
         accent: Color(0xFF818CF8),
-        glow: Color(0xFF312E81),
-        card: Color(0xCC0F172A),
+        glow: Color(0xFF1E1B4B),
+        card: Color(0xE60A0F1C),
         text: Color(0xFFF1F5F9),
-        textMuted: Color(0xFF94A3B8),
-        orbStart: Color(0xFFA5B4FC),
-        orbEnd: Color(0xFF6366F1),
-        showSun: false,
-        showMoon: true,
-        sunY: 1.2,
-        moonY: 0.22,
-      ),
-    DayPeriod.night => const AtmospherePalette(
-        top: Color(0xFF0B1225),
-        mid: Color(0xFF111B33),
-        bottom: Color(0xFF1A2438),
-        accent: Color(0xFF93C5FD),
-        glow: Color(0xFF1E3A5F),
-        card: Color(0xCC152036),
-        text: Color(0xFFF8FAFC),
         textMuted: Color(0xFF94A3B8),
         orbStart: Color(0xFFE2E8F0),
         orbEnd: Color(0xFF94A3B8),
         showSun: false,
         showMoon: true,
-        sunY: 1.2,
-        moonY: 0.28,
+        sunY: 1.3,
+        moonY: 0.20,
+      ),
+    DayPeriod.predawn => const AtmospherePalette(
+        top: Color(0xFF0B1225),
+        mid: Color(0xFF1E293B),
+        bottom: Color(0xFF334155),
+        accent: Color(0xFF7DD3FC),
+        glow: Color(0xFF1E3A5F),
+        card: Color(0xE60F172A),
+        text: Color(0xFFF8FAFC),
+        textMuted: Color(0xFFCBD5E1),
+        orbStart: Color(0xFFFEF3C7),
+        orbEnd: Color(0xFFF59E0B),
+        showSun: true,
+        showMoon: true,
+        sunY: 0.92,
+        moonY: 0.18,
+        horizonWarmth: 0.25,
+      ),
+    DayPeriod.night => const AtmospherePalette(
+        top: Color(0xFF070B16),
+        mid: Color(0xFF0F172A),
+        bottom: Color(0xFF1A2438),
+        accent: Color(0xFF93C5FD),
+        glow: Color(0xFF1E3A5F),
+        card: Color(0xE60F172A),
+        text: Color(0xFFF8FAFC),
+        textMuted: Color(0xFF94A3B8),
+        orbStart: Color(0xFFF1F5F9),
+        orbEnd: Color(0xFFCBD5E1),
+        showSun: false,
+        showMoon: true,
+        sunY: 1.3,
+        moonY: 0.26,
       ),
     DayPeriod.sunrise => const AtmospherePalette(
         top: Color(0xFF1E3A5F),
-        mid: Color(0xFFB45309),
+        mid: Color(0xFFC2410C),
         bottom: Color(0xFFFDBA74),
         accent: Color(0xFFFBBF24),
-        glow: Color(0xFFF97316),
-        card: Color(0xCC1C1917),
+        glow: Color(0xFFEA580C),
+        card: Color(0xE01C1917),
         text: Color(0xFFFFFBEB),
         textMuted: Color(0xFFE7E5E4),
-        orbStart: Color(0xFFFDE68A),
-        orbEnd: Color(0xFFF97316),
+        orbStart: Color(0xFFFEF08A),
+        orbEnd: Color(0xFFEA580C),
         showSun: true,
         showMoon: false,
-        sunY: 0.72,
-        moonY: 1.2,
+        sunY: 0.78,
+        moonY: 1.3,
+        horizonWarmth: 0.7,
       ),
     DayPeriod.morning => const AtmospherePalette(
         top: Color(0xFF38BDF8),
@@ -156,11 +195,11 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         orbEnd: Color(0xFFFBBF24),
         showSun: true,
         showMoon: false,
-        sunY: 0.35,
-        moonY: 1.2,
+        sunY: 0.38,
+        moonY: 1.3,
       ),
     DayPeriod.midday => const AtmospherePalette(
-        top: Color(0xFF0EA5E9),
+        top: Color(0xFF0284C7),
         mid: Color(0xFF38BDF8),
         bottom: Color(0xFFBAE6FD),
         accent: Color(0xFFF59E0B),
@@ -172,11 +211,11 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         orbEnd: Color(0xFFF59E0B),
         showSun: true,
         showMoon: false,
-        sunY: 0.18,
-        moonY: 1.2,
+        sunY: 0.14,
+        moonY: 1.3,
       ),
     DayPeriod.afternoon => const AtmospherePalette(
-        top: Color(0xFF0284C7),
+        top: Color(0xFF0369A1),
         mid: Color(0xFF0EA5E9),
         bottom: Color(0xFF7DD3FC),
         accent: Color(0xFF2DD4BF),
@@ -188,8 +227,25 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         orbEnd: Color(0xFFFBBF24),
         showSun: true,
         showMoon: false,
-        sunY: 0.42,
-        moonY: 1.2,
+        sunY: 0.40,
+        moonY: 1.3,
+      ),
+    DayPeriod.goldenHour => const AtmospherePalette(
+        top: Color(0xFF1D4ED8),
+        mid: Color(0xFFFB923C),
+        bottom: Color(0xFFFDE68A),
+        accent: Color(0xFFFBBF24),
+        glow: Color(0xFFF97316),
+        card: Color(0xE01C0A00),
+        text: Color(0xFFFFFBEB),
+        textMuted: Color(0xFFFED7AA),
+        orbStart: Color(0xFFFED7AA),
+        orbEnd: Color(0xFFEA580C),
+        showSun: true,
+        showMoon: false,
+        sunY: 0.62,
+        moonY: 1.3,
+        horizonWarmth: 0.55,
       ),
     DayPeriod.sunset => const AtmospherePalette(
         top: Color(0xFF312E81),
@@ -197,84 +253,182 @@ AtmospherePalette paletteFor(DayPeriod period, SkyCondition sky) {
         bottom: Color(0xFFFBBF24),
         accent: Color(0xFFFB923C),
         glow: Color(0xFFEA580C),
-        card: Color(0xCC1C0A00),
+        card: Color(0xE01C0A00),
         text: Color(0xFFFFF7ED),
         textMuted: Color(0xFFFED7AA),
         orbStart: Color(0xFFFED7AA),
-        orbEnd: Color(0xFFEA580C),
+        orbEnd: Color(0xFFC2410C),
         showSun: true,
         showMoon: true,
-        sunY: 0.78,
-        moonY: 0.25,
+        sunY: 0.82,
+        moonY: 0.22,
+        horizonWarmth: 0.85,
       ),
-    DayPeriod.evening => const AtmospherePalette(
+    DayPeriod.dusk => const AtmospherePalette(
         top: Color(0xFF1E1B4B),
-        mid: Color(0xFF312E81),
-        bottom: Color(0xFF1E3A5F),
-        accent: Color(0xFFA78BFA),
-        glow: Color(0xFF4C1D95),
-        card: Color(0xCC0F172A),
+        mid: Color(0xFF4C1D95),
+        bottom: Color(0xFF7C2D12),
+        accent: Color(0xFFC4B5FD),
+        glow: Color(0xFF5B21B6),
+        card: Color(0xE00F172A),
         text: Color(0xFFF5F3FF),
         textMuted: Color(0xFFC4B5FD),
         orbStart: Color(0xFFE0E7FF),
         orbEnd: Color(0xFFA5B4FC),
         showSun: false,
         showMoon: true,
-        sunY: 1.2,
+        sunY: 1.3,
+        moonY: 0.28,
+        horizonWarmth: 0.35,
+      ),
+    DayPeriod.evening => const AtmospherePalette(
+        top: Color(0xFF0F172A),
+        mid: Color(0xFF1E1B4B),
+        bottom: Color(0xFF1E3A5F),
+        accent: Color(0xFFA78BFA),
+        glow: Color(0xFF4C1D95),
+        card: Color(0xE00F172A),
+        text: Color(0xFFF5F3FF),
+        textMuted: Color(0xFFC4B5FD),
+        orbStart: Color(0xFFE0E7FF),
+        orbEnd: Color(0xFFA5B4FC),
+        showSun: false,
+        showMoon: true,
+        sunY: 1.3,
         moonY: 0.30,
       ),
   };
 
-  // Weather overlays darken / cool the palette
-  if (sky == SkyCondition.rain || sky == SkyCondition.thunder) {
-    return AtmospherePalette(
-      top: Color.lerp(base.top, const Color(0xFF1E293B), 0.55)!,
-      mid: Color.lerp(base.mid, const Color(0xFF334155), 0.5)!,
-      bottom: Color.lerp(base.bottom, const Color(0xFF475569), 0.45)!,
-      accent: sky == SkyCondition.thunder
-          ? const Color(0xFFA78BFA)
-          : const Color(0xFF38BDF8),
-      glow: sky == SkyCondition.thunder
-          ? const Color(0xFF7C3AED)
-          : const Color(0xFF0EA5E9),
-      card: Color.lerp(base.card, const Color(0xFF0F172A), 0.4)!,
-      text: const Color(0xFFF8FAFC),
-      textMuted: const Color(0xFFCBD5E1),
-      orbStart: base.orbStart,
-      orbEnd: base.orbEnd,
-      showSun: false,
-      showMoon: period == DayPeriod.night ||
-          period == DayPeriod.midnight ||
-          period == DayPeriod.evening,
-      sunY: base.sunY,
-      moonY: base.moonY,
-    );
+  return _applyWeather(base, sky, period);
+}
+
+AtmospherePalette _applyWeather(
+  AtmospherePalette base,
+  SkyCondition sky,
+  DayPeriod period,
+) {
+  final night = period == DayPeriod.night ||
+      period == DayPeriod.midnight ||
+      period == DayPeriod.evening ||
+      period == DayPeriod.dusk;
+
+  switch (sky) {
+    case SkyCondition.thunder:
+      return AtmospherePalette(
+        top: Color.lerp(base.top, const Color(0xFF0F172A), 0.7)!,
+        mid: Color.lerp(base.mid, const Color(0xFF1E293B), 0.65)!,
+        bottom: Color.lerp(base.bottom, const Color(0xFF334155), 0.55)!,
+        accent: const Color(0xFFA78BFA),
+        glow: const Color(0xFF6D28D9),
+        card: Color.lerp(base.card, const Color(0xFF020617), 0.5)!,
+        text: const Color(0xFFF8FAFC),
+        textMuted: const Color(0xFFCBD5E1),
+        orbStart: base.orbStart,
+        orbEnd: base.orbEnd,
+        showSun: false,
+        showMoon: night,
+        sunY: base.sunY,
+        moonY: base.moonY,
+      );
+    case SkyCondition.heavyRain:
+    case SkyCondition.rain:
+    case SkyCondition.drizzle:
+      final darken = sky == SkyCondition.heavyRain ? 0.6 : 0.45;
+      return AtmospherePalette(
+        top: Color.lerp(base.top, const Color(0xFF1E293B), darken)!,
+        mid: Color.lerp(base.mid, const Color(0xFF334155), darken * 0.9)!,
+        bottom: Color.lerp(base.bottom, const Color(0xFF475569), darken * 0.7)!,
+        accent: const Color(0xFF38BDF8),
+        glow: const Color(0xFF0EA5E9),
+        card: Color.lerp(base.card, const Color(0xFF0F172A), 0.35)!,
+        text: const Color(0xFFF8FAFC),
+        textMuted: const Color(0xFFCBD5E1),
+        orbStart: base.orbStart,
+        orbEnd: base.orbEnd,
+        showSun: false,
+        showMoon: night,
+        sunY: base.sunY,
+        moonY: base.moonY,
+      );
+    case SkyCondition.snow:
+      return AtmospherePalette(
+        top: Color.lerp(base.top, const Color(0xFF64748B), 0.4)!,
+        mid: Color.lerp(base.mid, const Color(0xFF94A3B8), 0.35)!,
+        bottom: Color.lerp(base.bottom, const Color(0xFFE2E8F0), 0.3)!,
+        accent: const Color(0xFFE0F2FE),
+        glow: const Color(0xFF94A3B8),
+        card: Color.lerp(base.card, const Color(0xFF1E293B), 0.3)!,
+        text: const Color(0xFFF8FAFC),
+        textMuted: const Color(0xFFE2E8F0),
+        orbStart: base.orbStart,
+        orbEnd: base.orbEnd,
+        showSun: base.showSun && !night,
+        showMoon: night,
+        sunY: base.sunY,
+        moonY: base.moonY,
+      );
+    case SkyCondition.fog:
+      return AtmospherePalette(
+        top: Color.lerp(base.top, const Color(0xFF94A3B8), 0.5)!,
+        mid: Color.lerp(base.mid, const Color(0xFFCBD5E1), 0.45)!,
+        bottom: Color.lerp(base.bottom, const Color(0xFFE2E8F0), 0.4)!,
+        accent: base.accent,
+        glow: const Color(0xFF94A3B8),
+        card: base.card,
+        text: night ? base.text : const Color(0xFF1E293B),
+        textMuted: night ? base.textMuted : const Color(0xFF475569),
+        orbStart: base.orbStart,
+        orbEnd: base.orbEnd,
+        showSun: false,
+        showMoon: false,
+        sunY: base.sunY,
+        moonY: base.moonY,
+      );
+    case SkyCondition.overcast:
+      return AtmospherePalette(
+        top: Color.lerp(base.top, const Color(0xFF475569), 0.4)!,
+        mid: Color.lerp(base.mid, const Color(0xFF64748B), 0.35)!,
+        bottom: Color.lerp(base.bottom, const Color(0xFF94A3B8), 0.3)!,
+        accent: base.accent,
+        glow: base.glow,
+        card: base.card,
+        text: night ? base.text : const Color(0xFF0F172A),
+        textMuted: night ? base.textMuted : const Color(0xFF334155),
+        orbStart: base.orbStart,
+        orbEnd: base.orbEnd,
+        showSun: false,
+        showMoon: night,
+        sunY: base.sunY,
+        moonY: base.moonY,
+      );
+    case SkyCondition.cloudy:
+    case SkyCondition.partlyCloudy:
+      return AtmospherePalette(
+        top: Color.lerp(base.top, const Color(0xFF64748B), 0.15)!,
+        mid: Color.lerp(base.mid, const Color(0xFF94A3B8), 0.12)!,
+        bottom: base.bottom,
+        accent: base.accent,
+        glow: base.glow,
+        card: base.card,
+        text: base.text,
+        textMuted: base.textMuted,
+        orbStart: base.orbStart,
+        orbEnd: base.orbEnd,
+        showSun: base.showSun,
+        showMoon: base.showMoon,
+        sunY: base.sunY,
+        moonY: base.moonY,
+        horizonWarmth: base.horizonWarmth,
+      );
+    case SkyCondition.windy:
+    case SkyCondition.clear:
+      return base;
   }
-  if (sky == SkyCondition.overcast || sky == SkyCondition.fog) {
-    return AtmospherePalette(
-      top: Color.lerp(base.top, const Color(0xFF64748B), 0.35)!,
-      mid: Color.lerp(base.mid, const Color(0xFF94A3B8), 0.3)!,
-      bottom: Color.lerp(base.bottom, const Color(0xFFCBD5E1), 0.25)!,
-      accent: base.accent,
-      glow: base.glow,
-      card: base.card,
-      text: base.text,
-      textMuted: base.textMuted,
-      orbStart: base.orbStart,
-      orbEnd: base.orbEnd,
-      showSun: base.showSun && sky != SkyCondition.overcast,
-      showMoon: base.showMoon,
-      sunY: base.sunY,
-      moonY: base.moonY,
-    );
-  }
-  return base;
 }
 
 DateTime? parseWeatherTime(String? raw) {
   if (raw == null || raw.trim().isEmpty) return null;
   try {
-    // Handles "2026-09-15T06:26" and full ISO
     var s = raw.trim();
     if (s.length == 16 && s.contains('T')) s = '${s}:00';
     return DateTime.tryParse(s);
