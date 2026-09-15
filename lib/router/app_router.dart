@@ -137,10 +137,10 @@ class NavigationShell extends StatelessWidget {
   final Widget child;
 
   static const _items = [
-    (path: '/home', icon: Icons.home_outlined, label: 'Home'),
-    (path: '/chat', icon: Icons.chat_bubble_outline, label: 'Chat'),
-    (path: '/explore', icon: Icons.map_outlined, label: 'Map'),
-    (path: '/profile', icon: Icons.person_outline, label: 'Profile'),
+    (path: '/home', icon: Icons.home_rounded, activeIcon: Icons.home_rounded, label: 'Home'),
+    (path: '/chat', icon: Icons.forum_outlined, activeIcon: Icons.forum_rounded, label: 'Chat'),
+    (path: '/explore', icon: Icons.public_outlined, activeIcon: Icons.public, label: 'Map'),
+    (path: '/profile', icon: Icons.tune_rounded, activeIcon: Icons.tune_rounded, label: 'Settings'),
   ];
 
   @override
@@ -155,41 +155,55 @@ class NavigationShell extends StatelessWidget {
       }
     }
     return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
       body: child,
+      extendBody: true,
       bottomNavigationBar: SafeArea(
-        top: false,
-        child: SizedBox(
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Container(
           height: 64,
-          child: NavigationBar(
-            selectedIndex: currentIndex,
-            onDestinationSelected: (index) => context.go(_items[index].path),
-            backgroundColor: AppColors.surfaceCard,
-            indicatorColor: Colors.transparent,
-            elevation: 0,
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-            destinations: _items.map((item) {
-              final active = _items.indexOf(item) == currentIndex;
-              final color =
-                  active ? AppColors.textPrimary : AppColors.textTertiary;
-              return NavigationDestination(
-                icon: Icon(item.icon, color: color),
-                selectedIcon: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(item.icon, color: color),
-                    const SizedBox(height: 2),
-                    Text(
-                      item.label,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textPrimary,
+          decoration: BoxDecoration(
+            color: AppColors.bgElevated.withValues(alpha: 0.94),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.borderSubtle),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Row(
+            children: List.generate(_items.length, (i) {
+              final item = _items[i];
+              final active = i == currentIndex;
+              return Expanded(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => context.go(item.path),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        active ? item.activeIcon : item.icon,
+                        size: 22,
+                        color: active ? AppColors.accent : AppColors.textTertiary,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                          color: active ? AppColors.accent : AppColors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                label: item.label,
               );
-            }).toList(),
+            }),
           ),
         ),
       ),

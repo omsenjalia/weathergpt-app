@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/markdown_utils.dart';
 import '../providers/voice_provider.dart';
-import '../widgets/recommendation_card.dart';
 
 class ConversationalResultScreen extends ConsumerStatefulWidget {
   const ConversationalResultScreen({super.key, required this.response});
@@ -24,223 +22,180 @@ class _ConversationalResultScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Body text only — skip the card title/verdict.
-      final spoken = MarkdownUtils.spokenSummary(
-        '',
-        widget.response.explanation,
-      );
+      final spoken =
+          MarkdownUtils.spokenSummary('', widget.response.explanation);
       ref.read(voiceProvider.notifier).speak(spoken);
     });
   }
 
-  /// Strip raw widget JSON blobs that look ugly in markdown.
-  String get _displayMarkdown {
-    var text = widget.response.explanation;
-    text = text.replaceAll(RegExp(r'```widget:[\s\S]*?```'), '');
-    text = text.replaceAll(RegExp(r'```json[\s\S]*?```'), '');
-    text = text.replaceAll(RegExp(r'widget:\w+\s*\{[\s\S]*?\}'), '');
-    return text.trim().isEmpty ? widget.response.verdict : text.trim();
+  String get _md {
+    var t = widget.response.explanation;
+    t = t.replaceAll(RegExp(r'```widget:[\s\S]*?```'), '');
+    t = t.replaceAll(RegExp(r'```json[\s\S]*?```'), '');
+    return t.trim().isEmpty ? widget.response.verdict : t.trim();
   }
 
   @override
   Widget build(BuildContext context) {
-    final response = widget.response;
+    final r = widget.response;
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () => context.go('/home'),
-          icon: const Icon(Icons.arrow_back),
-        ),
-        title: Text(
-          'common.weather_gpt'.tr(),
-          style: const TextStyle(fontSize: 17),
-        ),
-      ),
+      backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 290),
-                  padding: const EdgeInsets.all(14),
-                  decoration: const BoxDecoration(
-                    color: AppColors.surfaceCardAlt,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(5),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => context.go('/home'),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'Conversation',
+                      textAlign: TextAlign.center,
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                     ),
                   ),
-                  child: Text(response.transcript),
-                ),
+                  const SizedBox(width: 48),
+                ],
               ),
-              const SizedBox(height: 16),
-              RecommendationCard(response: response),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceCard,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.borderSubtle),
-                ),
-                child: MarkdownBody(
-                  data: _displayMarkdown,
-                  selectable: true,
-                  styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      height: 1.45,
-                    ),
-                    h1: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    h2: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    strong: const TextStyle(fontWeight: FontWeight.w700),
-                    listBullet: const TextStyle(color: AppColors.textSecondary),
-                    code: const TextStyle(
-                      backgroundColor: AppColors.surfaceCardAlt,
-                      fontSize: 12,
-                    ),
-                    codeblockDecoration: BoxDecoration(
-                      color: AppColors.surfaceCardAlt,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Row(
-                children: response.stats
-                    .map(
-                      (stat) => Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            right: stat == response.stats.last ? 0 : 8,
-                          ),
-                          child: _StatCard(stat: stat),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12, left: 48),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.18),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(18),
+                          topRight: Radius.circular(18),
+                          bottomLeft: Radius.circular(18),
+                          bottomRight: Radius.circular(6),
                         ),
+                        border: Border.all(
+                            color: AppColors.accent.withValues(alpha: 0.35)),
                       ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'voice.next_3_days'.tr(),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: response.forecast
-                    .map(
-                      (day) => Expanded(
-                        child: Padding(
-                          padding: EdgeInsets.only(
-                            right: day == response.forecast.last ? 0 : 8,
-                          ),
-                          child: _DayCard(day: day),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-              const SizedBox(height: 24),
-              OutlinedButton(
-                onPressed: () => context.push('/researcher/historical'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(54),
-                  side: const BorderSide(color: AppColors.textSecondary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                      child: Text(r.transcript),
+                    ),
                   ),
-                ),
-                child: Text('${response.ctaLabel}  →'),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceCard,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: AppColors.gradientAccent,
+                              ),
+                              child: const Icon(Icons.auto_awesome,
+                                  size: 14, color: Colors.black87),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              r.label.isEmpty ? 'WeatherGPT' : r.label,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        MarkdownBody(
+                          data: _md,
+                          styleSheet: MarkdownStyleSheet(
+                            p: const TextStyle(fontSize: 15.5, height: 1.45),
+                          ),
+                        ),
+                        if (r.stats.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: r.stats
+                                .map(
+                                  (s) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.bgElevated,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(s.label,
+                                            style: const TextStyle(
+                                                fontSize: 10,
+                                                color: AppColors.textTertiary)),
+                                        Text(s.value,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              color: s.color ??
+                                                  AppColors.textPrimary,
+                                            )),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => context.go('/chat'),
+                      child: const Text('Chat'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => context.push('/voice/listening',
+                          extra: {'accent': AppColors.accent}),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.black87,
+                      ),
+                      child: const Text('Ask again'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.stat});
-  final ResultStat stat;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCardAlt,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              stat.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              stat.value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: stat.color ?? AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      );
-}
-
-class _DayCard extends StatelessWidget {
-  const _DayCard({required this.day});
-  final ForecastDay day;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.borderSubtle),
-        ),
-        child: Column(
-          children: [
-            Text(
-              day.day,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-            ),
-            const SizedBox(height: 7),
-            Icon(day.icon, color: AppColors.statusAmber),
-            const SizedBox(height: 7),
-            Text(day.temperature, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(
-              day.rainfall,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-            ),
-          ],
-        ),
-      );
 }
