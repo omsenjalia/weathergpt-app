@@ -132,7 +132,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       );
       _restartSilenceTimer();
     } catch (e) {
-      state = VoiceState(
+      state = const VoiceState(
           status: VoiceStatus.error,
           errorMessage:
               'Could not start listening. Please try again.');
@@ -197,7 +197,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     } catch (e) {
       state = state.copyWith(
           status: VoiceStatus.error,
-          errorMessage: 'Something went wrong. Please try again.');
+          errorMessage: 'WeatherGPT took too long to answer. Please try again.');
     }
   }
 

@@ -162,8 +162,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                           onTap: _locate,
                         ),
                         const SizedBox(height: 10),
-                        AppCard(
-                          padding: const EdgeInsets.symmetric(
+                        const AppCard(
+                          padding: EdgeInsets.symmetric(
                               horizontal: 10, vertical: 6),
                           radius: 10,
                           child: Text(

@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../core/theme/app_colors.dart';
-import '../features/home/screens/home_router_screen.dart';
+import '../features/home/screens/weather_home_screen.dart';
+import '../features/chat/screens/chat_screen.dart';
 import '../features/explore/screens/explore_screen.dart';
-import '../features/explore/screens/saved_locations_screen.dart';
 import '../features/onboarding/screens/focus_select_screen.dart';
 import '../features/onboarding/screens/language_select_screen.dart';
 import '../features/onboarding/screens/splash_screen.dart';
@@ -92,18 +92,19 @@ final GoRouter appRouter = GoRouter(
       routes: [
         GoRoute(
           path: '/home',
-          builder: (_, state) => HomeRouterScreen(
-            locationName:
-                state.uri.queryParameters['location'] ?? 'Ahmedabad, Gujarat',
-          ),
+          builder: (_, __) => const WeatherHomeScreen(),
+        ),
+        GoRoute(
+          path: '/chat',
+          builder: (_, state) {
+            final extra = state.extra;
+            final prompt = extra is String ? extra : null;
+            return ChatScreen(initialPrompt: prompt);
+          },
         ),
         GoRoute(
           path: '/explore',
           builder: (_, __) => const ExploreScreen(),
-        ),
-        GoRoute(
-          path: '/saved',
-          builder: (_, __) => const SavedLocationsScreen(),
         ),
         GoRoute(
           path: '/profile',
@@ -132,17 +133,22 @@ class NavigationShell extends StatelessWidget {
 
   static const _items = [
     (path: '/home', icon: Icons.home_outlined, label: 'Home'),
-    (path: '/explore', icon: Icons.search, label: 'Explore'),
-    (path: '/saved', icon: Icons.bookmark_outline, label: 'Saved'),
+    (path: '/chat', icon: Icons.chat_bubble_outline, label: 'Chat'),
+    (path: '/explore', icon: Icons.map_outlined, label: 'Map'),
     (path: '/profile', icon: Icons.person_outline, label: 'Profile'),
   ];
 
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-    final currentIndex = _items
-        .indexWhere((item) => item.path == location)
-        .clamp(0, _items.length - 1);
+    var currentIndex = 0;
+    for (var i = 0; i < _items.length; i++) {
+      final path = _items[i].path;
+      if (location == path || location.startsWith('$path/')) {
+        currentIndex = i;
+        break;
+      }
+    }
     return Scaffold(
       body: child,
       bottomNavigationBar: SafeArea(

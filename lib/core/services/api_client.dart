@@ -17,8 +17,8 @@ class ApiClient {
   ApiClient._() {
     _dio = Dio(BaseOptions(
       baseUrl: (dotenv.env['BACKEND_URL'] ?? 'http://10.0.2.2:8888').replaceFirst(RegExp(r'/+$'), ''),
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 20),
+      receiveTimeout: const Duration(seconds: 60),
       headers: {'Accept': 'application/json'},
     ));
     _dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
@@ -46,7 +46,15 @@ class ApiClient {
   }
 
   AppApiError _map(DioException error) {
-    if (error.type == DioExceptionType.connectionTimeout || error.type == DioExceptionType.receiveTimeout || error.type == DioExceptionType.connectionError) return const NetworkError('Could not reach WeatherGPT. Check your connection and try again.');
+    if (error.type == DioExceptionType.receiveTimeout) {
+      return const NetworkError(
+          'WeatherGPT is taking longer than usual. Please try again in a moment.');
+    }
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.connectionError) {
+      return const NetworkError(
+          'Could not reach WeatherGPT. Check your connection and try again.');
+    }
     final status = error.response?.statusCode ?? 0;
     if (status == 400 || status == 422) return ValidationError(_detail(error) ?? 'Please check the requested weather data.');
     return ServerError(_detail(error) ?? 'WeatherGPT is temporarily unavailable. Please try again.');

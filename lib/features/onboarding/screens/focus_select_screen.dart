@@ -42,6 +42,7 @@ class FocusSelectScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(onboardingProvider).selectedPersona;
     return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
         body: SafeArea(
             child: Padding(
       padding: const EdgeInsets.fromLTRB(20, 56, 20, 20),

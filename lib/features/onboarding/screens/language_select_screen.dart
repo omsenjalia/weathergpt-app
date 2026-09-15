@@ -36,6 +36,7 @@ class LanguageSelectScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(onboardingProvider).selectedLanguage;
     return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
