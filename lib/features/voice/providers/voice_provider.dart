@@ -214,35 +214,91 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
     }
   }
 
+  /// Greetings / intro replies should not show irrigation/rain mock cards.
+  bool _looksLikeGreetingOrIntro(String query, String lowerBody) {
+    const greetings = {
+      'hi',
+      'hello',
+      'hey',
+      'yo',
+      'sup',
+      'help',
+      'thanks',
+      'thank you',
+      'namaste',
+      'namaskar',
+      'hola',
+      'હેલો',
+      'હાય',
+      'નમસ્તે',
+      'नमस्ते',
+      'हैलो',
+      'हाय',
+    };
+    final q = query.trim().toLowerCase();
+    if (greetings.contains(q)) return true;
+    if (q.startsWith('what do you') || q.startsWith('who are you')) {
+      return true;
+    }
+    if (lowerBody.contains("i'm **weathergpt**") ||
+        lowerBody.contains('i am weathergpt') ||
+        lowerBody.contains("couldn't fetch live weather") ||
+        lowerBody.contains('try asking:') ||
+        lowerBody.contains('weathergpt છું') ||
+        lowerBody.contains('weathergpt हूं') ||
+        lowerBody.contains('weathergpt हूँ')) {
+      return true;
+    }
+    final hasNumbers =
+        RegExp(r'\d+\s*°|\d+\s*mm|\d+%').hasMatch(lowerBody);
+    if (!hasNumbers &&
+        lowerBody.contains('weathergpt') &&
+        (lowerBody.contains('help') ||
+            lowerBody.contains('ask') ||
+            lowerBody.contains('સલાહ') ||
+            lowerBody.contains('જણાવો') ||
+            lowerBody.contains('advisor') ||
+            lowerBody.contains('હવામાન'))) {
+      return true;
+    }
+    return false;
+  }
+
   /// Explicit backend-to-UI mapping. The text response does not coerce enum values.
   VoiceResponse _responseFromBackend(String query, String response) {
-    final normalized = query.toLowerCase();
-    final type = normalized.contains('irrigat')
-        ? ResultType.irrigation
-        : normalized.contains('rain') || normalized.contains('forecast')
-            ? ResultType.rainForecast
-            : normalized.contains('crop') || normalized.contains('wheat')
-                ? ResultType.cropStatus
-                : ResultType.general;
+    final normalized = query.toLowerCase().trim();
+    final bodyRaw = response.trim();
+    final lowerBody = bodyRaw.toLowerCase();
+    final isMeta = _looksLikeGreetingOrIntro(normalized, lowerBody);
+
+    final type = isMeta
+        ? ResultType.general
+        : normalized.contains('irrigat')
+            ? ResultType.irrigation
+            : normalized.contains('rain') || normalized.contains('forecast')
+                ? ResultType.rainForecast
+                : normalized.contains('crop') || normalized.contains('wheat')
+                    ? ResultType.cropStatus
+                    : ResultType.general;
     final base = _responseFor(query);
-    final body = response.trim().isEmpty ? base.explanation : response.trim();
-    // First meaningful line as short verdict; full body kept for markdown UI
+    final body = bodyRaw.isEmpty ? base.explanation : bodyRaw;
     final plain = MarkdownUtils.forSpeech(body);
-    final firstLine = plain.split(RegExp(r'[.!?\n]')).map((s) => s.trim()).firstWhere(
-          (s) => s.isNotEmpty,
-          orElse: () => base.verdict,
-        );
-    final verdict = firstLine.length > 90 ? '${firstLine.substring(0, 90)}…' : firstLine;
+    final firstLine = plain
+        .split(RegExp(r'[.!?\n]'))
+        .map((s) => s.trim())
+        .firstWhere((s) => s.isNotEmpty, orElse: () => base.verdict);
+    final verdict =
+        firstLine.length > 90 ? '${firstLine.substring(0, 90)}…' : firstLine;
     return VoiceResponse(
       transcript: query,
       type: type,
       accent: base.accent,
-      label: base.label,
+      label: isMeta ? 'Assistant' : base.label,
       verdict: verdict.isEmpty ? base.verdict : verdict,
       explanation: body,
-      stats: base.stats,
-      forecast: base.forecast,
-      ctaLabel: base.ctaLabel,
+      stats: isMeta ? const [] : base.stats,
+      forecast: isMeta ? const [] : base.forecast,
+      ctaLabel: isMeta ? 'Ask about weather' : base.ctaLabel,
     );
   }
 
@@ -310,23 +366,15 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
           ctaLabel: 'View Farm Action Windows');
     }
     return VoiceResponse(
-        transcript:
-            query.isEmpty ? 'Should I irrigate my wheat field today?' : query,
-        type: ResultType.irrigation,
-        accent: AppColors.statusAmber,
-        label: 'Irrigation Recommendation',
-        verdict: 'Not recommended today',
-        explanation:
-            'Rain is likely tomorrow (12 mm), which should provide enough moisture for your wheat field.',
-        stats: const [
-          ResultStat('Rain (tomorrow)', '12 mm'),
-          ResultStat('Soil Moisture', 'Adequate',
-              color: AppColors.statusGreenText),
-          ResultStat('Field Condition', 'Good',
-              color: AppColors.statusGreenText)
-        ],
-        forecast: days,
-        ctaLabel: 'View Detailed Forecast');
+        transcript: query.isEmpty ? 'Weather question' : query,
+        type: ResultType.general,
+        accent: AppColors.researcherBlue,
+        label: 'WeatherGPT',
+        verdict: 'WeatherGPT',
+        explanation: '',
+        stats: const [],
+        forecast: const [],
+        ctaLabel: 'Ask about weather');
   }
 
   Future<void> speak(String text) async {
