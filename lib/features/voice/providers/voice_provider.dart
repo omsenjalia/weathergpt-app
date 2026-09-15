@@ -143,7 +143,6 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
             stopListening();
           }
         },
-        localeId: localeId,
         listenOptions: stt.SpeechListenOptions(
           partialResults: true,
           listenMode: stt.ListenMode.confirmation,
