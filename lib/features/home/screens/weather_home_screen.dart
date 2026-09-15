@@ -62,19 +62,19 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text('home.choose_location'.tr(),
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 17, fontWeight: FontWeight.w700)),
                   ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.my_location,
                       color: AppColors.statusAmber),
-                  title: const Text('home.use_my_location'.tr()),
+                  title: Text('home.use_my_location'.tr()),
                   onTap: () async {
                     final loc =
                         await ref.read(locationProvider.notifier).selectFromGps();
@@ -152,9 +152,9 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'home.tagline'.tr(),
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w500,
                                 fontStyle: FontStyle.italic,
@@ -285,9 +285,9 @@ class _SearchField extends StatelessWidget {
             child: TextField(
               controller: controller,
               style: const TextStyle(fontSize: 14),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'home.search_hint'.tr(),
-                hintStyle: TextStyle(color: AppColors.textTertiary),
+                hintStyle: const TextStyle(color: AppColors.textTertiary),
                 border: InputBorder.none,
                 isDense: true,
               ),
