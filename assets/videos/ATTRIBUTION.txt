@@ -1,0 +1,11 @@
+Weather sky loops — Wikimedia Commons (free licenses; transcoded & trimmed for mobile)
+
+- sky_rain: "Radevormwald - Raindrops on a window 07" (ies) — CC BY-SA 4.0
+- sky_cloudy / sky_day / sky_fog: "Timelapse of Clouds over Bellevue Canyon" — CC BY 4.0 (or as marked on Commons)
+- sky_sunset: "Pacific Ocean sunset (Ocean Shores, Washington), 01" — CC0 / public domain as marked on Commons
+- sky_sunrise: "Time-lapse sunrise Berlin Drachenberg" — as marked on Commons
+- sky_night: "Night sky time lapse" — as marked on Commons
+- sky_thunder: "Hail thunderstorm in Romans-sur-Isère" — as marked on Commons
+
+Sources: https://commons.wikimedia.org/
+Clips trimmed ~8s, re-encoded H.264 for Android/iOS.
