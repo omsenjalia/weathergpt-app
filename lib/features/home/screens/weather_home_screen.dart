@@ -170,6 +170,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                                   _pickLocation();
                                   return;
                                 }
+                                // Prefer local presets, then Open-Meteo geocode
                                 final match = kPresetLocations.where((l) =>
                                     l.name.toLowerCase().contains(query.toLowerCase()));
                                 AppLocation? loc =
@@ -180,11 +181,21 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                                       .read(locationProvider.notifier)
                                       .select(loc);
                                   ref.invalidate(weatherProvider);
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text('Location: ${loc.name}')),
+                                    );
+                                  }
                                 } else if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
+<<<<<<< HEAD
                                           'Place not found. Try another name.'),
+=======
+                                          'Place not found. Try another name or pick from the list.'),
+>>>>>>> origin/main
                                     ),
                                   );
                                   _pickLocation();

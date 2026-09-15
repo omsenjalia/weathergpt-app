@@ -87,7 +87,7 @@ final locationProvider =
   (ref) => LocationNotifier(),
 );
 
-
+/// Geocode a free-text place name via Open-Meteo (no API key).
 Future<AppLocation?> geocodePlaceName(String query) async {
   final q = query.trim();
   if (q.length < 2) return null;

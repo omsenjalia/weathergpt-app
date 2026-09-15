@@ -80,11 +80,20 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   final Ref _ref;
   final _speech = stt.SpeechToText();
 
+  /// Map app language code → speech_to_text locale id.
   String _sttLocale() {
     final lang = _ref.read(settingsProvider).language.toLowerCase();
     const map = {
-      'en': 'en_US', 'hi': 'hi_IN', 'gu': 'gu_IN', 'mr': 'mr_IN',
-      'ta': 'ta_IN', 'te': 'te_IN', 'kn': 'kn_IN', 'ml': 'ml_IN', 'bn': 'bn_IN',
+      'en': 'en_US',
+      'hi': 'hi_IN',
+      'gu': 'gu_IN',
+      'mr': 'mr_IN',
+      'ta': 'ta_IN',
+      'te': 'te_IN',
+      'kn': 'kn_IN',
+      'ml': 'ml_IN',
+      'bn': 'bn_IN',
+      'pa': 'pa_IN',
     };
     return map[lang] ?? 'en_US';
   }
@@ -134,6 +143,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
             stopListening();
           }
         },
+        localeId: localeId,
         listenOptions: stt.SpeechListenOptions(
           partialResults: true,
           listenMode: stt.ListenMode.confirmation,
