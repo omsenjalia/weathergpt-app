@@ -61,14 +61,42 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         u.contains('oauth') && u.contains('google');
   }
 
-  Future<void> _openExternal(String url) async {
+  /// Prefer Chrome Custom Tabs (Android) / SFSafariViewController (iOS).
+  /// Those share the system browser cookie jar, so Google sign-in persists
+  /// much better than an isolated WebView.
+  Future<bool> _openInCustomTabs(String url) async {
     final uri = Uri.parse(url);
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok && mounted) {
+    // 1) Custom Tabs / SFSafariViewController (in-app browser chrome)
+    try {
+      if (await canLaunchUrl(uri)) {
+        final ok = await launchUrl(
+          uri,
+          mode: LaunchMode.inAppBrowserView,
+          browserConfiguration: const BrowserConfiguration(showTitle: true),
+          webOnlyWindowName: '_blank',
+        );
+        if (ok) return true;
+      }
+    } catch (_) {
+      // Fall through to external browser.
+    }
+    // 2) Full external browser (Chrome / Safari)
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (ok) return true;
+    } catch (_) {}
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open browser')),
+        const SnackBar(
+          content: Text('Could not open Weather Lab. Check that a browser is installed.'),
+        ),
       );
     }
+    return false;
+  }
+
+  Future<void> _openExternal(String url) async {
+    await _openInCustomTabs(url);
   }
 
   /// Friendly prompt when Weather Lab needs Google sign-in.
@@ -95,8 +123,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 const SizedBox(height: 8),
                 const Text(
                   'DeepMind Weather Lab needs a Google account. '
-                  'Sign-in works more reliably in your system browser '
-                  '(cookies and 2FA are handled there).',
+                  'We open it in Chrome Custom Tabs / Safari so your '
+                  'Google session can persist (much better than WebView).',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -107,7 +135,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 FilledButton.icon(
                   onPressed: () => Navigator.pop(ctx, 'browser'),
                   icon: const Icon(Icons.open_in_browser),
-                  label: const Text('Sign in with Google in browser'),
+                  label: const Text('Continue with Google (Custom Tabs)'),
                   style: FilledButton.styleFrom(
                     backgroundColor: _accent,
                     foregroundColor: Colors.black87,
@@ -181,7 +209,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 FilledButton.icon(
                   onPressed: () => Navigator.pop(ctx, 'browser'),
                   icon: const Icon(Icons.open_in_browser),
-                  label: const Text('Open in browser (recommended)'),
+                  label: const Text('Open in Custom Tabs (recommended)'),
                   style: FilledButton.styleFrom(
                     backgroundColor: _accent,
                     foregroundColor: Colors.black87,
@@ -196,7 +224,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     side: const BorderSide(color: AppColors.borderSubtle),
                     minimumSize: const Size.fromHeight(44),
                   ),
-                  child: const Text('Try inside the app'),
+                  child: const Text('Try WebView (login may not stick)'),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, 'cancel'),
@@ -210,14 +238,23 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     );
     if (!mounted) return;
     if (choice == 'browser') {
-      await _openExternal(url);
-      // Keep source as weatherLab so badge is correct, or revert to windy
-      // User is viewing outside app — switch back to Windy map in-app.
+      final opened = await _openInCustomTabs(url);
+      // In-app map stays on Windy; Lab runs in Custom Tabs with better sessions.
       ref.read(mapProvider.notifier).setSource(MapSource.windy);
+      if (opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Weather Lab opened in Custom Tabs. Google sign-in can persist here.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     } else if (choice == 'cancel') {
       ref.read(mapProvider.notifier).setSource(MapSource.windy);
     }
-    // 'app' → WebView loads Weather Lab as already set
+    // 'app' → isolated WebView (weaker session persistence)
   }
 
   String _embedUrl(MapState map) {
