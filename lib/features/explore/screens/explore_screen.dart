@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -50,6 +51,173 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     };
   }
 
+
+  bool _isGoogleAuthUrl(String url) {
+    final u = url.toLowerCase();
+    return u.contains('accounts.google.com') ||
+        u.contains('google.com/account') ||
+        u.contains('oauth') && u.contains('google');
+  }
+
+  Future<void> _openExternal(String url) async {
+    final uri = Uri.parse(url);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open browser')),
+      );
+    }
+  }
+
+  /// Friendly prompt when Weather Lab needs Google sign-in.
+  Future<void> _promptGoogleSignIn(String authOrLabUrl) async {
+    if (!mounted) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.surfaceCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Google sign-in required',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'DeepMind Weather Lab needs a Google account. '
+                  'Sign-in works more reliably in your system browser '
+                  '(cookies and 2FA are handled there).',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(ctx, 'browser'),
+                  icon: const Icon(Icons.open_in_browser),
+                  label: const Text('Sign in with Google in browser'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _accent,
+                    foregroundColor: Colors.black87,
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, 'app'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.borderSubtle),
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  child: const Text('Continue in app (may fail)'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, 'cancel'),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted) return;
+    if (choice == 'browser') {
+      await _openExternal(authOrLabUrl);
+    } else if (choice == 'app' && _controller != null) {
+      // Stay in WebView — user chose to try embedded login
+    } else if (choice == 'cancel') {
+      ref.read(mapProvider.notifier).setSource(MapSource.windy);
+    }
+  }
+
+  Future<void> _onSelectWeatherLab() async {
+    ref.read(mapProvider.notifier).setSource(MapSource.weatherLab);
+    if (!mounted) return;
+    final url = _embedUrl(ref.read(mapProvider));
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.surfaceCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Open Weather Lab',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Weather Lab is Google DeepMind\'s AI forecast map. '
+                  'A Google account is often required. Opening in your '
+                  'browser gives the smoothest login experience.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(ctx, 'browser'),
+                  icon: const Icon(Icons.open_in_browser),
+                  label: const Text('Open in browser (recommended)'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _accent,
+                    foregroundColor: Colors.black87,
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, 'app'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.borderSubtle),
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  child: const Text('Try inside the app'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, 'cancel'),
+                  child: const Text('Stay on Windy'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted) return;
+    if (choice == 'browser') {
+      await _openExternal(url);
+      // Keep source as weatherLab so badge is correct, or revert to windy
+      // User is viewing outside app — switch back to Windy map in-app.
+      ref.read(mapProvider.notifier).setSource(MapSource.windy);
+    } else if (choice == 'cancel') {
+      ref.read(mapProvider.notifier).setSource(MapSource.windy);
+    }
+    // 'app' → WebView loads Weather Lab as already set
+  }
+
   String _embedUrl(MapState map) {
     if (map.source == MapSource.weatherLab) {
       // DeepMind Weather Lab — interactive AI forecast map (no scraping).
@@ -96,8 +264,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         ..setBackgroundColor(const Color(0xFF0B1220))
         ..setNavigationDelegate(
           NavigationDelegate(
-            onPageStarted: (_) {
+            onNavigationRequest: (request) {
+              final url = request.url;
+              if (_isGoogleAuthUrl(url)) {
+                // Don't show bare Google login inside the WebView.
+                _promptGoogleSignIn(url);
+                return NavigationDecision.prevent;
+              }
+              return NavigationDecision.navigate;
+            },
+            onPageStarted: (url) {
               if (mounted) setState(() => _loading = true);
+              if (_isGoogleAuthUrl(url)) {
+                _promptGoogleSignIn(url);
+              }
             },
             onPageFinished: (_) {
               if (mounted) setState(() => _loading = false);
@@ -200,7 +380,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 selected: {map.source},
                 onSelectionChanged: (s) {
                   if (s.isEmpty) return;
-                  ref.read(mapProvider.notifier).setSource(s.first);
+                  final next = s.first;
+                  if (next == MapSource.weatherLab) {
+                    _onSelectWeatherLab();
+                  } else {
+                    ref.read(mapProvider.notifier).setSource(MapSource.windy);
+                  }
                 },
                 style: const ButtonStyle(
                   visualDensity: VisualDensity.compact,
