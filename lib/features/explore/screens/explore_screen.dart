@@ -51,6 +51,18 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 
   String _embedUrl(MapState map) {
+    if (map.source == MapSource.weatherLab) {
+      // DeepMind Weather Lab — interactive AI forecast map (no scraping).
+      // center is lon,lat; zoom ~5–8 works well for regional view.
+      final zoom = (map.zoom.clamp(3, 12) * 0.85).toStringAsFixed(2);
+      return 'https://deepmind.google.com/science/weatherlab'
+          '?cyclones_enabled=false'
+          '&weather_enabled=true'
+          '&weather_model=weathernext3'
+          '&weather_layers=total_precipitation_1hr_mean'
+          '&zoom=$zoom'
+          '&center=${map.lat},${map.lon}';
+    }
     final overlay = map.activeLayer.name;
     final product = map.product.name;
     final menu = map.showMenu ? 'true' : '';
@@ -170,7 +182,34 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ],
               ),
             ),
-            // Layer chips
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+              child: SegmentedButton<MapSource>(
+                segments: const [
+                  ButtonSegment(
+                    value: MapSource.windy,
+                    label: Text('Windy'),
+                    icon: Icon(Icons.air, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: MapSource.weatherLab,
+                    label: Text('Weather Lab'),
+                    icon: Icon(Icons.auto_awesome, size: 16),
+                  ),
+                ],
+                selected: {map.source},
+                onSelectionChanged: (s) {
+                  if (s.isEmpty) return;
+                  ref.read(mapProvider.notifier).setSource(s.first);
+                },
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+            // Layer chips (Windy only)
+            if (map.source == MapSource.windy)
             SizedBox(
               height: 44,
               child: ListView.separated(
@@ -209,7 +248,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 },
               ),
             ),
-            if (isResearcher) ...[
+            if (isResearcher && map.source == MapSource.windy) ...[
               const SizedBox(height: 6),
               SizedBox(
                 height: 36,
@@ -311,7 +350,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         border: Border.all(color: AppColors.borderSubtle),
                       ),
                       child: Text(
-                        'Windy · ${_productLabels[map.product]} · z${map.zoom}',
+                        map.source == MapSource.weatherLab
+                            ? 'Weather Lab · WeatherNext 3 · z${map.zoom}'
+                            : 'Windy · ${_productLabels[map.product]} · z${map.zoom}',
                         style: const TextStyle(
                           fontSize: 10,
                           color: AppColors.textSecondary,
