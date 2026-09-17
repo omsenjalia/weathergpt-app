@@ -1,16 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-sealed class AppApiError implements Exception {
-  const AppApiError(this.message);
-  final String message;
-  @override
-  String toString() => message;
-}
-
-class NetworkError extends AppApiError { const NetworkError(super.message); }
-class ServerError extends AppApiError { const ServerError(super.message); }
-class ValidationError extends AppApiError { const ValidationError(super.message); }
+import '../errors/app_errors.dart';
+export '../errors/app_errors.dart';
 
 /// The sole HTTP entry point. Keep API keys on the server, never in this app.
 class ApiClient {

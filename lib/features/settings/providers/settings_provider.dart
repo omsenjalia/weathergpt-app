@@ -81,28 +81,32 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     );
   }
 
-  Future<Box<dynamic>> get _box => Hive.openBox<dynamic>('settings');
+  /// Single persistence path for every setting.
+  Future<void> _put(String key, Object? value) async {
+    final box = await Hive.openBox<dynamic>('settings');
+    await box.put(key, value);
+  }
+
   Future<void> updateProfile(String name, String email) async {
     state = state.copyWith(displayName: name, email: email);
-    final box = await _box;
-    await box.put('display_name', name);
-    await box.put('email', email);
+    await _put('display_name', name);
+    await _put('email', email);
   }
 
   Future<void> updateLanguage(String code) async {
     state = state.copyWith(language: code);
     ApiClient.instance.setLanguage(code);
-    await (await _box).put('language', code);
+    await _put('language', code);
   }
 
   Future<void> updatePersona(String persona) async {
     state = state.copyWith(userPersona: persona);
-    await (await _box).put('user_persona', persona);
+    await _put('user_persona', persona);
   }
 
   Future<void> updateUnits(TemperatureUnit units) async {
     state = state.copyWith(units: units);
-    await (await _box).put(
+    await _put(
       'temperature_unit',
       units == TemperatureUnit.fahrenheit ? 'fahrenheit' : 'celsius',
     );
@@ -110,25 +114,24 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 
   Future<void> updateTtsSpeed(double speed) async {
     state = state.copyWith(ttsSpeed: speed);
-    await (await _box).put('tts_speed', speed);
+    await _put('tts_speed', speed);
   }
 
   Future<void> updateTtsVoiceLocale(String locale) async {
     state = state.copyWith(ttsVoiceLocale: locale);
-    await (await _box).put('tts_voice_locale', locale);
+    await _put('tts_voice_locale', locale);
   }
 
   Future<void> updateVoiceSettings(String locale, double speed) async {
     state = state.copyWith(ttsVoiceLocale: locale, ttsSpeed: speed);
-    final box = await _box;
-    await box.put('tts_voice_locale', locale);
-    await box.put('tts_speed', speed);
+    await _put('tts_voice_locale', locale);
+    await _put('tts_speed', speed);
   }
 
   Future<void> updateNotificationPref(String key, bool enabled) async {
     final prefs = {...state.notificationsEnabled, key: enabled};
     state = state.copyWith(notificationsEnabled: prefs);
-    await (await _box).put('notifications_enabled', prefs);
+    await _put('notifications_enabled', prefs);
   }
 }
 

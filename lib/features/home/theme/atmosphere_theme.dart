@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../providers/weather_provider.dart';
+import '../../../models/weather.dart';
 
 enum SkyPeriod {
   midnight,

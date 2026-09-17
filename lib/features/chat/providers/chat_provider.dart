@@ -8,6 +8,8 @@ class ChatMessage {
   const ChatMessage({required this.role, required this.content});
   final String role; // user | assistant
   final String content;
+
+  Map<String, dynamic> toJson() => {'role': role, 'content': content};
 }
 
 class ChatState {
@@ -43,20 +45,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final next = [...state.messages, ChatMessage(role: 'user', content: trimmed)];
     state = state.copyWith(messages: next, sending: true, clearError: true);
     try {
-      final settings = _ref.read(settingsProvider);
-      final location = _ref.read(locationProvider);
-      final result = await ApiClient.instance.post('/chat', data: {
-        'message': trimmed,
-        'messages': next
-            .map((m) => {'role': m.role, 'content': m.content})
-            .toList(),
-        'location': location.name,
-        'lat': location.lat,
-        'lon': location.lon,
-        'language': settings.language,
-        'farmer_mode': settings.userPersona == 'farmer',
-        'crop': settings.userPersona == 'farmer' ? 'Wheat' : '',
-      });
+      final result =
+          await ApiClient.instance.post('/chat', data: _buildPayload(next, trimmed));
       final reply = '${result['response'] ?? ''}';
       state = state.copyWith(
         sending: false,
@@ -68,6 +58,23 @@ class ChatNotifier extends StateNotifier<ChatState> {
       state = state.copyWith(
           sending: false, error: 'Could not reach WeatherGPT. Try again.');
     }
+  }
+
+  /// Assembles the /chat request body from the current settings and location.
+  Map<String, dynamic> _buildPayload(
+      List<ChatMessage> messages, String message) {
+    final settings = _ref.read(settingsProvider);
+    final location = _ref.read(locationProvider);
+    return {
+      'message': message,
+      'messages': messages.map((m) => m.toJson()).toList(),
+      'location': location.name,
+      'lat': location.lat,
+      'lon': location.lon,
+      'language': settings.language,
+      'farmer_mode': settings.userPersona == 'farmer',
+      'crop': settings.userPersona == 'farmer' ? 'Wheat' : '',
+    };
   }
 
   void clear() => state = const ChatState();
