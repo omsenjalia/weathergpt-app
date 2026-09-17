@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../models/location.dart';
 import '../../home/providers/weather_provider.dart';
 import '../providers/saved_locations_provider.dart';
 
@@ -14,7 +15,7 @@ class SavedLocationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locations = ref.watch(savedLocationsProvider);
-    final weather = ref.watch(weatherProvider('everyone'));
+    final weather = ref.watch(weatherProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Saved Locations'),

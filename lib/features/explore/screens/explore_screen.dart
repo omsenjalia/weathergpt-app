@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../../../core/services/geocoding_service.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../models/location.dart';
 import '../../home/providers/location_provider.dart';
 import '../../settings/providers/settings_provider.dart';
 import '../providers/map_provider.dart';
@@ -355,7 +357,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.search),
                     onPressed: () async {
-                      final loc = await geocodePlaceName(controller.text);
+                      final loc = await GeocodingService.search(controller.text);
                       if (loc != null && ctx.mounted) {
                         Navigator.pop(ctx, loc);
                       }
@@ -363,7 +365,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   ),
                 ),
                 onSubmitted: (q) async {
-                  final loc = await geocodePlaceName(q);
+                  final loc = await GeocodingService.search(q);
                   if (loc != null && ctx.mounted) Navigator.pop(ctx, loc);
                 },
               ),

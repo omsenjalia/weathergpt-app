@@ -1,22 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-class SavedLocation {
-  const SavedLocation(
-      {required this.name, required this.lat, required this.lon});
-
-  final String name;
-  final double lat;
-  final double lon;
-
-  Map<String, dynamic> toMap() => {'name': name, 'lat': lat, 'lon': lon};
-
-  factory SavedLocation.fromMap(Map<dynamic, dynamic> map) => SavedLocation(
-        name: map['name'] as String,
-        lat: (map['lat'] as num).toDouble(),
-        lon: (map['lon'] as num).toDouble(),
-      );
-}
+import '../../../models/location.dart';
 
 class SavedLocationsNotifier extends StateNotifier<List<SavedLocation>> {
   SavedLocationsNotifier() : super(_load());

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../services/api_client.dart';
+import '../errors/app_errors.dart';
 import '../theme/app_colors.dart';
 
 class ApiErrorView extends StatelessWidget {
