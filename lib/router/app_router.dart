@@ -21,6 +21,7 @@ import '../features/researcher/screens/comparison_screen.dart';
 import '../features/researcher/screens/historical_data_screen.dart';
 import '../features/researcher/providers/anomaly_trends_provider.dart';
 import '../features/settings/screens/settings_screen.dart';
+import '../features/explore/providers/map_provider.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -137,7 +138,7 @@ class PlaceholderTab extends StatelessWidget {
       );
 }
 
-class NavigationShell extends StatelessWidget {
+class NavigationShell extends ConsumerWidget {
   const NavigationShell({super.key, required this.child});
   final Widget child;
 
@@ -149,7 +150,7 @@ class NavigationShell extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.path;
     var currentIndex = 0;
     for (var i = 0; i < _items.length; i++) {
@@ -159,11 +160,16 @@ class NavigationShell extends StatelessWidget {
         break;
       }
     }
+    // Weather Lab has its own timeline/controls — hide app nav to avoid overlap.
+    final hideNav = location.startsWith('/explore') &&
+        ref.watch(mapProvider).source == MapSource.weatherLab;
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: child,
       extendBody: true,
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: hideNav
+          ? null
+          : SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         child: Container(
           height: 64,

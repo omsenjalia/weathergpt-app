@@ -298,6 +298,99 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     }
   }
 
+  Future<void> _applyLocation(AppLocation loc, {int zoom = 8}) async {
+    await ref.read(locationProvider.notifier).select(loc);
+    ref.read(mapProvider.notifier).setCenter(loc.lat, loc.lon, zoom: zoom);
+    if (!mounted) return;
+    // Force WebView reload with new center (Weather Lab URL embeds lat/lon).
+    final map = ref.read(mapProvider);
+    final url = _embedUrl(map);
+    _lastUrl = url;
+    await _controller?.loadRequest(Uri.parse(url));
+  }
+
+  Future<void> _showLocationPicker() async {
+    final controller = TextEditingController();
+    final selected = await showModalBottomSheet<AppLocation>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.viewInsetsOf(ctx).bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Jump to location',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Weather Lab follows this center. Search a city or pick a preset.',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'e.g. Ahmedabad, Mumbai, Delhi',
+                  filled: true,
+                  fillColor: AppColors.bgPrimary,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.borderSubtle),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () async {
+                      final loc = await geocodePlaceName(controller.text);
+                      if (loc != null && ctx.mounted) {
+                        Navigator.pop(ctx, loc);
+                      }
+                    },
+                  ),
+                ),
+                onSubmitted: (q) async {
+                  final loc = await geocodePlaceName(q);
+                  if (loc != null && ctx.mounted) Navigator.pop(ctx, loc);
+                },
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 200,
+                child: ListView(
+                  children: [
+                    for (final loc in kPresetLocations)
+                      ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.place_outlined, size: 20),
+                        title: Text(loc.name),
+                        onTap: () => Navigator.pop(ctx, loc),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    controller.dispose();
+    if (selected != null) await _applyLocation(selected);
+  }
+
   Future<void> _locate() async {
     final location =
         await ref.read(mapProvider.notifier).detectCurrentLocation();
@@ -316,8 +409,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final persona = ref.watch(settingsProvider).userPersona;
     final isResearcher = persona == 'researcher';
 
-    if ((map.lat - homeLoc.lat).abs() > 0.01 ||
-        (map.lon - homeLoc.lon).abs() > 0.01) {
+    // Keep Windy centered on home location; Weather Lab uses explicit picker.
+    if (map.source == MapSource.windy &&
+        ((map.lat - homeLoc.lat).abs() > 0.01 ||
+            (map.lon - homeLoc.lon).abs() > 0.01)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref
             .read(mapProvider.notifier)
@@ -393,6 +488,67 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ),
               ),
             ),
+
+            // Location control for Weather Lab (cannot set place inside Google UI easily)
+            if (map.source == MapSource.weatherLab)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Material(
+                  color: AppColors.surfaceCard,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: _showLocationPicker,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Row(
+                        children: [
+                          Icon(Icons.place_rounded, color: _accent, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Forecast location',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.textTertiary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  homeLoc.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              final loc = await ref
+                                  .read(locationProvider.notifier)
+                                  .selectFromGps();
+                              if (loc != null) await _applyLocation(loc, zoom: 9);
+                            },
+                            child: const Text('GPS'),
+                          ),
+                          IconButton(
+                            tooltip: 'Search',
+                            onPressed: _showLocationPicker,
+                            icon: const Icon(Icons.search_rounded),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             // Layer chips (Windy only)
             if (map.source == MapSource.windy)
             SizedBox(
@@ -471,6 +627,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       color: Color(0xFF0B1220),
                       child: Center(child: CircularProgressIndicator()),
                     ),
+                  if (map.source == MapSource.windy)
                   Positioned(
                     right: 12,
                     bottom: 20,
@@ -523,6 +680,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       ],
                     ),
                   ),
+                  if (map.source == MapSource.windy)
                   Positioned(
                     left: 12,
                     bottom: 20,
