@@ -26,6 +26,8 @@ class AtmosphereVideoBackground extends StatefulWidget {
 class _AtmosphereVideoBackgroundState extends State<AtmosphereVideoBackground> {
   VideoPlayerController? _controller;
   var _ready = false;
+  var _showVideo = false;
+  var _loadGeneration = 0;
   String? _activeKey;
 
   static String _assetFor(SkyPeriod period, SkyCondition sky) {
@@ -41,7 +43,7 @@ class _AtmosphereVideoBackgroundState extends State<AtmosphereVideoBackground> {
         sky == SkyCondition.partlyCloudy) {
       return 'assets/videos/sky_cloudy.mp4';
     }
-    if (sky == SkyCondition.snow) return 'assets/videos/sky_cloudy.mp4';
+    if (sky == SkyCondition.snow) return 'assets/videos/sky_fog.mp4';
     switch (period) {
       case SkyPeriod.sunrise:
       case SkyPeriod.predawn:
@@ -63,24 +65,50 @@ class _AtmosphereVideoBackgroundState extends State<AtmosphereVideoBackground> {
 
   Future<void> _load(String asset) async {
     if (_activeKey == asset && _ready) return;
+
+    final generation = ++_loadGeneration;
     _activeKey = asset;
     final old = _controller;
     _controller = null;
-    if (mounted) setState(() => _ready = false);
+    if (mounted) {
+      setState(() {
+        _ready = false;
+        _showVideo = false;
+      });
+    }
     await old?.dispose();
+
     try {
       final c = VideoPlayerController.asset(asset);
-      _controller = c;
       await c.initialize();
       await c.setLooping(true);
       await c.setVolume(0);
       await c.play();
-      if (!mounted) return;
-      setState(() => _ready = true);
+
+      // A newer weather/time update may have started another load while this
+      // clip was initializing. Do not let a stale controller flash on screen.
+      if (!mounted || generation != _loadGeneration) {
+        await c.dispose();
+        return;
+      }
+
+      setState(() {
+        _controller = c;
+        _ready = true;
+      });
+      // Let the fixed contrast veil settle before revealing a bright frame.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && generation == _loadGeneration) {
+          setState(() => _showVideo = true);
+        }
+      });
     } catch (e) {
       debugPrint('Atmosphere video load failed: $asset → $e');
-      if (!mounted) return;
-      setState(() => _ready = false);
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() {
+        _ready = false;
+        _showVideo = false;
+      });
     }
   }
 
@@ -100,6 +128,7 @@ class _AtmosphereVideoBackgroundState extends State<AtmosphereVideoBackground> {
 
   @override
   void dispose() {
+    _loadGeneration++;
     _controller?.dispose();
     super.dispose();
   }
@@ -120,10 +149,13 @@ class _AtmosphereVideoBackgroundState extends State<AtmosphereVideoBackground> {
             ),
           ),
         ),
-        // Bundled looping video
+        // Bundled looping video. Fade it in so a bright first frame cannot
+        // briefly wash out the copy during a weather/time-of-day transition.
         if (_ready && _controller != null && _controller!.value.isInitialized)
-          Opacity(
-            opacity: 0.88,
+          AnimatedOpacity(
+            opacity: _showVideo ? 0.72 : 0,
+            duration: const Duration(milliseconds: 650),
+            curve: Curves.easeOut,
             child: FittedBox(
               fit: BoxFit.cover,
               clipBehavior: Clip.hardEdge,
@@ -141,17 +173,20 @@ class _AtmosphereVideoBackgroundState extends State<AtmosphereVideoBackground> {
           sky: widget.sky,
           period: widget.period,
         ),
-        // Light readability veil (keep video visible)
+        // Consistent contrast veil. Keep it above every clip so readability
+        // does not change when the video or the time-of-day palette changes.
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withValues(alpha: 0.08),
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.35),
+                Colors.black.withValues(alpha: 0.30),
+                Colors.black.withValues(alpha: 0.10),
+                Colors.black.withValues(alpha: 0.22),
+                Colors.black.withValues(alpha: 0.58),
               ],
+              stops: const [0.0, 0.28, 0.62, 1.0],
             ),
           ),
         ),

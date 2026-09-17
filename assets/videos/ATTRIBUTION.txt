@@ -10,3 +10,7 @@ Portrait 1080x1920 H.264 clips (~8–10s loops):
 - sky_thunder: "Hail thunderstorm in Romans-sur-Isère"
 
 Sources: https://commons.wikimedia.org/
+
+Vetted 1080x1920 refresh candidates from Pexels are tracked in
+`docs/background_video_research.md`; they are not hotlinked at runtime so the app
+stays offline-safe and avoids unrecorded media downloads.

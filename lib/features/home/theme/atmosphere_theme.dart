@@ -65,6 +65,42 @@ class AtmospherePalette {
   final double moonY;
   /// 0–1 extra warm band near horizon (sunset/sunrise).
   final double horizonWarmth;
+
+  AtmospherePalette copyWith({
+    Color? top,
+    Color? mid,
+    Color? bottom,
+    Color? accent,
+    Color? glow,
+    Color? card,
+    Color? text,
+    Color? textMuted,
+    Color? orbStart,
+    Color? orbEnd,
+    bool? showSun,
+    bool? showMoon,
+    double? sunY,
+    double? moonY,
+    double? horizonWarmth,
+  }) {
+    return AtmospherePalette(
+      top: top ?? this.top,
+      mid: mid ?? this.mid,
+      bottom: bottom ?? this.bottom,
+      accent: accent ?? this.accent,
+      glow: glow ?? this.glow,
+      card: card ?? this.card,
+      text: text ?? this.text,
+      textMuted: textMuted ?? this.textMuted,
+      orbStart: orbStart ?? this.orbStart,
+      orbEnd: orbEnd ?? this.orbEnd,
+      showSun: showSun ?? this.showSun,
+      showMoon: showMoon ?? this.showMoon,
+      sunY: sunY ?? this.sunY,
+      moonY: moonY ?? this.moonY,
+      horizonWarmth: horizonWarmth ?? this.horizonWarmth,
+    );
+  }
 }
 
 SkyPeriod periodFromLocalTime(DateTime now, DateTime? sunrise, DateTime? sunset) {
@@ -299,7 +335,26 @@ AtmospherePalette paletteFor(SkyPeriod period, SkyCondition sky) {
       ),
   };
 
-  return _applyWeather(base, sky, period);
+  return _ensureReadable(_applyWeather(base, sky, period));
+}
+
+/// Keep the content layer legible even when a bright clip is behind it.
+///
+/// Most home-screen surfaces are intentionally dark glass. A few daytime
+/// palettes used dark text with that same dark glass, which made the copy
+/// disappear whenever the background video changed. Normalize those
+/// combinations here so every weather/time scenario has a safe text color.
+AtmospherePalette _ensureReadable(AtmospherePalette palette) {
+  if (palette.card.computeLuminance() >= 0.45) return palette;
+
+  return palette.copyWith(
+    card: palette.card.withValues(alpha: 0.92),
+    accent: palette.accent.computeLuminance() < 0.25
+        ? const Color(0xFF67E8F9)
+        : palette.accent,
+    text: const Color(0xFFF8FAFC),
+    textMuted: const Color(0xFFD6E2EE),
+  );
 }
 
 AtmospherePalette _applyWeather(

@@ -120,39 +120,55 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: _pickLocation,
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.near_me_rounded,
-                                        size: 18, color: palette.accent),
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Text(
-                                        location.name.split(',').first,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: palette.text,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.24),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.12),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: _pickLocation,
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.near_me_rounded,
+                                          size: 18, color: palette.accent),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          location.name.split(',').first,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w700,
+                                            color: palette.text,
+                                            shadows: const [
+                                              Shadow(
+                                                color: Colors.black54,
+                                                blurRadius: 8,
+                                              ),
+                                            ],
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                    Icon(Icons.keyboard_arrow_down_rounded,
-                                        color: palette.textMuted),
-                                  ],
+                                      Icon(Icons.keyboard_arrow_down_rounded,
+                                          color: palette.textMuted),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            IconButton(
-                              onPressed: () => context.go('/profile'),
-                              icon: Icon(Icons.settings_outlined,
-                                  color: palette.text),
-                            ),
-                          ],
+                              IconButton(
+                                onPressed: () => context.go('/profile'),
+                                icon: Icon(Icons.settings_outlined,
+                                    color: palette.text),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
