@@ -26,6 +26,7 @@ class MapState {
   const MapState({
     this.activeLayer = MapLayer.wind,
     this.product = MapProduct.ecmwf,
+    this.source = MapSource.windy,
     this.lat = 23.0225,
     this.lon = 72.5714,
     this.zoom = 6,
@@ -37,6 +38,7 @@ class MapState {
 
   final MapLayer activeLayer;
   final MapProduct product;
+  final MapSource source;
   final double lat;
   final double lon;
   final int zoom;
