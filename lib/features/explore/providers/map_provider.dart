@@ -18,10 +18,15 @@ enum MapLayer {
 
 enum MapProduct { ecmwf, gfs, icon, nems }
 
+/// Which map engine to show in Explore.
+enum MapSource { windy, weatherLab }
+
+
 class MapState {
   const MapState({
     this.activeLayer = MapLayer.wind,
     this.product = MapProduct.ecmwf,
+    this.source = MapSource.windy,
     this.lat = 23.0225,
     this.lon = 72.5714,
     this.zoom = 6,
@@ -33,6 +38,7 @@ class MapState {
 
   final MapLayer activeLayer;
   final MapProduct product;
+  final MapSource source;
   final double lat;
   final double lon;
   final int zoom;
@@ -44,6 +50,7 @@ class MapState {
   MapState copyWith({
     MapLayer? activeLayer,
     MapProduct? product,
+    MapSource? source,
     double? lat,
     double? lon,
     int? zoom,
@@ -56,6 +63,7 @@ class MapState {
       MapState(
         activeLayer: activeLayer ?? this.activeLayer,
         product: product ?? this.product,
+        source: source ?? this.source,
         lat: lat ?? this.lat,
         lon: lon ?? this.lon,
         zoom: zoom ?? this.zoom,
@@ -74,6 +82,8 @@ class MapNotifier extends StateNotifier<MapState> {
 
   void setProduct(MapProduct product) =>
       state = state.copyWith(product: product);
+
+  void setSource(MapSource source) => state = state.copyWith(source: source);
 
   void setZoom(int zoom) =>
       state = state.copyWith(zoom: zoom.clamp(3, 12));

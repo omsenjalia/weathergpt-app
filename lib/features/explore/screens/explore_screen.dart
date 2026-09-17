@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -50,7 +51,186 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     };
   }
 
+
+  bool _isGoogleAuthUrl(String url) {
+    final u = url.toLowerCase();
+    return u.contains('accounts.google.com') ||
+        u.contains('google.com/account') ||
+        u.contains('oauth') && u.contains('google');
+  }
+
+  Future<void> _openExternal(String url) async {
+    final uri = Uri.parse(url);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open browser')),
+      );
+    }
+  }
+
+  /// Friendly prompt when Weather Lab needs Google sign-in.
+  Future<void> _promptGoogleSignIn(String authOrLabUrl) async {
+    if (!mounted) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.surfaceCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Google sign-in required',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'DeepMind Weather Lab needs a Google account. '
+                  'Sign-in works more reliably in your system browser '
+                  '(cookies and 2FA are handled there).',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(ctx, 'browser'),
+                  icon: const Icon(Icons.open_in_browser),
+                  label: const Text('Sign in with Google in browser'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _accent,
+                    foregroundColor: Colors.black87,
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, 'app'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.borderSubtle),
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  child: const Text('Continue in app (may fail)'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, 'cancel'),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted) return;
+    if (choice == 'browser') {
+      await _openExternal(authOrLabUrl);
+    } else if (choice == 'app' && _controller != null) {
+      // Stay in WebView — user chose to try embedded login
+    } else if (choice == 'cancel') {
+      ref.read(mapProvider.notifier).setSource(MapSource.windy);
+    }
+  }
+
+  Future<void> _onSelectWeatherLab() async {
+    ref.read(mapProvider.notifier).setSource(MapSource.weatherLab);
+    if (!mounted) return;
+    final url = _embedUrl(ref.read(mapProvider));
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.surfaceCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Open Weather Lab',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Weather Lab is Google DeepMind\'s AI forecast map. '
+                  'A Google account is often required. Opening in your '
+                  'browser gives the smoothest login experience.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => Navigator.pop(ctx, 'browser'),
+                  icon: const Icon(Icons.open_in_browser),
+                  label: const Text('Open in browser (recommended)'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _accent,
+                    foregroundColor: Colors.black87,
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, 'app'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.textPrimary,
+                    side: const BorderSide(color: AppColors.borderSubtle),
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  child: const Text('Try inside the app'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, 'cancel'),
+                  child: const Text('Stay on Windy'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted) return;
+    if (choice == 'browser') {
+      await _openExternal(url);
+      // Keep source as weatherLab so badge is correct, or revert to windy
+      // User is viewing outside app — switch back to Windy map in-app.
+      ref.read(mapProvider.notifier).setSource(MapSource.windy);
+    } else if (choice == 'cancel') {
+      ref.read(mapProvider.notifier).setSource(MapSource.windy);
+    }
+    // 'app' → WebView loads Weather Lab as already set
+  }
+
   String _embedUrl(MapState map) {
+    if (map.source == MapSource.weatherLab) {
+      // DeepMind Weather Lab — interactive AI forecast map (no scraping).
+      // center is lon,lat; zoom ~5–8 works well for regional view.
+      final zoom = (map.zoom.clamp(3, 12) * 0.85).toStringAsFixed(2);
+      return 'https://deepmind.google.com/science/weatherlab'
+          '?cyclones_enabled=false'
+          '&weather_enabled=true'
+          '&weather_model=weathernext3'
+          '&weather_layers=total_precipitation_1hr_mean'
+          '&zoom=$zoom'
+          '&center=${map.lat},${map.lon}';
+    }
     final overlay = map.activeLayer.name;
     final product = map.product.name;
     final menu = map.showMenu ? 'true' : '';
@@ -84,8 +264,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         ..setBackgroundColor(const Color(0xFF0B1220))
         ..setNavigationDelegate(
           NavigationDelegate(
-            onPageStarted: (_) {
+            onNavigationRequest: (request) {
+              final url = request.url;
+              if (_isGoogleAuthUrl(url)) {
+                // Don't show bare Google login inside the WebView.
+                _promptGoogleSignIn(url);
+                return NavigationDecision.prevent;
+              }
+              return NavigationDecision.navigate;
+            },
+            onPageStarted: (url) {
               if (mounted) setState(() => _loading = true);
+              if (_isGoogleAuthUrl(url)) {
+                _promptGoogleSignIn(url);
+              }
             },
             onPageFinished: (_) {
               if (mounted) setState(() => _loading = false);
@@ -106,6 +298,99 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     }
   }
 
+  Future<void> _applyLocation(AppLocation loc, {int zoom = 8}) async {
+    await ref.read(locationProvider.notifier).select(loc);
+    ref.read(mapProvider.notifier).setCenter(loc.lat, loc.lon, zoom: zoom);
+    if (!mounted) return;
+    // Force WebView reload with new center (Weather Lab URL embeds lat/lon).
+    final map = ref.read(mapProvider);
+    final url = _embedUrl(map);
+    _lastUrl = url;
+    await _controller?.loadRequest(Uri.parse(url));
+  }
+
+  Future<void> _showLocationPicker() async {
+    final controller = TextEditingController();
+    final selected = await showModalBottomSheet<AppLocation>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.viewInsetsOf(ctx).bottom + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Jump to location',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Weather Lab follows this center. Search a city or pick a preset.',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'e.g. Ahmedabad, Mumbai, Delhi',
+                  filled: true,
+                  fillColor: AppColors.bgPrimary,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.borderSubtle),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () async {
+                      final loc = await geocodePlaceName(controller.text);
+                      if (loc != null && ctx.mounted) {
+                        Navigator.pop(ctx, loc);
+                      }
+                    },
+                  ),
+                ),
+                onSubmitted: (q) async {
+                  final loc = await geocodePlaceName(q);
+                  if (loc != null && ctx.mounted) Navigator.pop(ctx, loc);
+                },
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 200,
+                child: ListView(
+                  children: [
+                    for (final loc in kPresetLocations)
+                      ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.place_outlined, size: 20),
+                        title: Text(loc.name),
+                        onTap: () => Navigator.pop(ctx, loc),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    controller.dispose();
+    if (selected != null) await _applyLocation(selected);
+  }
+
   Future<void> _locate() async {
     final location =
         await ref.read(mapProvider.notifier).detectCurrentLocation();
@@ -124,8 +409,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final persona = ref.watch(settingsProvider).userPersona;
     final isResearcher = persona == 'researcher';
 
-    if ((map.lat - homeLoc.lat).abs() > 0.01 ||
-        (map.lon - homeLoc.lon).abs() > 0.01) {
+    // Keep Windy centered on home location; Weather Lab uses explicit picker.
+    if (map.source == MapSource.windy &&
+        ((map.lat - homeLoc.lat).abs() > 0.01 ||
+            (map.lon - homeLoc.lon).abs() > 0.01)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref
             .read(mapProvider.notifier)
@@ -170,7 +457,100 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ],
               ),
             ),
-            // Layer chips
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+              child: SegmentedButton<MapSource>(
+                segments: const [
+                  ButtonSegment(
+                    value: MapSource.windy,
+                    label: Text('Windy'),
+                    icon: Icon(Icons.air, size: 16),
+                  ),
+                  ButtonSegment(
+                    value: MapSource.weatherLab,
+                    label: Text('Weather Lab'),
+                    icon: Icon(Icons.auto_awesome, size: 16),
+                  ),
+                ],
+                selected: {map.source},
+                onSelectionChanged: (s) {
+                  if (s.isEmpty) return;
+                  final next = s.first;
+                  if (next == MapSource.weatherLab) {
+                    _onSelectWeatherLab();
+                  } else {
+                    ref.read(mapProvider.notifier).setSource(MapSource.windy);
+                  }
+                },
+                style: const ButtonStyle(
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+
+            // Location control for Weather Lab (cannot set place inside Google UI easily)
+            if (map.source == MapSource.weatherLab)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Material(
+                  color: AppColors.surfaceCard,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: _showLocationPicker,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Row(
+                        children: [
+                          Icon(Icons.place_rounded, color: _accent, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Forecast location',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.textTertiary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  homeLoc.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              final loc = await ref
+                                  .read(locationProvider.notifier)
+                                  .selectFromGps();
+                              if (loc != null) await _applyLocation(loc, zoom: 9);
+                            },
+                            child: const Text('GPS'),
+                          ),
+                          IconButton(
+                            tooltip: 'Search',
+                            onPressed: _showLocationPicker,
+                            icon: const Icon(Icons.search_rounded),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            // Layer chips (Windy only)
+            if (map.source == MapSource.windy)
             SizedBox(
               height: 44,
               child: ListView.separated(
@@ -209,7 +589,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 },
               ),
             ),
-            if (isResearcher) ...[
+            if (isResearcher && map.source == MapSource.windy) ...[
               const SizedBox(height: 6),
               SizedBox(
                 height: 36,
@@ -247,6 +627,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       color: Color(0xFF0B1220),
                       child: Center(child: CircularProgressIndicator()),
                     ),
+                  if (map.source == MapSource.windy)
                   Positioned(
                     right: 12,
                     bottom: 20,
@@ -299,6 +680,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       ],
                     ),
                   ),
+                  if (map.source == MapSource.windy)
                   Positioned(
                     left: 12,
                     bottom: 20,
@@ -311,7 +693,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         border: Border.all(color: AppColors.borderSubtle),
                       ),
                       child: Text(
-                        'Windy · ${_productLabels[map.product]} · z${map.zoom}',
+                        map.source == MapSource.weatherLab
+                            ? 'Weather Lab · WeatherNext 3 · z${map.zoom}'
+                            : 'Windy · ${_productLabels[map.product]} · z${map.zoom}',
                         style: const TextStyle(
                           fontSize: 10,
                           color: AppColors.textSecondary,
