@@ -136,13 +136,18 @@ def evaluate(
                         body = response.json()
                         answers = body.get("answers")
                         if isinstance(answers, dict):
-                            return {
+                            result = {
                                 "answers": answers,
                                 "model": body.get("model") or model_name(),
                                 "usage": body.get("usage") or {},
                                 "latency_ms": round((time.perf_counter() - started) * 1000, 1),
                                 "attempts": attempt,
                             }
+                            if os.getenv("TYPESAFE_LOG_CALLS", "0") == "1":
+                                log_event("INFO", f"[typesafe:{label}] ok",
+                                          {"latency_ms": result["latency_ms"],
+                                           "attempts": attempt})
+                            return result
                         last_error = "malformed response body"
                         break  # a 200 with a bad body will not heal on retry
                     last_error = f"HTTP {response.status_code}"

@@ -225,6 +225,9 @@ async def get_advisory(
     lon: float = Query(..., ge=-180, le=180),
     crop: str = Query("", description="Optional crop name"),
     days: int = Query(3, ge=1, le=7),
+    growth_stage: str = Query("", description="Optional crop growth stage (e.g. Flowering)"),
+    soil: str = Query("", description="Optional soil type"),
+    irrigation: str = Query("", description="Optional irrigation type"),
 ) -> dict[str, Any]:
     """Simple farm action-window style advisory for mobile farmer mode.
 
@@ -308,7 +311,14 @@ async def get_advisory(
     ai_meta: dict[str, Any] = {"enabled": False, "applied": False, "model": None}
     if windows and typesafe.is_enabled():
         stats = [advisory_ai.daily_stats(data.get("hourly") or {}, str(d)) for d in dates]
-        state_text = advisory_ai.build_state(crop_label, lat, lon, dates, stats)
+        state_text = advisory_ai.build_state(
+            crop_label, lat, lon, dates, stats,
+            farm={
+                "growth_stage": growth_stage,
+                "soil": soil,
+                "irrigation": irrigation,
+            },
+        )
         result = typesafe.evaluate(
             state_text,
             advisory_ai.build_questions(dates),

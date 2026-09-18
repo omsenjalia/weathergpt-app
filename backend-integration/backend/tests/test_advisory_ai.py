@@ -257,3 +257,79 @@ def test_advisory_endpoint_without_key_stays_threshold_based(monkeypatch):
     assert data["advisory_engine"] == "thresholds"
     assert data["ai"]["enabled"] is False
     assert "hourly" in data["windows"][0]
+
+
+# --------------------------------------------------------------------------- #
+# Farm context in the System One state
+# --------------------------------------------------------------------------- #
+def test_build_state_includes_farm_context():
+    stats = [{"pop_max": 10, "rain_sum": 0.0, "wind_max": 9.0, "temp_min": 24.0,
+              "temp_max": 32.0, "thunder_hours": 0}]
+    state = advisory.build_state(
+        "Wheat", 22.56, 72.95, ["2026-09-10"], stats,
+        farm={"growth_stage": "Flowering", "soil": "Loamy", "irrigation": ""},
+    )
+    assert "Crop: Wheat" in state
+    assert "growth stage: Flowering" in state
+    assert "soil: Loamy" in state
+    assert "irrigation:" not in state  # empty context values are omitted
+    assert "rain chance 10%" in state  # forecast sketch still present
+
+
+def test_build_state_sanitizes_farm_values():
+    stats = [{"pop_max": 10, "rain_sum": 0.0, "wind_max": 9.0, "temp_min": 24.0,
+              "temp_max": 32.0, "thunder_hours": 0}]
+    state = advisory.build_state(
+        "Wheat", 22.56, 72.95, ["2026-09-10"], stats,
+        farm={"growth_stage": "  weird\nmulti  space  value that is far too long to be useful  "},
+    )
+    assert "growth stage: weird multi space value that is far too" in state
+
+
+def test_advisory_endpoint_forwards_farm_context_to_system_one(monkeypatch):
+    from fastapi.testclient import TestClient
+    from main import app
+    import routers.mobile as mobile
+
+    forecast_payload = {
+        "daily": {
+            "time": ["2026-09-10"],
+            "temperature_2m_max": [32.0],
+            "temperature_2m_min": [24.0],
+            "precipitation_probability_max": [10],
+            "rain_sum": [0.0],
+            "wind_speed_10m_max": [14.0],
+            "weather_code": [1],
+        },
+        "hourly": _two_day_hourly(),
+    }
+    monkeypatch.setattr(mobile, "_get_json",
+                        lambda url, params, timeout=12.0: forecast_payload)
+    monkeypatch.setenv("TYPESAFE_API_KEY", "tsk_test_key")
+
+    captured_states: list[str] = []
+
+    def _factory(timeout: float) -> httpx.Client:
+        def handler(request: httpx.Request) -> httpx.Response:
+            import json as _json
+            captured_states.append(_json.loads(request.content)["state"])
+            return httpx.Response(200, json={
+                "model": "jev-latest",
+                "answers": _answers({0: {"overall": ("good", 0.9)}}),
+                "usage": {},
+            })
+        return httpx.Client(base_url="https://mock.typesafe.test/v1",
+                            transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(typesafe, "_client_factory", _factory)
+
+    client = TestClient(app)
+    response = client.get("/advisory", params={
+        "lat": 22.56, "lon": 72.95, "crop": "Wheat", "days": 1,
+        "growth_stage": "Flowering", "soil": "Loamy", "irrigation": "Borewell",
+    })
+    assert response.status_code == 200
+    assert captured_states, "System One must have been called"
+    assert "growth stage: Flowering" in captured_states[0]
+    assert "soil: Loamy" in captured_states[0]
+    assert "irrigation: Borewell" in captured_states[0]

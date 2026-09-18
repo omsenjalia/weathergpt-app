@@ -216,10 +216,27 @@ def build_hourly_by_date(hourly: dict[str, Any], dates: list[str],
 # TypeSafe overlay — composite scoring across days, one batched call.
 # --------------------------------------------------------------------------- #
 def build_state(crop_label: str, lat: float, lon: float, dates: list[str],
-                stats: list[dict[str, Any] | None]) -> str:
-    """Compact text state: everything a field officer would need for a gut-check."""
-    lines = [f"Crop: {crop_label}. Location: {lat:.2f}, {lon:.2f} (India).",
-             "Daily forecast summary (rain chance is the daily maximum, wind the daily peak):"]
+                stats: list[dict[str, Any] | None],
+                farm: dict[str, str] | None = None) -> str:
+    """Compact text state: everything a field officer would need for a gut-check.
+
+    ``farm`` may carry optional context keys (``growth_stage``, ``soil``,
+    ``irrigation``) — the same judgment differs by growth stage, so richer
+    state makes the scores materially smarter. Values are sanitized.
+    """
+    def _clean(value: Any) -> str:
+        return " ".join(str(value).split())[:40] if value else ""
+
+    lines = [f"Crop: {crop_label}. Location: {lat:.2f}, {lon:.2f} (India)."]
+    if farm:
+        context = ", ".join(
+            f"{key.replace('_', ' ')}: {cleaned}"
+            for key in ("growth_stage", "soil", "irrigation")
+            for cleaned in [_clean(farm.get(key))] if cleaned
+        )
+        if context:
+            lines.append(f"Farm context: {context}.")
+    lines.append("Daily forecast summary (rain chance is the daily maximum, wind the daily peak):")
     for date, day in zip(dates, stats):
         if not day:
             continue

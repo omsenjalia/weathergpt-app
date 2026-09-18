@@ -88,13 +88,18 @@ class ActionWindowsNotifier extends StateNotifier<ActionWindowsState> {
   Future<void> refresh() async {
     _attempted = true;
     final location = _ref.read(locationProvider);
-    final crop = _ref.read(farmProfileProvider).crop;
+    final profile = _ref.read(farmProfileProvider);
     try {
       final data = await ApiClient.instance.get(ApiEndpoints.advisory, query: {
         'lat': location.lat,
         'lon': location.lon,
-        'crop': crop,
+        'crop': profile.crop,
         'days': 7,
+        // Farm context refines the backend's System One scoring (the same
+        // judgment differs by growth stage and soil).
+        'growth_stage': profile.growthStage,
+        'soil': profile.soilType,
+        'irrigation': profile.irrigationType,
       });
       final today = _stateForTab(ActionWindowTab.today, data, location.name);
       final tomorrow = _stateForTab(ActionWindowTab.tomorrow, data, location.name);
