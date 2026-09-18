@@ -173,44 +173,71 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           alignment: user
                               ? Alignment.centerRight
                               : Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 5),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 12),
-                            constraints: BoxConstraints(
-                              maxWidth:
-                                  MediaQuery.sizeOf(context).width * 0.82,
-                            ),
-                            decoration: BoxDecoration(
-                              color: user
-                                  ? AppColors.accent.withValues(alpha: 0.18)
-                                  : AppColors.surfaceCard,
-                              borderRadius: BorderRadius.only(
-                                topLeft: const Radius.circular(18),
-                                topRight: const Radius.circular(18),
-                                bottomLeft: Radius.circular(user ? 18 : 6),
-                                bottomRight: Radius.circular(user ? 6 : 18),
-                              ),
-                              border: Border.all(
-                                color: user
-                                    ? AppColors.accent.withValues(alpha: 0.35)
-                                    : AppColors.borderSubtle,
-                              ),
-                            ),
-                            child: user
-                                ? Text(m.content,
-                                    style: const TextStyle(height: 1.35))
-                                : MarkdownBody(
-                                    data: m.content
-                                        .replaceAll(
-                                            RegExp(r'```widget:[\s\S]*?```'),
-                                            '')
-                                        .trim(),
-                                    styleSheet: MarkdownStyleSheet(
-                                      p: const TextStyle(
-                                          fontSize: 15, height: 1.4),
-                                    ),
+                          child: Column(
+                            crossAxisAlignment: user
+                                ? CrossAxisAlignment.end
+                                : CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                margin: const EdgeInsets.symmetric(vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 12),
+                                constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.sizeOf(context).width * 0.82,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: user
+                                      ? AppColors.accent.withValues(alpha: 0.18)
+                                      : AppColors.surfaceCard,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(18),
+                                    topRight: const Radius.circular(18),
+                                    bottomLeft: Radius.circular(user ? 18 : 6),
+                                    bottomRight: Radius.circular(user ? 6 : 18),
                                   ),
+                                  border: Border.all(
+                                    color: user
+                                        ? AppColors.accent.withValues(alpha: 0.35)
+                                        : AppColors.borderSubtle,
+                                  ),
+                                ),
+                                child: user
+                                    ? Text(m.content,
+                                        style: const TextStyle(height: 1.35))
+                                    : MarkdownBody(
+                                        data: m.content
+                                            .replaceAll(
+                                                RegExp(r'```widget:[\s\S]*?```'),
+                                                '')
+                                            .trim(),
+                                        styleSheet: MarkdownStyleSheet(
+                                          p: const TextStyle(
+                                              fontSize: 15, height: 1.4),
+                                        ),
+                                      ),
+                              ),
+                              if (!user && m.meta?['intent_engine'] == 'system-one')
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8, bottom: 4),
+                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                    const Icon(Icons.bolt_rounded,
+                                        size: 12, color: AppColors.textTertiary),
+                                    const SizedBox(width: 3),
+                                    Builder(builder: (_) {
+                                      final confidence =
+                                          m.meta?['intent_confidence'];
+                                      final pct = confidence is num
+                                          ? ' · ${(confidence.toDouble() * 100).round()}%'
+                                          : '';
+                                      return Text('Routed by System One$pct',
+                                          style: const TextStyle(
+                                              fontSize: 10.5,
+                                              color: AppColors.textTertiary));
+                                    }),
+                                  ]),
+                                ),
+                            ],
                           ),
                         );
                       },

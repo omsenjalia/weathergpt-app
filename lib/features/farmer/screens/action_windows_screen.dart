@@ -6,29 +6,55 @@ import '../../../core/widgets/app_card.dart';
 import '../providers/action_windows_provider.dart';
 import '../widgets/time_window_bar.dart';
 
-class ActionWindowsScreen extends ConsumerWidget {
+class ActionWindowsScreen extends ConsumerStatefulWidget {
   const ActionWindowsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ActionWindowsScreen> createState() =>
+      _ActionWindowsScreenState();
+}
+
+class _ActionWindowsScreenState extends ConsumerState<ActionWindowsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(actionWindowsProvider.notifier).refresh();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(actionWindowsProvider);
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        title: const Column(
+        title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Farm Action Windows',
+              const Text('Farm Action Windows',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-              Text('Anand, Gujarat',
+              Text(
+                  state.locationLabel.isEmpty
+                      ? 'Anand, Gujarat'
+                      : state.locationLabel,
                   style:
-                      TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
             ]),
       ),
       body: SafeArea(
           child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               children: [
+            if (state.status == AdvisoryStatus.loading)
+              const Padding(
+                  padding: EdgeInsets.only(bottom: 10),
+                  child: LinearProgressIndicator(minHeight: 2)),
+            if (state.status == AdvisoryStatus.fallback)
+              const _NoticeBanner(
+                  icon: Icons.cloud_off_rounded,
+                  text:
+                      'Showing the saved advisory — the server could not be reached.'),
             _Tabs(
                 selected: state.selectedTab,
                 onSelect: ref.read(actionWindowsProvider.notifier).selectTab),
@@ -83,11 +109,57 @@ class ActionWindowsScreen extends ConsumerWidget {
                                 fontSize: 13,
                                 color: AppColors.textSecondary,
                                 height: 1.35)),
+                        if (state.aiAssisted && state.aiConfidence != null)
+                          Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                      color: AppColors.farmerGreen
+                                          .withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(8)),
+                                  child: Row(mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                    const Icon(Icons.bolt_rounded,
+                                        size: 13, color: AppColors.farmerGreen),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                        'System One · ${(state.aiConfidence! * 100).round()}% confident',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.farmerGreen)),
+                                  ]))),
                       ])),
                 ])),
           ])),
     );
   }
+}
+
+class _NoticeBanner extends StatelessWidget {
+  const _NoticeBanner({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+            color: AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.borderSubtle)),
+        child: Row(children: [
+          Icon(icon, size: 16, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Text(text,
+                  style: const TextStyle(
+                      fontSize: 12, color: AppColors.textSecondary))),
+        ]),
+      );
 }
 
 const _scaleStyle = TextStyle(fontSize: 11, color: AppColors.textSecondary);

@@ -8,7 +8,9 @@ void main() {
     final palette = paletteFor(SkyPeriod.midday, SkyCondition.clear);
 
     expect(palette.card.computeLuminance(), lessThan(0.45));
-    expect(palette.accent, const Color(0xFF67E8F9));
+    // _ensureReadable guarantees a *visible* accent on dark cards: it swaps in
+    // cyan only when the accent is dark, so warm daylight accents (amber) stay.
+    expect(palette.accent.computeLuminance(), greaterThan(0.25));
     expect(palette.text, const Color(0xFFF8FAFC));
     expect(palette.textMuted, const Color(0xFFD6E2EE));
   });

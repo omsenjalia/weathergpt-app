@@ -5,9 +5,14 @@ import '../../home/providers/location_provider.dart';
 import '../../settings/providers/settings_provider.dart';
 
 class ChatMessage {
-  const ChatMessage({required this.role, required this.content});
+  const ChatMessage({required this.role, required this.content, this.meta});
   final String role; // user | assistant
   final String content;
+
+  /// Additive response metadata from the backend (`meta` in /chat responses).
+  /// Present on the assistant message when the server sent it; used to surface
+  /// routing diagnostics such as the System One intent engine.
+  final Map<String, dynamic>? meta;
 
   Map<String, dynamic> toJson() => {'role': role, 'content': content};
 }
@@ -48,9 +53,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
       final result =
           await ApiClient.instance.post('/chat', data: _buildPayload(next, trimmed));
       final reply = '${result['response'] ?? ''}';
+      final meta = result['meta'] is Map
+          ? (result['meta'] as Map).cast<String, dynamic>()
+          : null;
       state = state.copyWith(
         sending: false,
-        messages: [...next, ChatMessage(role: 'assistant', content: reply)],
+        messages: [
+          ...next,
+          ChatMessage(role: 'assistant', content: reply, meta: meta),
+        ],
       );
     } on AppApiError catch (e) {
       state = state.copyWith(sending: false, error: e.message);
