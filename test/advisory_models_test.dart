@@ -55,13 +55,16 @@ void main() {
       expect(result.every((c) => c.hours == 1), isTrue);
     });
 
-    test('ignores malformed cells', () {
+    test('ignores malformed cells (maps them to neutral)', () {
       final result = collapseHourlyCells([
         'not-a-map',
         {'suitability': 'good'},
       ]);
-      expect(result, hasLength(1));
-      expect(result.first.suitability, Suitability.good);
+      // Two cells never merge into one bucket (bucket size floors at 1);
+      // malformed entries read as neutral instead of crashing.
+      expect(result, hasLength(2));
+      expect(result[0].suitability, Suitability.neutral);
+      expect(result[1].suitability, Suitability.good);
     });
   });
 
