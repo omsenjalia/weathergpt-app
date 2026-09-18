@@ -3,4 +3,5 @@ abstract final class ApiEndpoints {
   static const health = '/health';
   static const diagnostics = '/dev';
   static const sandbox = '/dev/sandbox';
+  static const advisory = '/advisory';
 }

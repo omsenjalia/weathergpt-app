@@ -2,6 +2,16 @@
 
 WeatherGPT is a multilingual, voice-first weather companion for **SIH 2026**, problem statement **SIH26068** under the Disaster Management theme.
 
+## TypeSafe System One (Jev)
+
+Farm Action Windows and chat routing are backed by [TypeSafe AI](https://docs.typesafe.ai)'s
+System One decision model (Jev) running **in the backend** — typed Choice/Score/Noul
+questions over fused weather state return calibrated answers with confidence, and the app
+renders a "System One · NN% confident" badge when the AI shaped a verdict. The integration
+is fully backward-compatible: without a backend key everything falls back to deterministic
+thresholds. The ready-to-apply backend change lives in `backend-integration/` (see its
+README); API keys stay server-side.
+
 ## Run locally
 
 1. Start the API: follow `Web App/backend/README.md`.
