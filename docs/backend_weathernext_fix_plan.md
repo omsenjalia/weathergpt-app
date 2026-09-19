@@ -22,8 +22,8 @@ This plan fixes backend to use **all 9** and make Flutter app receive WeatherNex
 
 | Checkbox | What it is | Best for | Cost |
 |---|---|---|---|
-| **WN2 on BigQuery** | WeatherNext 2 (GenCast/GraphCast era) 0.1° table `weathernext_2_*` via Analytics Hub | SQL joins with business data, historical comparison | Billed per bytes scanned, needs billing |
-| **WN2 Mean on BigQuery** | Pre-aggregated mean/statistics of WN2 (smaller, faster) | Everyday forecast, cheaper | Same but less data scanned |
+| **WN2 on BigQuery** | WeatherNext 2 (GenCast/GraphCast era) table `weathernext_2_0_0` via Analytics Hub, linked into its **own dataset** (`weathernext_2`) | SQL joins with business data, historical comparison | Billed per bytes scanned, needs billing |
+| **WN2 Mean on BigQuery** | WeatherNext 2 Mean — a **separate listing and table** (`weathernext_2_0_0_mean`), smaller/faster | Everyday forecast, cheaper | Same but less data scanned |
 | **WN2 on GCS (Zarr)** | Full 64-member ensemble Zarr `gs://weathernext2_*` | Raw ensemble, ML, custom stats | Storage egress, no BigQuery cost |
 | **WN2 Mean on GCS (Zarr)** | Statistics Zarr for WN2 | Fast mean/p10-p90 | Same |
 | **WN2 on Earth Engine** | WN2 as EE ImageCollection | Maps, raster, NDVI joins | EE quota, no BigQuery |
@@ -82,7 +82,13 @@ GOOGLE_CLOUD_PROJECT=cool-archery-296710
 GOOGLE_CLOUD_QUOTA_PROJECT=cool-archery-296710
 WEATHERNEXT_TABLE_3=cool-archery-296710.weathernext.weathernext_3_0_0_0p1deg
 WEATHERNEXT_TABLE_3_HR=cool-archery-296710.weathernext.weathernext_3_0_0_0p05deg
-WEATHERNEXT_TABLE_2=cool-archery-296710.weathernext.weathernext_2_0_0_0p1deg
+# WN2 and WN3 are separate Analytics Hub listings, so each is linked into its
+# own dataset. Setting the dataset name is enough; the table keeps the
+# published name (composed default: <project>.<dataset>.weathernext_2_0_0).
+WEATHERNEXT_BQ_DATASET_3=weathernext
+WEATHERNEXT_BQ_DATASET_2=weathernext_2
+WEATHERNEXT_TABLE_2=cool-archery-296710.weathernext_2.weathernext_2_0_0
+WEATHERNEXT_TABLE_2_MEAN=cool-archery-296710.weathernext_2.weathernext_2_0_0_mean
 WEATHERNEXT_GCS_BUCKET_3=weathernext3_spatial
 WEATHERNEXT_GCS_STATS_3=weathernext3_statistics_spatial
 WEATHERNEXT_GCS_BUCKET_2=weathernext2_spatial
@@ -125,14 +131,23 @@ def get_ee_credentials():
 
 ### 4.3 BigQuery Adapters — All Versions
 
+**WN2 and WN3 cannot live in one dataset.** They are separate Analytics Hub
+listings, so each subscription is linked into its own dataset in
+`cool-archery-296710` (WN3 → `weathernext`, WN2 → `weathernext_2`), and the WN2
+Mean listing is a separate table again (`weathernext_2_0_0_mean`). The backend
+composes `<project>.<dataset>.<published table>` per model, rejects a WN2 table
+that points into the WN3 dataset (`WEATHERNEXT_BQ_ALLOW_SHARED_DATASET=1` is the
+documented escape hatch), and repairs a stale table id after a rename with one
+metadata-only `list_tables` call (`WEATHERNEXT_BQ_TABLE_DISCOVERY=1`).
+
 `backend/services/weathernext_bigquery.py`:
 
 ```python
 TABLES = {
-    "wn3_0p1": os.getenv("WEATHERNEXT_TABLE_3"), # WN3 on BigQuery
-    "wn3_0p05": os.getenv("WEATHERNEXT_TABLE_3_HR"), # WN3 high-res
-    "wn2_0p1": os.getenv("WEATHERNEXT_TABLE_2"), # WN2 on BigQuery
-    "wn2_mean": os.getenv("WEATHERNEXT_TABLE_2") # WN2 Mean same table, select _mean columns only
+    "wn3_0p1": "<project>.weathernext.weathernext_3_0_0_0p1deg",   # WN3 listing
+    "wn3_0p05": "<project>.weathernext.weathernext_3_0_0_0p05deg", # WN3 high-res
+    "wn2_0p1": "<project>.weathernext_2.weathernext_2_0_0",         # WN2 listing (own dataset)
+    "wn2_mean": "<project>.weathernext_2.weathernext_2_0_0_mean",   # WN2 Mean listing (own table)
 }
 
 def query_wn3_point(lat, lon, init_time):
@@ -143,10 +158,13 @@ def query_wn3_point(lat, lon, init_time):
     # max_bytes_billed=1GB
 
 def query_wn2_point(lat, lon, init_time):
-    # Same but WN2 table — for comparison / historical
+    # WN2 table in its own linked dataset — for comparison / historical
+
+def query_wn2_mean_point(lat, lon, init_time):
+    # WN2 Mean table (separate listing) — mean/p10..p90 only
 
 def query_wn3_mean_point(...):
-    # WN3 Mean on BigQuery — actually same as wn3, but only _mean columns (cheaper)
+    # WN3 Mean on BigQuery — same WN3 table, but only _mean columns (cheaper)
 ```
 
 ### 4.4 GCS Zarr Adapters — Full Ensemble + Mean
@@ -254,10 +272,10 @@ Provenance must include `surface`, `table`/`bucket`, `model_version` (2 vs 3), `
 
 Map your 9 checkboxes to catalog:
 
-- WN2 BigQuery → `bigquery` surface, `weathernext_2_*` product
-- WN2 Mean BigQuery → same but only `_mean` columns
+- WN2 BigQuery → `bigquery` surface, `weathernext_2_0_0` product, linked dataset `weathernext_2`
+- WN2 Mean BigQuery → its own listing/table `weathernext_2_0_0_mean` (not `_mean` columns of the WN2 table)
 - WN2 GCS → `gcs_ensemble` vs `gcs_statistics`
-- WN3 BigQuery → `bigquery` 0p1deg + 0p05deg
+- WN3 BigQuery → `bigquery` 0p1deg + 0p05deg in the `weathernext` dataset
 - WN3 GCS → `weathernext3_spatial` (full) + `statistics_spatial` (mean)
 - Earth Engine → `earth_engine` surface
 
@@ -310,9 +328,10 @@ You have billing in cool-archery-296710, but personal account fails. For SIH:
 
 - [ ] SA with BQ Job User + Data Viewer + Storage Viewer + EE Viewer
 - [ ] Vercel env GOOGLE_APPLICATION_CREDENTIALS_JSON set
+- [ ] WN2 and WN3 linked into **separate** datasets (`weathernext_2` / `weathernext`); `/v2/weather/health` shows no shared-dataset error
 - [ ] WN3 BigQuery primary works → selected_source weathernext
 - [ ] WN3 GCS ensemble works → /v2/weather/ensemble returns members
-- [ ] WN2 BigQuery works for comparison
+- [ ] WN2 BigQuery works for comparison (own dataset + WN2 Mean table)
 - [ ] Earth Engine tiles work → /v2/weather/tiles
 - [ ] Catalog updated: planned → implemented for your 9
 - [ ] Flutter shows WeatherNext badge
