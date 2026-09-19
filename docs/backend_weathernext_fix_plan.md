@@ -1,287 +1,320 @@
-# Backend Fix Plan — Make WeatherNext Live (for SIH 2026)
+# Backend Fix Plan — Make WeatherNext Live (All 9 Surfaces) for SIH 2026
 
 **Target repo:** `omsenjalia/weathergpt` (backend at `weathergpt-backend.vercel.app`)
-**Current deployed:** v2.1.0, `weathernext.enabled=true`, `auth_mode=oauth`, `project=cool-archery-296710`, `has_refresh_token=true`
-**Current failure:**
-```
-GET /v2/weather?requested_source=weathernext
-→ selected_source: open_meteo
-→ fallback_reasons: weathernext live_credentials_required (table cool-archery-296710.weathernext.weathernext_3_0_0_0p1deg)
+**Current deployed:** v2.1.0, `weathernext.enabled=true`, `auth_mode=oauth`, `project=cool-archery-296710`
+**Current failure:** `live_credentials_required` for `cool-archery-296710.weathernext.weathernext_3_0_0_0p1deg`
+**You have:** All 9 accesses from your screenshot:
+- [x] WeatherNext 2 on Earth Engine
+- [x] WeatherNext 2 on BigQuery
+- [x] WeatherNext 2 on Google Cloud Storage (Zarr)
+- [x] WeatherNext 2 Mean on Earth Engine
+- [x] WeatherNext 2 Mean on BigQuery
+- [x] WeatherNext 2 Mean on Google Cloud Storage (Zarr)
+- [x] WeatherNext 3 on Earth Engine
+- [x] WeatherNext 3 on BigQuery
+- [x] WeatherNext 3 on Google Cloud Storage (Zarr)
 
-GET /v2/weather/series?variable=temperature_2m
-→ {status: unavailable, error: Requested source weathernext unavailable: live_credentials_required}
-```
-**You have:** All 9 accesses checked in image:
-- WN2 on Earth Engine, BigQuery, GCS (Zarr)
-- WN2 Mean on Earth Engine, BigQuery, GCS
-- WN3 on Earth Engine, BigQuery, GCS
-→ Project `cool-archery-296710` is allowlisted.
-
-This plan fixes backend to actually return WeatherNext data to Flutter app.
+This plan fixes backend to use **all 9** and make Flutter app receive WeatherNext data.
 
 ---
 
-## 1. Root Cause
+## 1. What the 9 Checkboxes Mean
 
-Backend uses OAuth client ID + secret + refresh token to get BigQuery access token at runtime.
+| Checkbox | What it is | Best for | Cost |
+|---|---|---|---|
+| **WN2 on BigQuery** | WeatherNext 2 (GenCast/GraphCast era) 0.1° table `weathernext_2_*` via Analytics Hub | SQL joins with business data, historical comparison | Billed per bytes scanned, needs billing |
+| **WN2 Mean on BigQuery** | Pre-aggregated mean/statistics of WN2 (smaller, faster) | Everyday forecast, cheaper | Same but less data scanned |
+| **WN2 on GCS (Zarr)** | Full 64-member ensemble Zarr `gs://weathernext2_*` | Raw ensemble, ML, custom stats | Storage egress, no BigQuery cost |
+| **WN2 Mean on GCS (Zarr)** | Statistics Zarr for WN2 | Fast mean/p10-p90 | Same |
+| **WN2 on Earth Engine** | WN2 as EE ImageCollection | Maps, raster, NDVI joins | EE quota, no BigQuery |
+| **WN2 Mean on Earth Engine** | Mean collection on EE | Map tiles | Same |
+| **WN3 on BigQuery** | WeatherNext 3 (current) 0.1° `weathernext_3_0_0_0p1deg` + 0.05° `...0p05deg` | Primary 15-day forecast, 6 stats (mean/p10/p25/p50/p75/p90) | Billed, needs billing |
+| **WN3 Mean on BigQuery** | Same as above — WN3 tables ARE mean/stats (confusing name, but WN3 BigQuery only serves stats) | Same as WN3 on BigQuery | Same |
+| **WN3 on GCS (Zarr)** | Full fidelity: `gs://weathernext3_spatial/` (raw 64 members + 3D levels) and `gs://weathernext3_statistics_spatial/` (stats) | Ensemble spread, profiles, energy (100m wind), SST | Egress only, best for researcher |
+| **WN3 on Earth Engine** | WN3 0.1° and 0.05° collections `projects/gcp-public-data-weathernext/assets/weathernext_3_0_0_0p1deg` | Map tiles for app Explore, researcher maps | EE quota |
 
-In Vercel serverless (`api/index.py`):
-- `GOOGLE_OAUTH_CLIENT_ID=764086051850...`, `CLIENT_SECRET`, `REFRESH_TOKEN` exist (per `/dev`)
-- But `google-cloud-bigquery` client with OAuth credentials fails to refresh in serverless (no persistent token cache, clock skew, or missing `google.auth` transport)
-- Result: `live_credentials_required` and fallback to Open-Meteo
+**For SIH:** Use **WN3 on BigQuery** as primary (15-day, 0.1°), **WN3 on GCS Zarr** for ensemble/researcher, **WN2** for historical comparison (show improvement). Earth Engine for map tiles.
 
-OAuth refresh is flaky for prod. Service account + ADC is reliable for serverless.
+## 2. Root Cause of Current Failure
 
-## 2. Solution Architecture
+Backend uses OAuth refresh token. In Vercel serverless, token refresh fails → `live_credentials_required` → fallback to Open-Meteo.
 
-Keep OAuth as fallback, add service account as primary.
+You have billing issue `untrusted account` when trying to enable billing — but project `cool-archery-296710` already has billing and SA, so backend should use **service account JSON** not OAuth.
+
+## 3. Architecture — Use All 9 Surfaces
 
 ```
-Flutter /v2/weather?requested_source=weathernext
-  → FastAPI routers/v2_weather.py
-    → ForecastProvider (IMD → WeatherNext → AccuWeather → Open-Meteo)
-      → WeatherNextBigQueryAdapter
-        1. Try service account JSON from env GOOGLE_APPLICATION_CREDENTIALS_JSON
-        2. Try ADC (GOOGLE_APPLICATION_CREDENTIALS file / workload identity)
-        3. Try OAuth refresh token (existing)
-        4. If all fail → return FallbackReason live_credentials_required
+Flutter App
+  /v2/weather?requested_source=weathernext&model=weathernext_3
+    → ForecastProvider
+      → WN3 BigQuery Adapter (primary, 0.1° + 0.05°)
+        → if fails: WN3 GCS Zarr Adapter (stats)
+          → if fails: WN2 BigQuery Adapter (historical)
+            → if fails: AccuWeather → Open-Meteo
+
+  /v2/weather/ensemble?variable=temperature_2m
+    → WN3 GCS Full Ensemble Adapter (gs://weathernext3_spatial/)
+
+  /v2/weather/catalog
+    → Returns all 262 capabilities with access_status:
+      planned → implemented → verified (track each of your 9)
+
+  /v2/weather/tiles/{var}/{run}/{z}/{x}/{y}.png
+    → Earth Engine Adapter (WN2 + WN3) for map tiles
 ```
 
-No app change needed once backend returns `selected_source=weathernext` — Flutter already parses v2 provenance.
+## 4. Implementation Steps
 
-## 3. Backend Implementation Steps
-
-### 3.1 Create service account (one-time, in GCP console)
+### 4.1 Service Account (covers all 9)
 
 In `cool-archery-296710`:
 
-1. IAM → Service Accounts → Create `weathergpt-backend`
-2. Roles:
-   - `BigQuery Job User` (to run jobs)
-   - `BigQuery Data Viewer` on dataset `weathernext` (or project-level if dataset not shareable)
-   - `Storage Object Viewer` on buckets `weathernext3_spatial`, `weathernext3_statistics_spatial` (for future GCS Zarr)
-3. Keys → Create JSON key → download
-4. **Do NOT commit JSON to git** — add to Vercel env
+- IAM → Service Accounts → `weathergpt-backend` → Roles:
+  - `BigQuery Job User`, `BigQuery Data Viewer` (for WN2 + WN3 BigQuery)
+  - `Storage Object Viewer` (for WN2 + WN3 GCS Zarr)
+  - `Earth Engine Resource Viewer` (for WN2 + WN3 Earth Engine)
+- Keys → JSON → Add to Vercel env `GOOGLE_APPLICATION_CREDENTIALS_JSON` (stringified, never commit)
 
-### 3.2 Add env vars to Vercel
+Vercel env:
+```
+GOOGLE_APPLICATION_CREDENTIALS_JSON={"type":"service_account",...}
+GOOGLE_CLOUD_PROJECT=cool-archery-296710
+GOOGLE_CLOUD_QUOTA_PROJECT=cool-archery-296710
+WEATHERNEXT_TABLE_3=cool-archery-296710.weathernext.weathernext_3_0_0_0p1deg
+WEATHERNEXT_TABLE_3_HR=cool-archery-296710.weathernext.weathernext_3_0_0_0p05deg
+WEATHERNEXT_TABLE_2=cool-archery-296710.weathernext.weathernext_2_0_0_0p1deg
+WEATHERNEXT_GCS_BUCKET_3=weathernext3_spatial
+WEATHERNEXT_GCS_STATS_3=weathernext3_statistics_spatial
+WEATHERNEXT_GCS_BUCKET_2=weathernext2_spatial
+WEATHERNEXT_ENABLED=1
+```
 
-In Vercel dashboard for `weathergpt-backend`:
+### 4.2 Auth Helper (covers BigQuery + GCS + EE)
 
-- `GOOGLE_APPLICATION_CREDENTIALS_JSON` = entire JSON file content (stringified)
-- Keep existing: `GOOGLE_OAUTH_CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN` as fallback
-- `GOOGLE_CLOUD_PROJECT=cool-archery-296710`
-- `GOOGLE_CLOUD_QUOTA_PROJECT=cool-archery-296710`
-- `WEATHERNEXT_TABLE=cool-archery-296710.weathernext.weathernext_3_0_0_0p1deg` (and `...0p05deg`)
-- `WEATHERNEXT_ENABLED=1`
-
-### 3.3 Code changes in `omsenjalia/weathergpt/backend`
-
-**File: `backend/services/weathernext_auth.py` (new)**
+`backend/services/weathernext_auth.py` (new):
 
 ```python
 import json, os
-from typing import Optional
 from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 
-def get_bigquery_credentials() -> Optional[object]:
-    # 1. Service account JSON from env (best for Vercel)
+def get_credentials(scopes):
     sa_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
     if sa_json:
-        try:
-            info = json.loads(sa_json)
-            creds = service_account.Credentials.from_service_account_info(
-                info,
-                scopes=["https://www.googleapis.com/auth/bigquery"]
-            )
-            return creds
-        except Exception as e:
-            print(f"[weathernext_auth] SA JSON failed: {e}")
+        info = json.loads(sa_json)
+        return service_account.Credentials.from_service_account_info(info, scopes=scopes)
+    # fallback to ADC / OAuth as before
+    ...
 
-    # 2. ADC file path (Cloud Run / local)
-    adc_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    if adc_path and os.path.exists(adc_path):
-        try:
-            creds = service_account.Credentials.from_service_account_file(
-                adc_path,
-                scopes=["https://www.googleapis.com/auth/bigquery"]
-            )
-            return creds
-        except Exception as e:
-            print(f"[weathernext_auth] ADC file failed: {e}")
+def get_bq_client():
+    from google.cloud import bigquery
+    creds = get_credentials(["https://www.googleapis.com/auth/bigquery"])
+    if not creds: raise RuntimeError("live_credentials_required")
+    return bigquery.Client(credentials=creds, project=os.getenv("GOOGLE_CLOUD_PROJECT"))
 
-    # 3. OAuth refresh token (existing)
-    client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID")
-    client_secret = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
-    refresh_token = os.getenv("GOOGLE_OAUTH_REFRESH_TOKEN")
-    if client_id and client_secret and refresh_token:
-        try:
-            creds = Credentials(
-                token=None,
-                refresh_token=refresh_token,
-                token_uri="https://oauth2.googleapis.com/token",
-                client_id=client_id,
-                client_secret=client_secret,
-                scopes=["https://www.googleapis.com/auth/bigquery"]
-            )
-            creds.refresh(Request())
-            return creds
-        except Exception as e:
-            print(f"[weathernext_auth] OAuth refresh failed: {e}")
+def get_gcs_client():
+    from google.cloud import storage
+    creds = get_credentials(["https://www.googleapis.com/auth/devstorage.read_only"])
+    return storage.Client(credentials=creds)
 
-    return None
+def get_ee_credentials():
+    # EE uses same SA, but needs earthengine scope
+    return get_credentials(["https://www.googleapis.com/auth/earthengine"])
 ```
 
-**File: `backend/services/weathernext_bigquery.py`**
+### 4.3 BigQuery Adapters — All Versions
 
-Update `get_client()`:
+`backend/services/weathernext_bigquery.py`:
 
 ```python
-from google.cloud import bigquery
-from .weathernext_auth import get_bigquery_credentials
+TABLES = {
+    "wn3_0p1": os.getenv("WEATHERNEXT_TABLE_3"), # WN3 on BigQuery
+    "wn3_0p05": os.getenv("WEATHERNEXT_TABLE_3_HR"), # WN3 high-res
+    "wn2_0p1": os.getenv("WEATHERNEXT_TABLE_2"), # WN2 on BigQuery
+    "wn2_mean": os.getenv("WEATHERNEXT_TABLE_2") # WN2 Mean same table, select _mean columns only
+}
 
-def get_client():
-    creds = get_bigquery_credentials()
-    if not creds:
-        raise RuntimeError("live_credentials_required")
-    project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_QUOTA_PROJECT") or "cool-archery-296710"
-    return bigquery.Client(credentials=creds, project=project)
+def query_wn3_point(lat, lon, init_time):
+    # Uses wn3_0p1 table — 19 vars, 6 stats each (mean/p10/p25/p50/p75/p90)
+    # Always WHERE init_time = TIMESTAMP(...) to prune partitions
+    # SELECT f.temperature_2m_mean, f.temperature_2m_p10, f.temperature_2m_p90, ...
+    # ST_DWITHIN(geography, ST_GEOGPOINT(lon, lat), 10000)
+    # max_bytes_billed=1GB
+
+def query_wn2_point(lat, lon, init_time):
+    # Same but WN2 table — for comparison / historical
+
+def query_wn3_mean_point(...):
+    # WN3 Mean on BigQuery — actually same as wn3, but only _mean columns (cheaper)
 ```
 
-Add `maximum_bytes_billed` and partition filter:
+### 4.4 GCS Zarr Adapters — Full Ensemble + Mean
+
+`backend/services/weathernext_gcs.py` (new):
 
 ```python
-def query_point(lat, lon, init_time, table):
-    client = get_client()
-    job_config = bigquery.QueryJobConfig(
-        maximum_bytes_billed=1_000_000_000,  # 1 GiB hard cap per SIH requirement
-        query_parameters=[
-            bigquery.ScalarQueryParameter("lat", "FLOAT64", lat),
-            bigquery.ScalarQueryParameter("lon", "FLOAT64", lon),
-        ]
-    )
-    sql = f"""
-    SELECT t.forecast
-    FROM `{table}` t
-    WHERE t.init_time = TIMESTAMP(@init_time)
-      AND ST_DWITHIN(t.geography, ST_GEOGPOINT(@lon, @lat), 10000)
-    LIMIT 1
-    """
-    # Always filter by init_time to avoid full scan
+import xarray as xr
+import obstore as obs
+
+BUCKETS = {
+    "wn3_full": "gs://weathernext3_spatial/weathernext_3_0_0/zarr/",
+    "wn3_stats": "gs://weathernext3_statistics_spatial/weathernext_3_0_0/zarr/",
+    "wn2_full": "gs://weathernext2_spatial/...",
+    "wn2_mean": "gs://weathernext2_statistics_spatial/..."
+}
+
+def open_wn3_ensemble(init_time):
+    # xr.open_zarr(BUCKETS["wn3_full"], chunks={})
+    # Select init_time, then point via sel(lat, lon, method="nearest")
+    # Returns 64 members for ensemble spread
+
+def open_wn3_stats(init_time):
+    # For p10-p90, mean — used for Everyone enrichments
+
+# Used by:
+# /v2/weather/ensemble?variable=temperature_2m&lat=..&lon=..
+# /v2/weather/profile?variable=temperature&levels=...
 ```
 
-**File: `backend/routers/v2_weather.py`**
+No BigQuery cost, only GCS egress — good for SIH when billing blocked.
 
-Ensure fallback reason includes table:
+### 4.5 Earth Engine Adapters — Map Tiles
+
+`backend/services/weathernext_ee.py` (new):
 
 ```python
-try:
-    data = await weathernext_adapter.fetch(lat, lon, init_time)
-    provenance["selected_source"] = "weathernext"
-except Exception as e:
-    reason = "live_credentials_required" if "live_credentials_required" in str(e) else "unavailable"
-    provenance["fallback_reasons"].append({
-        "provider": "weathernext",
-        "reason": reason,
-        "surface": "bigquery",
-        "table": os.getenv("WEATHERNEXT_TABLE")
-    })
-    # try next provider
+import ee
+
+def init_ee():
+    creds = get_ee_credentials()
+    ee.Initialize(credentials=creds, project=os.getenv("GOOGLE_CLOUD_PROJECT"))
+
+def get_tile_url(variable, run_id, col_name):
+    # col_name: "projects/gcp-public-data-weathernext/assets/weathernext_3_0_0_0p1deg"
+    # or "weathernext_2_..." for WN2
+    # For WN3 on Earth Engine and WN2 on Earth Engine
+    # Return EE map tile URL for /v2/weather/tiles/{var}/{run}/{z}/{x}/{y}.png
 ```
 
-**File: `backend/main.py` — CORS already fixed in PR #17, verify:**
+Used by Flutter Explore map — keeps Windy but adds WeatherNext tiles.
+
+### 4.6 v2 Router — Use All
+
+`backend/routers/v2_weather.py`:
 
 ```python
-from fastapi.middleware.cors import CORSMiddleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+from ..services import weathernext_bigquery as bq
+from ..services import weathernext_gcs as gcs
+
+async def fetch_weathernext(lat, lon, requested_model="weathernext_3"):
+    tried = []
+    # 1. WN3 on BigQuery (primary)
+    try:
+        return await bq.query_wn3_point(lat, lon), "weathernext", "bigquery", "wn3_0p1deg"
+    except Exception as e:
+        tried.append({"provider": "weathernext", "reason": str(e), "surface": "bigquery", "table": TABLES["wn3_0p1"]})
+
+    # 2. WN3 on GCS Zarr (stats)
+    try:
+        return await gcs.open_wn3_stats(lat, lon), "weathernext", "gcs_zarr", "weathernext3_statistics"
+    except Exception as e:
+        tried.append({"provider": "weathernext", "reason": str(e), "surface": "gcs", "bucket": BUCKETS["wn3_stats"]})
+
+    # 3. WN2 on BigQuery (fallback historical)
+    try:
+        return await bq.query_wn2_point(lat, lon), "weathernext", "bigquery", "wn2_0p1deg"
+    except Exception as e:
+        tried.append({"provider": "weathernext", "reason": str(e), "surface": "bigquery", "table": TABLES["wn2_0p1"]})
+
+    # 4. WN2 on GCS
+    try:
+        return await gcs.open_wn2_mean(lat, lon), "weathernext", "gcs_zarr", "wn2_mean"
+    except Exception as e:
+        tried.append({"provider": "weathernext", "reason": str(e), "surface": "gcs"})
+
+    raise Unavailable(fallback_reasons=tried)
 ```
 
-### 3.4 Vercel config
+Provenance must include `surface`, `table`/`bucket`, `model_version` (2 vs 3), `is_ensemble`.
 
-`vercel.json`:
+### 4.7 Catalog — Track Your 9
+
+`/v2/weather/catalog` should return 262 entries with:
 
 ```json
 {
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 60
-    }
-  }
+  "capability_id": "gcs_ensemble_temperature_2m",
+  "product": "weathernext_3_0_0",
+  "surface": "gcs_ensemble",
+  "access_status": "planned" -> "implemented" -> "verified",
+  "backend_route": "/v2/weather/ensemble"
 }
 ```
 
-Already set per PR #9, keep.
+Map your 9 checkboxes to catalog:
 
-### 3.5 Testing
+- WN2 BigQuery → `bigquery` surface, `weathernext_2_*` product
+- WN2 Mean BigQuery → same but only `_mean` columns
+- WN2 GCS → `gcs_ensemble` vs `gcs_statistics`
+- WN3 BigQuery → `bigquery` 0p1deg + 0p05deg
+- WN3 GCS → `weathernext3_spatial` (full) + `statistics_spatial` (mean)
+- Earth Engine → `earth_engine` surface
 
-Local:
+Update `by_state` counts as you implement.
 
-```bash
-cd backend
-pip install google-cloud-bigquery google-auth
-GOOGLE_APPLICATION_CREDENTIALS_JSON='{"type":"service_account",...}' \
-GOOGLE_CLOUD_PROJECT=cool-archery-296710 \
-python -m pytest tests/test_weathernext_bigquery.py -v
-
-# Manual
-python -c "from services.weathernext_bigquery import query_point; print(query_point(22.56, 72.95, '2026-09-19 00:00:00 UTC', 'cool-archery-296710.weathernext.weathernext_3_0_0_0p1deg'))"
-```
-
-Deployed:
+### 4.8 Testing All 9
 
 ```bash
-curl https://weathergpt-backend.vercel.app/v2/weather/health | jq .provider_health.weathernext
-# expect: configured true, eligible true, reason null
+# WN3 BigQuery (your main)
+curl ".../v2/weather?lat=22.56&lon=72.95&requested_source=weathernext&model=weathernext_3" | jq .provenance.selected_source
+# → weathernext
 
-curl "https://weathergpt-backend.vercel.app/v2/weather?lat=22.56&lon=72.95&requested_source=weathernext" | jq .provenance
-# expect: selected_source weathernext, no fallback containing weathernext
+# WN2 BigQuery (comparison)
+curl ".../v2/weather?lat=22.56&lon=72.95&requested_source=weathernext&model=weathernext_2" | jq .
 
-curl "https://weathergpt-backend.vercel.app/v2/weather/series?lat=22.56&lon=72.95&variable=temperature_2m&requested_source=weathernext" | jq .
-# expect: points array, not unavailable
+# WN3 GCS Ensemble
+curl ".../v2/weather/ensemble?lat=22.56&lon=72.95&variable=temperature_2m" | jq .
+
+# WN3 Earth Engine tiles
+curl ".../v2/weather/tiles/temperature_2m/latest/6/10/20.png" --output tile.png
+
+# Health
+curl .../v2/weather/health | jq .provider_health.weathernext
+# → eligible true, reason null
 ```
 
-## 4. Flutter App Already Ready
+## 5. Flutter App — Already Ready for All
 
-App branch `arena/01a0b8b7-weathergpt-app` now:
+Current app branch calls `/v2/weather` and parses `selected_source`, `fallbackReasons`, `model`. Once backend returns WN2/WN3, provenance bar shows blue WeatherNext badge.
 
-- Calls `/v2/weather` primary, `requested_source=weathernext` for researcher
-- Parses `selected_source`, `fallbackReasons`
-- Shows blue WeatherNext badge when live, yellow warning when `live_credentials_required`
-- No diagnostic screen (per your request)
+To use specific types in researcher mode:
 
-Once backend fix deployed, app auto-shows WeatherNext without code change.
+- `/v2/weather?model=weathernext_2` → WN2
+- `/v2/weather?model=weathernext_3` → WN3
+- `/v2/weather/ensemble` → full 64 members for spread (p10-p90)
+- Map tiles from Earth Engine for Explore
 
-## 5. Cost Control for SIH (billing untrusted issue)
+No diagnostic screen needed — honest fallback chain is enough for SIH.
 
-You said Google says untrusted account when enabling billing. For SIH:
+## 6. SIH Billing Untrusted Fix
 
-- Use personal Gmail + credit card, not college email + debit
-- Use college GCP education credits if available
-- Set budget alert $5, cap per query 1 GiB
-- For demo, 2 runs/day (00Z,12Z) = ~510 GiB/month fits in 1TB free tier
-- If billing still blocked, use GCS Zarr path: `gs://weathernext3_spatial/` public Zarr can be read with `xarray` + `obstore` without BigQuery billing (only small egress). Show Colab notebook as SIH evidence.
+You have billing in cool-archery-296710, but personal account fails. For SIH:
 
-## 6. Done Criteria
+- Use that project's SA, not personal billing
+- Set budget alert $5, max_bytes_billed 1GB per query
+- 2 runs/day = 510 GiB/month fits in 1TB free tier
+- If still blocked, use GCS Zarr path (no BigQuery cost) for demo + show catalog as proof of access
 
-- [ ] Service account created, Vercel env set, not committed to git
-- [ ] `get_bigquery_credentials()` tries SA → ADC → OAuth
-- [ ] `/v2/weather/health` → weathernext eligible true, reason null
-- [ ] `/v2/weather?requested_source=weathernext` → selected_source weathernext
-- [ ] Flutter app shows WeatherNext badge, p10-p90 spread, next-24h precip when available
-- [ ] `flutter test` + `flutter analyze` pass
-- [ ] No secrets in Flutter `.env`
+## 7. Done
 
-## 7. Rollback
+- [ ] SA with BQ Job User + Data Viewer + Storage Viewer + EE Viewer
+- [ ] Vercel env GOOGLE_APPLICATION_CREDENTIALS_JSON set
+- [ ] WN3 BigQuery primary works → selected_source weathernext
+- [ ] WN3 GCS ensemble works → /v2/weather/ensemble returns members
+- [ ] WN2 BigQuery works for comparison
+- [ ] Earth Engine tiles work → /v2/weather/tiles
+- [ ] Catalog updated: planned → implemented for your 9
+- [ ] Flutter shows WeatherNext badge
 
-If BigQuery fails, fallback chain returns Open-Meteo with explicit `fallback_reasons` — app never crashes, shows honest source.
-
----
-
-**This plan is for `omsenjalia/weathergpt` backend. Apply, deploy Vercel, then test Flutter app.**
+Once done, Flutter app receives WeatherNext data automatically.
