@@ -117,5 +117,20 @@
   "home.feels_like": "Feels Like",
   "chat.title": "WeatherGPT Chat",
   "chat.empty": "Ask about weather, forecasts, AQI, or farming tips.",
-  "chat.hint": "Ask WeatherGPT anything…"
+  "chat.hint": "Ask WeatherGPT anything…",
+  "home.source": "ಮೂಲ",
+  "home.source_not_reported": "ಮೂಲ ವರದಿಯಾಗಿಲ್ಲ",
+  "home.source_fallback": "ಪರ್ಯಾಯ ಮೂಲ",
+  "home.fresh": "ನವೀಕರಣ",
+  "home.stale": "ಹಳೆಯದು",
+  "home.updated": "{time} ಕ್ಕೆ ನವೀಕರಿಸಲಾಗಿದೆ",
+  "home.data_stale": "{time} ಡೇಟಾ — ಹಳೆಯದಾಗಿರಬಹುದು",
+  "home.run": "ರನ್",
+  "home.temp_spread": "ಮುನ್ಸೂಚನೆ ಶ್ರೇಣಿ p10–p90",
+  "home.next_24h_rain": "ಮುಂದಿನ 24 ಗಂಟೆಗಳ ಮಳೆ",
+  "home.next_24h_rain_partial": "ಮಳೆ (ಭಾಗಶಃ ದಿನ)",
+  "farmer.advisory_offline_banner": "ಸಲಹೆ ಲಭ್ಯವಿಲ್ಲ — ಸರ್ವರ್ ಅನ್ನು ತಲುಪಲಾಗಲಿಲ್ಲ.",
+  "farmer.advisory_unavailable": "ಸಲಹೆ ಲಭ್ಯವಿಲ್ಲ",
+  "farmer.advisory_unavailable_body": "ಈ ಹೊಲಕ್ಕೆ ಈಗ ಯಾವುದೇ ಪರಿಶೀಲಿತ ಕೆಲಸದ ಸಮಯಗಳಿಲ್ಲ. ಊಹಿಸುವ ಬದಲು ಏನನ್ನೂ ತೋರಿಸಲಾಗಿಲ್ಲ — ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+  "farmer.last_verified": "ಕೊನೆಯ ಪರಿಶೀಲನೆ {time}"
 }

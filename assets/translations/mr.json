@@ -117,5 +117,20 @@
   "home.feels_like": "Feels Like",
   "chat.title": "WeatherGPT Chat",
   "chat.empty": "Ask about weather, forecasts, AQI, or farming tips.",
-  "chat.hint": "Ask WeatherGPT anything…"
+  "chat.hint": "Ask WeatherGPT anything…",
+  "home.source": "स्रोत",
+  "home.source_not_reported": "स्रोत उपलब्ध नाही",
+  "home.source_fallback": "पर्यायी स्रोत",
+  "home.fresh": "अद्ययावत",
+  "home.stale": "जुने",
+  "home.updated": "{time} वाजता अद्ययावत",
+  "home.data_stale": "{time} चा डेटा — जुना असू शकतो",
+  "home.run": "रन",
+  "home.temp_spread": "अंदाज श्रेणी p10–p90",
+  "home.next_24h_rain": "पुढील 24 तासांचा पाऊस",
+  "home.next_24h_rain_partial": "पाऊस (अर्धवट दिवस)",
+  "farmer.advisory_offline_banner": "सल्ला उपलब्ध नाही — सर्व्हरशी संपर्क होऊ शकला नाही.",
+  "farmer.advisory_unavailable": "सल्ला उपलब्ध नाही",
+  "farmer.advisory_unavailable_body": "या शेतासाठी सध्या कोणतीही पडताळणी केलेली कार्यवेळ नाही. अंदाज वर्तवण्याऐवजी काहीही दाखवलेले नाही — पुन्हा प्रयत्न करा.",
+  "farmer.last_verified": "शेवटची पडताळणी {time}"
 }

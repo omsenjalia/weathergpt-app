@@ -117,5 +117,20 @@
   "home.feels_like": "Feels Like",
   "chat.title": "WeatherGPT Chat",
   "chat.empty": "Ask about weather, forecasts, AQI, or farming tips.",
-  "chat.hint": "Ask WeatherGPT anything…"
+  "chat.hint": "Ask WeatherGPT anything…",
+  "home.source": "மூலம்",
+  "home.source_not_reported": "மூலம் தெரிவிக்கப்படவில்லை",
+  "home.source_fallback": "மாற்று மூலம்",
+  "home.fresh": "புதுப்பிப்பு",
+  "home.stale": "பழையது",
+  "home.updated": "{time} மணிக்கு புதுப்பிக்கப்பட்டது",
+  "home.data_stale": "{time} தரவு — காலாவதியாகி இருக்கலாம்",
+  "home.run": "ரன்",
+  "home.temp_spread": "முன்னறிவிப்பு வரம்பு p10–p90",
+  "home.next_24h_rain": "அடுத்த 24 மணி நேர மழை",
+  "home.next_24h_rain_partial": "மழை (பகுதி நாள்)",
+  "farmer.advisory_offline_banner": "ஆலோசனை கிடைக்கவில்லை — சர்வரை அணுக முடியவில்லை.",
+  "farmer.advisory_unavailable": "ஆலோசனை கிடைக்கவில்லை",
+  "farmer.advisory_unavailable_body": "இந்த நிலத்திற்கு தற்போது சரிபார்க்கப்பட்ட வேலை நேரம் இல்லை. ஊகிப்பதற்கு பதிலாக எதுவும் காட்டப்படவில்லை — மீண்டும் முயற்சிக்கவும்.",
+  "farmer.last_verified": "கடைசி சரிபார்ப்பு {time}"
 }

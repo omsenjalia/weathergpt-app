@@ -1,5 +1,7 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
@@ -50,45 +52,55 @@ class _ActionWindowsScreenState extends ConsumerState<ActionWindowsScreen> {
               const Padding(
                   padding: EdgeInsets.only(bottom: 10),
                   child: LinearProgressIndicator(minHeight: 2)),
-            if (state.status == AdvisoryStatus.fallback)
-              const _NoticeBanner(
+            if (state.status == AdvisoryStatus.unavailable)
+              _NoticeBanner(
                   icon: Icons.cloud_off_rounded,
-                  text:
-                      'Showing the saved advisory — the server could not be reached.'),
+                  text: 'farmer.advisory_offline_banner'.tr()),
             _Tabs(
                 selected: state.selectedTab,
                 onSelect: ref.read(actionWindowsProvider.notifier).selectTab),
             const SizedBox(height: 20),
-            const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Row(children: [
-                  Expanded(child: Text('6 AM', style: _scaleStyle)),
-                  Expanded(
-                      child: Text('12 PM',
-                          textAlign: TextAlign.center, style: _scaleStyle)),
-                  Expanded(
-                      child: Text('6 PM',
-                          textAlign: TextAlign.right, style: _scaleStyle)),
-                ])),
-            const SizedBox(height: 12),
-            _ActionRow(
-                label: 'Irrigation',
-                caption: 'Best: 6–10 AM',
-                values: state.irrigationWindows,
-                captionColor: AppColors.farmerGreen),
-            const SizedBox(height: 18),
-            _ActionRow(
-                label: 'Spraying',
-                caption: 'Best: 2–5 PM',
-                values: state.sprayingWindows,
-                captionColor: AppColors.statusAmber),
-            const SizedBox(height: 18),
-            _ActionRow(
-                label: 'Field Work',
-                caption: state.fieldWorkStatus,
-                values: state.fieldWorkWindows,
-                captionColor: AppColors.farmerGreen),
-            const SizedBox(height: 26),
+            if (state.hasWindows) ...[
+              const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(children: [
+                    Expanded(child: Text('6 AM', style: _scaleStyle)),
+                    Expanded(
+                        child: Text('12 PM',
+                            textAlign: TextAlign.center, style: _scaleStyle)),
+                    Expanded(
+                        child: Text('6 PM',
+                            textAlign: TextAlign.right, style: _scaleStyle)),
+                  ])),
+              const SizedBox(height: 12),
+              _ActionRow(
+                  label: 'farmer.irrigation'.tr(),
+                  values: state.irrigationWindows,
+                  captionColor: AppColors.farmerGreen),
+              const SizedBox(height: 18),
+              _ActionRow(
+                  label: 'farmer.spraying'.tr(),
+                  values: state.sprayingWindows,
+                  captionColor: AppColors.statusAmber),
+              const SizedBox(height: 18),
+              _ActionRow(
+                  label: 'farmer.field_work'.tr(),
+                  caption: state.fieldWorkStatus,
+                  values: state.fieldWorkWindows,
+                  captionColor: AppColors.farmerGreen),
+              if (state.asOfUtc != null)
+                Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Text(
+                        'farmer.last_verified'
+                            .tr(namedArgs: {'time': _formatStamp(state.asOfUtc!)}),
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.textTertiary))),
+              const SizedBox(height: 26),
+            ] else ...[
+              _UnavailableAdvisory(asOfUtc: state.asOfUtc),
+              const SizedBox(height: 26),
+            ],
             AppCard(
                 child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,11 +112,17 @@ class _ActionWindowsScreenState extends ConsumerState<ActionWindowsScreen> {
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                        Text(state.summaryVerdict,
+                        Text(
+                            state.summaryVerdict.isNotEmpty
+                                ? state.summaryVerdict
+                                : 'farmer.advisory_unavailable'.tr(),
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 5),
-                        Text(state.summaryExplanation,
+                        Text(
+                            state.summaryExplanation.isNotEmpty
+                                ? state.summaryExplanation
+                                : 'farmer.advisory_unavailable_body'.tr(),
                             style: const TextStyle(
                                 fontSize: 13,
                                 color: AppColors.textSecondary,
@@ -206,11 +224,14 @@ class _Tabs extends StatelessWidget {
 class _ActionRow extends StatelessWidget {
   const _ActionRow(
       {required this.label,
-      required this.caption,
+      this.caption,
       required this.values,
       required this.captionColor});
   final String label;
-  final String caption;
+
+  /// Optional note from the backend. Absent means no note is rendered; the app
+  /// never substitutes a canned "Best: 6–10 AM".
+  final String? caption;
   final List<HourlySuitability> values;
   final Color captionColor;
   @override
@@ -218,13 +239,57 @@ class _ActionRow extends StatelessWidget {
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 3),
-        Text(caption,
-            style: TextStyle(
-                fontSize: 12,
-                color: captionColor,
-                fontWeight: FontWeight.w600)),
+        if (caption != null && caption!.isNotEmpty) ...[
+          const SizedBox(height: 3),
+          Text(caption!,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: captionColor,
+                  fontWeight: FontWeight.w600)),
+        ],
         const SizedBox(height: 9),
         TimeWindowBar(values: values),
       ]);
+}
+
+/// Formats a UTC stamp for the local reader without pretending to a precision
+/// the backend did not provide.
+String _formatStamp(DateTime utc) =>
+    DateFormat('d MMM, HH:mm').format(utc.toLocal());
+
+/// Shown instead of the window bars when nothing has been verified. Empty bars
+/// would read as "everything is neutral", which is a claim the data does not
+/// support.
+class _UnavailableAdvisory extends StatelessWidget {
+  const _UnavailableAdvisory({this.asOfUtc});
+  final DateTime? asOfUtc;
+
+  @override
+  Widget build(BuildContext context) => AppCard(
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.report_gmailerrorred_outlined,
+            color: AppColors.statusAmber, size: 26),
+        const SizedBox(width: 12),
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('farmer.advisory_unavailable'.tr(),
+              style:
+                  const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 5),
+          Text('farmer.advisory_unavailable_body'.tr(),
+              style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  height: 1.35)),
+          if (asOfUtc != null)
+            Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                    'farmer.last_verified'
+                        .tr(namedArgs: {'time': _formatStamp(asOfUtc!)}),
+                    style: const TextStyle(
+                        fontSize: 11, color: AppColors.textTertiary))),
+        ])),
+      ]));
 }

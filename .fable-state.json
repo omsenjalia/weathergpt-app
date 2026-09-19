@@ -1,0 +1,119 @@
+{
+  "skill": "fable-mode",
+  "task": "Execute feature/app (WeatherNext + Jev Flutter app implementation plan)",
+  "session_branch": "arena/01a0b77f-weathergpt-app",
+  "started": "2026-09-19",
+  "environment_findings": {
+    "flutter_sdk": "NOT installed in sandbox; no `flutter` or `dart` binary on PATH",
+    "pub_dev": "BLOCKED (curl -4 https://pub.dev -> exit/000, SSL_ERROR_SYSCALL); flutter/pub artifacts are served from storage.googleapis.com which is also blocked",
+    "dart_sdk_via_github": "404 - Dart SDK zips are not published as GitHub release assets",
+    "network_allowlist_ok": [
+      "github.com",
+      "api.github.com",
+      "pypi.org",
+      "registry.npmjs.org",
+      "codeload.github.com"
+    ],
+    "verification_strategy": "Local `flutter test`/`flutter analyze` impossible. The repository's own CI (.github/workflows/ci-test.yml, Flutter 3.44.0 stable) runs `flutter test`; `flutter analyze` added to the same workflow so the project's own runner verifies both. `gh` is authenticated as arena-ai-coding-agent[bot]."
+  },
+  "scope_boundary": {
+    "allowed": "App-only work that is safe against the CURRENT documented backend contract (docs/web_app_api_contract.md) plus strictly additive tolerant parsing of future fields.",
+    "forbidden": "Wiring screens to proposed /v2/... endpoints; implementing Jev/LangGraph/provider-selection/scientific ensemble logic; putting credentials in the app; presenting demo data as live advice.",
+    "reason": "implementation_plan.md sections 1 and 5 gate live integration on an implemented, versioned, authorized backend that does not exist yet."
+  },
+  "stages": [
+    {
+      "id": "s1",
+      "name": "Recon: repo, specs, tooling, blast radius",
+      "output": "Findings above + file inventory",
+      "status": "done"
+    },
+    {
+      "id": "s2",
+      "name": "Stage map + state file",
+      "output": ".fable-state.json (this file)",
+      "status": "done"
+    },
+    {
+      "id": "s3",
+      "name": "Core contracts: AppMode, safe JSON coercion, DataProvenance",
+      "output": "3 pure-Dart files under lib/core/models/",
+      "status": "done"
+    },
+    {
+      "id": "s4",
+      "name": "Mode propagation + real farm context",
+      "output": "weather/chat/voice providers send validated mode; Wheat hardcode removed",
+      "status": "done"
+    },
+    {
+      "id": "s5",
+      "name": "Weather snapshot: provenance, nullable weather code, no truncation, 2 Everyone enrichments",
+      "output": "lib/models/weather.dart + weather_provider.dart",
+      "status": "done"
+    },
+    {
+      "id": "s6",
+      "name": "Farmer: remove canned favourable windows, per-day verdict, refetch on location/profile change",
+      "output": "action_windows_provider.dart + advisory_models.dart",
+      "status": "done"
+    },
+    {
+      "id": "s7",
+      "name": "Voice/chat: remove canned 78%/12mm/weekday cards",
+      "output": "voice_provider.dart",
+      "status": "done"
+    },
+    {
+      "id": "s8",
+      "name": "Researcher: real /historical + /comparison instead of constant demo charts",
+      "output": "researcher providers + screens",
+      "status": "done"
+    },
+    {
+      "id": "s9",
+      "name": "Lifecycle: generation guards so stale responses cannot overwrite newer selection",
+      "output": "guards in StateNotifier providers",
+      "status": "done"
+    },
+    {
+      "id": "s10",
+      "name": "Localization: new keys in all 9 locales",
+      "output": "assets/translations/*.json",
+      "status": "done"
+    },
+    {
+      "id": "s11",
+      "name": "Tests: parser fixtures, mode, farmer/voice regressions, widget + keyset",
+      "output": "test/*_test.dart",
+      "status": "done"
+    },
+    {
+      "id": "s12",
+      "name": "Docs: migrate lasting docs, keep feature/ plans (backend unfinished), repair links",
+      "output": "docs/ + README.md + AGENTS.md",
+      "status": "done"
+    },
+    {
+      "id": "s13",
+      "name": "Verify with the project's own runner (CI flutter test + analyze)",
+      "output": "gh run result",
+      "status": "in_progress"
+    },
+    {
+      "id": "s14",
+      "name": "Self-critique + completion report incl. remaining work",
+      "output": "final message + feature/app/REMAINING_WORK.md",
+      "status": "pending"
+    }
+  ],
+  "cleanup_decision": {
+    "delete_feature_app_plans": false,
+    "reason": "AGENTS.md and feature/README.md forbid deleting plans while required tests/access checks are blocked or the component is unfinished. The plan's own Done bar is 'implemented and tested app code PLUS a compatible authorized backend'; the backend plan in feature/backend/ is unimplemented and several app items are explicitly gated on backend contracts. Record remaining work instead of claiming completion."
+  },
+  "delegation_note": "No Task/Agent-Teams subagent tool is exposed in this environment, so stages run sequentially in one context; independent read/recon batches are parallelised at the tool-call level. This is an honest adaptation, not delegated execution.",
+  "verification": {
+    "local": "impossible (no flutter/dart, pub.dev + storage.googleapis.com blocked)",
+    "runner": ".github/workflows/ci-test.yml on the pull request; flutter analyze step added"
+  }
+}

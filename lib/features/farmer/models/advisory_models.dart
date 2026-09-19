@@ -101,15 +101,58 @@ bool aiApplied(Map<String, dynamic>? ai) =>
     ai != null && ai['enabled'] == true && ai['applied'] == true;
 
 /// Top-level verdict choice reported by System One, if any.
+///
+/// This is a *whole-request* verdict (the backend's highest-confidence overall
+/// answer). It must not be rendered as one specific day's decision — use
+/// [dayDecisionFrom] for that.
 String? aiOverallVerdict(Map<String, dynamic>? ai) {
   final value = ai?['overall_verdict'];
   return value is String ? value : null;
 }
 
-/// Mean confidence across the System One answers the backend acted on.
-double? aiMeanConfidence(Map<String, dynamic>? ai) {
-  final value = ai?['mean_confidence'];
-  return value is num ? value.toDouble() : null;
+/// The decision the backend attached to one specific forecast day.
+///
+/// `/advisory` returns `windows[i].ai.overall = {choice, confidence}`. Reading
+/// the day's own decision is what stops a global, highest-confidence verdict
+/// from being shown as "today's" answer when it was actually computed for
+/// another day.
+class DayDecision {
+  const DayDecision({this.choice, this.confidence});
+
+  /// Absent decision — the day has no verdict to show.
+  static const DayDecision none = DayDecision();
+
+  final String? choice;
+  final double? confidence;
+
+  bool get isPresent => choice != null && choice!.isNotEmpty;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DayDecision &&
+      other.choice == choice &&
+      other.confidence == confidence;
+
+  @override
+  int get hashCode => Object.hash(choice, confidence);
+
+  @override
+  String toString() => 'DayDecision($choice, $confidence)';
+}
+
+Map<String, dynamic>? _castMap(Object? value) =>
+    value is Map ? Map<String, dynamic>.from(value) : null;
+
+/// Extracts the per-day decision from one `/advisory` window entry.
+DayDecision dayDecisionFrom(Map<String, dynamic>? window) {
+  final overall = _castMap(_castMap(window?['ai'])?['overall']);
+  if (overall == null) return DayDecision.none;
+  final choice = overall['choice'];
+  final confidence = overall['confidence'];
+  return DayDecision(
+    choice: choice is String ? choice : null,
+    confidence: confidence is num ? confidence.toDouble() : null,
+  );
 }
 
 /// Farmer-facing verdict line derived from a daily band name.
@@ -125,4 +168,12 @@ String verdictTextForBand(String? band) {
     default:
       return 'Advisory ready';
   }
+}
+
+/// Mean confidence across the System One answers the backend acted on.
+double? aiMeanConfidence(Map<String, dynamic>? ai) {
+  final value = ai?['mean_confidence'];
+  return value is num ? value.toDouble() : null;
+}
+
 }

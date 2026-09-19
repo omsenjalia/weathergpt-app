@@ -117,5 +117,20 @@
   "home.feels_like": "Feels Like",
   "chat.title": "WeatherGPT Chat",
   "chat.empty": "Ask about weather, forecasts, AQI, or farming tips.",
-  "chat.hint": "Ask WeatherGPT anything…"
+  "chat.hint": "Ask WeatherGPT anything…",
+  "home.source": "ഉറവിടം",
+  "home.source_not_reported": "ഉറവിടം റിപ്പോർട്ട് ചെയ്തിട്ടില്ല",
+  "home.source_fallback": "ബദൽ ഉറവിടം",
+  "home.fresh": "അപ്‌ഡേറ്റ്",
+  "home.stale": "പഴയത്",
+  "home.updated": "{time} ന് അപ്‌ഡേറ്റ് ചെയ്തു",
+  "home.data_stale": "{time} ലെ ഡാറ്റ — കാലഹരണപ്പെട്ടിരിക്കാം",
+  "home.run": "റൺ",
+  "home.temp_spread": "പ്രവചന പരിധി p10–p90",
+  "home.next_24h_rain": "അടുത്ത 24 മണിക്കൂറിലെ മഴ",
+  "home.next_24h_rain_partial": "മഴ (ഭാഗിക ദിവസം)",
+  "farmer.advisory_offline_banner": "ഉപദേശം ലഭ്യമല്ല — സെർവറിലേക്ക് എത്താൻ കഴിഞ്ഞില്ല.",
+  "farmer.advisory_unavailable": "ഉപദേശം ലഭ്യമല്ല",
+  "farmer.advisory_unavailable_body": "ഈ പാടത്തിന് ഇപ്പോൾ പരിശോധിച്ചുറപ്പിച്ച പ്രവൃത്തി സമയങ്ങളില്ല. ഊഹിക്കുന്നതിന് പകരം ഒന്നും കാണിക്കുന്നില്ല — വീണ്ടും ശ്രമിക്കുക.",
+  "farmer.last_verified": "അവസാന പരിശോധന {time}"
 }

@@ -1,14 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/api_endpoints.dart';
+import '../../../core/models/json_values.dart';
+import '../../../core/services/api_client.dart';
+import '../../home/providers/location_provider.dart';
 import 'chart_point.dart';
 
 enum HistoricalMetric { rainfall, temperature, humidity }
+
+/// Metric name as the archive API expects it.
+String metricParam(HistoricalMetric metric) => switch (metric) {
+      HistoricalMetric.rainfall => 'rainfall',
+      HistoricalMetric.temperature => 'temperature',
+      HistoricalMetric.humidity => 'humidity',
+    };
 
 class HistoricalDataState {
   const HistoricalDataState(
       {this.metric = HistoricalMetric.rainfall, this.monthly = false});
   final HistoricalMetric metric;
-  /// When true, show month-of-year climatology; when false, yearly series.
+
+  /// When true, month-of-year climatology is requested; when false, a yearly
+  /// archive series.
   final bool monthly;
 
   HistoricalDataState copyWith({HistoricalMetric? metric, bool? monthly}) =>
@@ -16,6 +29,16 @@ class HistoricalDataState {
         metric: metric ?? this.metric,
         monthly: monthly ?? this.monthly,
       );
+
+  /// Family cache key: two equal states must not trigger a second request.
+  @override
+  bool operator ==(Object other) =>
+      other is HistoricalDataState &&
+      other.metric == metric &&
+      other.monthly == monthly;
+
+  @override
+  int get hashCode => Object.hash(metric, monthly);
 }
 
 class HistoricalDataNotifier extends StateNotifier<HistoricalDataState> {
@@ -30,104 +53,96 @@ final historicalDataProvider =
   (ref) => HistoricalDataNotifier(),
 );
 
-/// Yearly series (x = year).
-const yearlySeries = <HistoricalMetric, List<ChartPoint>>{
-  HistoricalMetric.rainfall: [
-    ChartPoint(2000, 208),
-    ChartPoint(2003, 280),
-    ChartPoint(2006, 191),
-    ChartPoint(2009, 367),
-    ChartPoint(2012, 294),
-    ChartPoint(2015, 401),
-    ChartPoint(2018, 355),
-    ChartPoint(2020, 487),
-    ChartPoint(2022, 569),
-    ChartPoint(2024, 387),
-    ChartPoint(2026, 412),
-  ],
-  HistoricalMetric.temperature: [
-    ChartPoint(2000, 26.1),
-    ChartPoint(2003, 26.4),
-    ChartPoint(2006, 26.6),
-    ChartPoint(2009, 27.0),
-    ChartPoint(2012, 27.3),
-    ChartPoint(2015, 27.5),
-    ChartPoint(2018, 27.9),
-    ChartPoint(2020, 28.1),
-    ChartPoint(2022, 28.4),
-    ChartPoint(2024, 28.6),
-    ChartPoint(2026, 28.8),
-  ],
-  HistoricalMetric.humidity: [
-    ChartPoint(2000, 58),
-    ChartPoint(2003, 60),
-    ChartPoint(2006, 57),
-    ChartPoint(2009, 62),
-    ChartPoint(2012, 61),
-    ChartPoint(2015, 63),
-    ChartPoint(2018, 60),
-    ChartPoint(2020, 64),
-    ChartPoint(2022, 66),
-    ChartPoint(2024, 63),
-    ChartPoint(2026, 65),
-  ],
-};
+/// Why a series could not be shown. Distinct reasons matter: "the archive has
+/// nothing for this place" and "this API does not serve that view" are
+/// different facts and must not be rendered identically.
+enum ArchiveStatus { available, empty, unsupported }
 
-/// Monthly climatology (x = month 1–12).
-const monthlySeries = <HistoricalMetric, List<ChartPoint>>{
-  HistoricalMetric.rainfall: [
-    ChartPoint(1, 2),
-    ChartPoint(2, 1),
-    ChartPoint(3, 3),
-    ChartPoint(4, 8),
-    ChartPoint(5, 18),
-    ChartPoint(6, 95),
-    ChartPoint(7, 210),
-    ChartPoint(8, 185),
-    ChartPoint(9, 110),
-    ChartPoint(10, 25),
-    ChartPoint(11, 6),
-    ChartPoint(12, 2),
-  ],
-  HistoricalMetric.temperature: [
-    ChartPoint(1, 20.5),
-    ChartPoint(2, 23.1),
-    ChartPoint(3, 27.8),
-    ChartPoint(4, 31.5),
-    ChartPoint(5, 33.2),
-    ChartPoint(6, 31.0),
-    ChartPoint(7, 28.4),
-    ChartPoint(8, 27.9),
-    ChartPoint(9, 28.6),
-    ChartPoint(10, 28.1),
-    ChartPoint(11, 24.8),
-    ChartPoint(12, 21.2),
-  ],
-  HistoricalMetric.humidity: [
-    ChartPoint(1, 42),
-    ChartPoint(2, 38),
-    ChartPoint(3, 35),
-    ChartPoint(4, 40),
-    ChartPoint(5, 48),
-    ChartPoint(6, 68),
-    ChartPoint(7, 78),
-    ChartPoint(8, 80),
-    ChartPoint(9, 74),
-    ChartPoint(10, 55),
-    ChartPoint(11, 48),
-    ChartPoint(12, 45),
-  ],
-};
+class HistoricalSeries {
+  const HistoricalSeries({
+    required this.metric,
+    required this.points,
+    this.status = ArchiveStatus.available,
+    this.detail,
+    this.source,
+  });
 
-List<ChartPoint> seriesFor(HistoricalDataState state) =>
-    state.monthly ? monthlySeries[state.metric]! : yearlySeries[state.metric]!;
+  final HistoricalMetric metric;
+  final List<ChartPoint> points;
+  final ArchiveStatus status;
+
+  /// Human-readable reason for a non-available series.
+  final String? detail;
+  final String? source;
+
+  bool get isAvailable => status == ArchiveStatus.available && points.isNotEmpty;
+
+  int? get firstYear => points.isEmpty ? null : points.first.x.toInt();
+  int? get lastYear => points.isEmpty ? null : points.last.x.toInt();
+
+  /// Actual coverage of the returned data, e.g. "2001 – 2024". The UI shows
+  /// this instead of a hardcoded range so the label cannot overstate coverage.
+  String? get rangeLabel =>
+      firstYear == null ? null : '$firstYear – $lastYear';
+
+  /// Parses `{ metric, points: [{ year, value }] }`. Rows without both a year
+  /// and a finite value are dropped rather than plotted as zero.
+  factory HistoricalSeries.fromJson(
+      HistoricalMetric metric, Map<String, dynamic> data) {
+    final points = <ChartPoint>[];
+    for (final item in jsonList(data['points'])) {
+      final row = jsonMap(item);
+      if (row == null) continue;
+      final x = jsonDouble(row['year'] ?? row['x']);
+      final value = jsonDouble(row['value'] ?? row['y']);
+      if (x == null || value == null) continue;
+      points.add(ChartPoint(x, value, label: jsonString(row['label'])));
+    }
+    return HistoricalSeries(
+      metric: metric,
+      points: points,
+      status:
+          points.isEmpty ? ArchiveStatus.empty : ArchiveStatus.available,
+      source: jsonString(data['source'] ?? data['provider']),
+    );
+  }
+}
+
+/// Archive series for the current selection, fetched from `/historical`.
+///
+/// The previous version of this screen charted bundled constant series, which
+/// presented invented numbers as an observed climate record. Data now comes
+/// from the archive API, and a view the API does not serve says so.
+final historicalSeriesProvider = FutureProvider.family<HistoricalSeries,
+    HistoricalDataState>((ref, state) async {
+  if (state.monthly) {
+    // `/historical` serves yearly points only. Month-of-year climatology is a
+    // different product; inventing it from a bundled table is not an option.
+    return HistoricalSeries(
+      metric: state.metric,
+      points: const [],
+      status: ArchiveStatus.unsupported,
+      detail: 'Month-of-year climatology is not served by the archive API.',
+    );
+  }
+  final location = ref.watch(locationProvider);
+  final data = await ApiClient.instance.get(ApiEndpoints.historical, query: {
+    'lat': location.lat,
+    'lon': location.lon,
+    'metric': metricParam(state.metric),
+  });
+  return HistoricalSeries.fromJson(state.metric, data);
+});
 
 double longTermAverage(List<ChartPoint> points) {
   if (points.isEmpty) return 0;
   return points.map((p) => p.value).reduce((a, b) => a + b) / points.length;
 }
 
-/// Percent anomaly of the latest point vs long-term average.
+/// Percent deviation of the latest point from the mean of the *returned*
+/// points. This is a display statistic over whatever window the archive gave
+/// back — it is not a climate-normal calculation, and the UI labels it as a
+/// deviation rather than an anomaly against a 30-year baseline.
 double anomalyPercent(List<ChartPoint> points) {
   final avg = longTermAverage(points);
   if (avg == 0 || points.isEmpty) return 0;

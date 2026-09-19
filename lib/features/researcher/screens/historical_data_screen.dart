@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/outlined_button_pill.dart';
 import '../../home/providers/location_provider.dart';
+import '../providers/chart_point.dart';
 import '../providers/historical_data_provider.dart';
 import '../widgets/chart_theme.dart';
 
@@ -20,7 +21,10 @@ class HistoricalDataScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(historicalDataProvider);
     final location = ref.watch(locationProvider);
-    final points = seriesFor(state);
+    // Archive data now comes from the backend, not from a bundled table.
+    final seriesAsync = ref.watch(historicalSeriesProvider(state));
+    final series = seriesAsync.value;
+    final points = series?.points ?? const <ChartPoint>[];
     final unit = metricUnit(state.metric);
     final avg = longTermAverage(points);
     final anomaly = anomalyPercent(points);
@@ -73,7 +77,9 @@ class HistoricalDataScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Expanded(child: Filter(label: '2000 – 2026')),
+                  Expanded(
+                      child: Filter(
+                          label: series?.rangeLabel ?? 'No records')),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Segmented(
@@ -88,6 +94,25 @@ class HistoricalDataScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 22),
+              if (seriesAsync.isLoading)
+                const _ArchiveNotice(
+                    icon: Icons.hourglass_top_rounded,
+                    text: 'Loading the archive…')
+              else if (seriesAsync.hasError)
+                const _ArchiveNotice(
+                    icon: Icons.cloud_off_rounded,
+                    text:
+                        'The archive could not be reached. No values are shown rather than estimated.')
+              else if (series != null &&
+                  series.status == ArchiveStatus.unsupported)
+                _ArchiveNotice(
+                    icon: Icons.block_rounded,
+                    text: series.detail ?? 'This view is not served by the archive API.')
+              else if (series != null && !series.isAvailable)
+                const _ArchiveNotice(
+                    icon: Icons.inbox_outlined,
+                    text:
+                        'The archive returned no records for this location and metric.'),
               SizedBox(
                 height: 240,
                 child: BarChart(
@@ -331,5 +356,28 @@ class Segmented extends StatelessWidget {
             ),
           ),
         ),
+      );
+}
+
+/// Explicit non-available state for the archive views. An empty chart on its own
+/// would read as "no change", which is a claim the data does not make.
+class _ArchiveNotice extends StatelessWidget {
+  const _ArchiveNotice({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, size: 18, color: AppColors.statusAmber),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Text(text,
+                  style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                      height: 1.35))),
+        ]),
       );
 }

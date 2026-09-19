@@ -8,6 +8,7 @@ import '../../../core/widgets/api_error_view.dart';
 import '../../../models/location.dart';
 import '../../explore/providers/saved_locations_provider.dart';
 import '../../settings/providers/developer_options_provider.dart';
+import '../../settings/providers/settings_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/atmosphere_theme.dart';
@@ -16,6 +17,7 @@ import '../widgets/voice_orb.dart';
 import '../widgets/weather_detail_panels.dart';
 import '../widgets/weather_hero_card.dart';
 import '../widgets/weather_metric_strip.dart';
+import '../widgets/weather_provenance_bar.dart';
 import '../widgets/weather_segment_tabs.dart';
 
 class WeatherHomeScreen extends ConsumerStatefulWidget {
@@ -49,6 +51,9 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
   Widget build(BuildContext context) {
     final location = ref.watch(locationProvider);
     final weatherAsync = ref.watch(weatherProvider);
+    // The two compact enrichments are an Everyone-mode contract; Farmer and
+    // Researcher get their own scope instead of the same card recoloured.
+    final mode = ref.watch(settingsProvider.select((s) => s.mode));
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     final bottomInset = bottomPad + 100; // space for nav + mic
 
@@ -176,6 +181,13 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                         child: WeatherHeroCard(weather: w, palette: palette),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: WeatherProvenanceBar(
+                        weather: w,
+                        palette: palette,
+                        showEnrichments: mode == AppMode.everyone,
                       ),
                     ),
                     SliverToBoxAdapter(

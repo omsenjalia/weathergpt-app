@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/outlined_button_pill.dart';
+import '../../home/providers/location_provider.dart';
 import '../providers/anomaly_trends_provider.dart';
+import '../providers/chart_point.dart';
+import '../providers/historical_data_provider.dart';
 import '../widgets/chart_theme.dart';
 import 'historical_data_screen.dart' show Filter, Segmented;
 
@@ -15,9 +18,27 @@ class AnomalyTrendsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final metric = ref.watch(anomalyTrendsProvider);
-    final points =
-        metric == TrendMetric.temperature ? temperatureTrend : rainfallTrend;
+    final location = ref.watch(locationProvider);
+    // Trend data comes from the same archive endpoint as the historical view,
+    // so this screen can no longer disagree with it.
+    final seriesAsync = ref.watch(historicalSeriesProvider(HistoricalDataState(
+        metric: metric == TrendMetric.temperature
+            ? HistoricalMetric.temperature
+            : HistoricalMetric.rainfall)));
+    final series = seriesAsync.value;
+    final points = series?.points ?? const <ChartPoint>[];
     final warming = metric == TrendMetric.temperature;
+    // Axes describe the returned records; a hardcoded 1996–2026 / 26–30 window
+    // would silently crop or flatten whatever the archive actually holds.
+    final values = points.map((p) => p.value).toList();
+    final lowest = values.isEmpty ? 0.0 : values.reduce((a, b) => a < b ? a : b);
+    final highest = values.isEmpty ? 1.0 : values.reduce((a, b) => a > b ? a : b);
+    final span = (highest - lowest).abs() < 1e-6 ? 1.0 : highest - lowest;
+    final minX = points.isEmpty ? 0.0 : points.first.x;
+    final maxX = points.isEmpty ? 1.0 : points.last.x;
+    final minY = lowest - span * 0.25;
+    final maxY = highest + span * 0.25;
+    final rangeLabel = series?.rangeLabel ?? 'No records';
     return Scaffold(
         appBar: AppBar(
             titleSpacing: 0,
@@ -28,7 +49,7 @@ class AnomalyTrendsScreen extends ConsumerWidget {
                   Text('Anomaly & Trends',
                       style:
                           TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-                  Text('⌖ Ahmedabad, Gujarat',
+                  Text('⌖ ${location.name}',
                       style: TextStyle(
                           fontSize: 11, color: AppColors.textSecondary))
                 ])),
@@ -45,26 +66,57 @@ class AnomalyTrendsScreen extends ConsumerWidget {
                               .read(anomalyTrendsProvider.notifier)
                               .select(TrendMetric.values[i])),
                       const SizedBox(height: 16),
-                      const Row(children: [
-                        Expanded(child: Filter(label: 'Annual Average')),
-                        SizedBox(width: 10),
-                        Expanded(child: Filter(label: '1996 - 2026'))
+                      Row(children: [
+                        const Expanded(child: Filter(label: 'Annual Average')),
+                        const SizedBox(width: 10),
+                        Expanded(child: Filter(label: rangeLabel))
                       ]),
+                      if (seriesAsync.isLoading)
+                        const Padding(
+                            padding: EdgeInsets.only(top: 12),
+                            child: Text('Loading the archive…',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary)))
+                      else if (seriesAsync.hasError)
+                        const Padding(
+                            padding: EdgeInsets.only(top: 12),
+                            child: Text(
+                                'The archive could not be reached, so no trend is drawn.',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.statusAmber)))
+                      else if (series != null &&
+                          series.status == ArchiveStatus.unsupported)
+                        Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(series.detail ?? '',
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.statusAmber)))
+                      else if (series != null && !series.isAvailable)
+                        const Padding(
+                            padding: EdgeInsets.only(top: 12),
+                            child: Text(
+                                'The archive returned no records for this location.',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.statusAmber))),
                       const SizedBox(height: 20),
                       Text(
                           warming
-                              ? 'Temperature trend (1996 - 2026)'
-                              : 'Rainfall trend (1996 - 2026)',
+                              ? 'Temperature trend ($rangeLabel)'
+                              : 'Rainfall trend ($rangeLabel)',
                           style: const TextStyle(
                               fontSize: 14, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 10),
                       SizedBox(
                           height: 220,
                           child: LineChart(LineChartData(
-                              minX: 1996,
-                              maxX: 2026,
-                              minY: warming ? 26 : 250,
-                              maxY: warming ? 30 : 500,
+                              minX: minX,
+                              maxX: maxX,
+                              minY: minY,
+                              maxY: maxY,
                               gridData: ResearchChartTheme.grid,
                               borderData: FlBorderData(show: false),
                               lineTouchData: ResearchChartTheme.lineTouch,

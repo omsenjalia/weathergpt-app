@@ -28,6 +28,10 @@ enum SkyCondition {
   thunder,
   snow,
   windy,
+
+  /// The backend sent no weather code and no matching condition text. This is
+  /// deliberately not `clear`: an unknown sky must not be drawn as a sunny one.
+  unknown,
 }
 
 class AtmospherePalette {
@@ -123,31 +127,44 @@ SkyPeriod periodFromLocalTime(DateTime now, DateTime? sunrise, DateTime? sunset)
 }
 
 SkyCondition conditionFromWeather(WeatherSnapshot w) {
+  // `code == null` means the backend did not report one. Every numeric test is
+  // guarded by [known] so a missing code can never fall through to `clear`.
   final code = w.weatherCode;
+  final known = code != null;
   final c = w.condition.toLowerCase();
   final wind = w.windKmh?.toDouble() ?? 0;
 
-  if (code >= 95 || c.contains('thunder')) return SkyCondition.thunder;
-  if (code == 65 || code == 67 || code == 82 || c.contains('heavy rain')) {
+  if ((known && code >= 95) || c.contains('thunder')) {
+    return SkyCondition.thunder;
+  }
+  if ((known && (code == 65 || code == 67 || code == 82)) ||
+      c.contains('heavy rain')) {
     return SkyCondition.heavyRain;
   }
-  if ((code >= 51 && code <= 57) || c.contains('drizzle')) {
+  if ((known && code >= 51 && code <= 57) || c.contains('drizzle')) {
     return SkyCondition.drizzle;
   }
-  if ((code >= 61 && code <= 67) ||
-      (code >= 80 && code <= 82) ||
+  if ((known && ((code >= 61 && code <= 67) || (code >= 80 && code <= 82))) ||
       c.contains('rain')) {
     return SkyCondition.rain;
   }
-  if ((code >= 71 && code <= 77) || c.contains('snow')) return SkyCondition.snow;
-  if ((code >= 45 && code <= 48) || c.contains('fog') || c.contains('mist')) {
+  if ((known && code >= 71 && code <= 77) || c.contains('snow')) {
+    return SkyCondition.snow;
+  }
+  if ((known && code >= 45 && code <= 48) ||
+      c.contains('fog') ||
+      c.contains('mist')) {
     return SkyCondition.fog;
   }
-  if (code >= 3 || c.contains('overcast')) return SkyCondition.overcast;
-  if (code == 2 || c.contains('partly')) return SkyCondition.partlyCloudy;
-  if (code == 1 || c.contains('cloud')) return SkyCondition.cloudy;
+  if ((known && code >= 3) || c.contains('overcast')) {
+    return SkyCondition.overcast;
+  }
+  if ((known && code == 2) || c.contains('partly')) {
+    return SkyCondition.partlyCloudy;
+  }
+  if ((known && code == 1) || c.contains('cloud')) return SkyCondition.cloudy;
   if (wind >= 35) return SkyCondition.windy;
-  return SkyCondition.clear;
+  return known ? SkyCondition.clear : SkyCondition.unknown;
 }
 
 AtmospherePalette paletteFor(SkyPeriod period, SkyCondition sky) {
@@ -439,6 +456,7 @@ AtmospherePalette _applyWeather(
         sunY: base.sunY,
         moonY: base.moonY,
       );
+    case SkyCondition.unknown:
     case SkyCondition.overcast:
       return AtmospherePalette(
         top: Color.lerp(base.top, const Color(0xFF475569), 0.4)!,
