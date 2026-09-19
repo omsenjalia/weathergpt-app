@@ -1,5 +1,9 @@
 name: CI Test
 
+permissions:
+  contents: read
+  pull-requests: write
+
 on:
   pull_request:
   push:
@@ -39,7 +43,36 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze
+        id: analyze
+        continue-on-error: true
+        run: |
+          set +e
+          flutter analyze > analyze.txt 2>&1
+          code=$?
+          cat analyze.txt
+          exit $code
+
+      # Analyzer output is posted back to the PR so it is readable without
+      # downloading runner logs.
+      - name: Report analyze failures on the PR
+        if: steps.analyze.outcome == 'failure' && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo '### `flutter analyze` — ${{ github.sha }}'
+            echo '```'
+            cat analyze.txt
+            echo '```'
+          } > analyze-comment.md
+          gh pr comment "$PR_NUMBER" --body-file analyze-comment.md
+
+      - name: Fail on analyze issues
+        if: steps.analyze.outcome == 'failure'
+        run: |
+          echo "::error::flutter analyze reported issues"
+          exit 1
 
       - name: Test
         run: flutter test --timeout 30s

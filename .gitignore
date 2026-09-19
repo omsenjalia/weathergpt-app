@@ -13,3 +13,7 @@ google-services.json
 GoogleService-Info.plist
 **/android/key.properties
 **/android/local.properties
+
+# CI analyzer artifacts
+analyze.txt
+analyze-comment.md
