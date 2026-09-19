@@ -2,7 +2,6 @@
 /// Handles both v2 and legacy v1 so migration is safe.
 library;
 
-import '../core/models/data_provenance.dart';
 import '../core/models/json_values.dart';
 import 'weather.dart';
 
