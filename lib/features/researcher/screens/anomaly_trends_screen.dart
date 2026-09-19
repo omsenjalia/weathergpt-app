@@ -42,15 +42,15 @@ class AnomalyTrendsScreen extends ConsumerWidget {
     return Scaffold(
         appBar: AppBar(
             titleSpacing: 0,
-            title: const Column(
+            title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Anomaly & Trends',
+                  const Text('Anomaly & Trends',
                       style:
                           TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                   Text('⌖ ${location.name}',
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontSize: 11, color: AppColors.textSecondary))
                 ])),
         body: SafeArea(

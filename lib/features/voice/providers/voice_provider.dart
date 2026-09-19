@@ -107,7 +107,6 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       state = const VoiceState(status: VoiceStatus.listening);
       final localeId = _sttLocale();
       await _speech.listen(
-        localeId: localeId,
         onResult: (result) {
           state = state.copyWith(transcript: result.recognizedWords);
           _restartSilenceTimer();
@@ -116,6 +115,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
           }
         },
         listenOptions: stt.SpeechListenOptions(
+          localeId: localeId,
           partialResults: true,
           listenMode: stt.ListenMode.confirmation,
           cancelOnError: true,

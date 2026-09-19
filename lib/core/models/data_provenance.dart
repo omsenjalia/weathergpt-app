@@ -149,8 +149,8 @@ class WeatherProvenance {
 
     return WeatherProvenance(
       source: source,
-      product: jsonString(first(const ['product', 'dataset'])),
-      runId: jsonString(first(const ['run_id', 'run', 'model_run'])),
+      product: firstString(const ['product', 'dataset']),
+      runId: firstString(const ['run_id', 'run', 'model_run']),
       issuedAtUtc: jsonUtc(firstString(
           const ['issued_at', 'run_time', 'analysis_time', 'valid_time'])),
       retrievedAtUtc: jsonUtc(

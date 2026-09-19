@@ -183,7 +183,7 @@ IconData iconForCondition(String? condition) {
 /// prose with empty stats — fabricating a rain percentage, a soil-moisture
 /// reading, a growth stage or a fixed weekday forecast here is exactly the
 /// behaviour the implementation plan prohibits.
-VoiceResponse _responseFromBackend(String query, String response,
+VoiceResponse mapBackendAnswer(String query, String response,
     {Map<String, dynamic>? raw}) {
   final normalized = query.toLowerCase().trim();
   final bodyRaw = response.trim();

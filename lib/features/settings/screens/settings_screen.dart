@@ -58,44 +58,50 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             _section('Language'),
             _card(
-              child: Column(
-                children: [
-                  for (final (code, label) in _languages)
-                    RadioListTile<String>(
-                      value: code,
-                      groupValue: settings.language,
-                      activeColor: AppColors.accent,
-                      title: Text(label),
-                      onChanged: (v) async {
-                        if (v == null) return;
-                        await n.updateLanguage(v);
-                        await n.updateTtsVoiceLocale(_ttsLocales[v] ?? 'en-US');
-                        if (context.mounted) await context.setLocale(Locale(v));
-                      },
-                    ),
-                ],
+              // RadioGroup owns the group value in current Flutter releases;
+              // per-tile groupValue/onChanged are deprecated.
+              child: RadioGroup<String>(
+                groupValue: settings.language,
+                onChanged: (v) async {
+                  if (v == null) return;
+                  await n.updateLanguage(v);
+                  await n.updateTtsVoiceLocale(_ttsLocales[v] ?? 'en-US');
+                  if (context.mounted) await context.setLocale(Locale(v));
+                },
+                child: Column(
+                  children: [
+                    for (final (code, label) in _languages)
+                      RadioListTile<String>(
+                        value: code,
+                        activeColor: AppColors.accent,
+                        title: Text(label),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 20),
             _section('Experience'),
             _card(
-              child: Column(
-                children: [
-                  for (final (id, key) in [
-                    ('everyone', 'persona.everyone'),
-                    ('farmer', 'persona.farmer'),
-                    ('researcher', 'persona.researcher'),
-                  ])
-                    RadioListTile<String>(
-                      value: id,
-                      groupValue: settings.userPersona,
-                      activeColor: AppColors.accent,
-                      title: Text(key.tr()),
-                      onChanged: (v) {
-                        if (v != null) n.updatePersona(v);
-                      },
-                    ),
-                ],
+              child: RadioGroup<String>(
+                groupValue: settings.userPersona,
+                onChanged: (v) {
+                  if (v != null) n.updatePersona(v);
+                },
+                child: Column(
+                  children: [
+                    for (final (id, key) in [
+                      ('everyone', 'persona.everyone'),
+                      ('farmer', 'persona.farmer'),
+                      ('researcher', 'persona.researcher'),
+                    ])
+                      RadioListTile<String>(
+                        value: id,
+                        activeColor: AppColors.accent,
+                        title: Text(key.tr()),
+                      ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -168,7 +174,7 @@ class SettingsScreen extends ConsumerWidget {
                     title: const Text('Enable developer options'),
                     subtitle: const Text('Override sky, weather, TTS for testing'),
                     value: dev.enabled,
-                    activeColor: AppColors.accent,
+                    activeThumbColor: AppColors.accent,
                     onChanged: devN.setEnabled,
                   ),
                   if (dev.enabled) ...[
@@ -180,7 +186,7 @@ class SettingsScreen extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                       child: DropdownButtonFormField<String>(
-                        value: dev.forcePeriod?.name ?? 'auto',
+                        initialValue: dev.forcePeriod?.name ?? 'auto',
                         items: [
                           const DropdownMenuItem(value: 'auto', child: Text('Auto')),
                           ...SkyPeriod.values.map(
@@ -203,7 +209,7 @@ class SettingsScreen extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                       child: DropdownButtonFormField<String>(
-                        value: dev.forceSky?.name ?? 'auto',
+                        initialValue: dev.forceSky?.name ?? 'auto',
                         items: [
                           const DropdownMenuItem(value: 'auto', child: Text('Auto')),
                           ...SkyCondition.values.map(
@@ -223,7 +229,7 @@ class SettingsScreen extends ConsumerWidget {
                       title: const Text('Disable video sky'),
                       subtitle: const Text('Use gradient only'),
                       value: dev.disableVideoSky,
-                      activeColor: AppColors.accent,
+                      activeThumbColor: AppColors.accent,
                       onChanged: devN.setDisableVideoSky,
                     ),
                     ListTile(
@@ -233,7 +239,7 @@ class SettingsScreen extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                       child: DropdownButtonFormField<String>(
-                        value: dev.forceTtsLocale ?? 'default',
+                        initialValue: dev.forceTtsLocale ?? 'default',
                         items: const [
                           DropdownMenuItem(value: 'default', child: Text('Use app setting')),
                           DropdownMenuItem(value: 'en-US', child: Text('en-US')),

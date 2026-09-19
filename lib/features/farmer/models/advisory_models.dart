@@ -175,5 +175,3 @@ double? aiMeanConfidence(Map<String, dynamic>? ai) {
   final value = ai?['mean_confidence'];
   return value is num ? value.toDouble() : null;
 }
-
-}

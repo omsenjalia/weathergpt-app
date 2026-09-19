@@ -503,7 +503,7 @@ DateTime? parseWeatherTime(String? raw) {
   if (raw == null || raw.trim().isEmpty) return null;
   try {
     var s = raw.trim();
-    if (s.length == 16 && s.contains('T')) s = '${s}:00';
+    if (s.length == 16 && s.contains('T')) s = '$s:00';
     return DateTime.tryParse(s);
   } catch (_) {
     return null;

@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:weathergpt_mobile/features/farmer/models/advisory_models.dart';
 import 'package:weathergpt_mobile/features/farmer/providers/action_windows_provider.dart';
 
 final _verifiedAt = DateTime.utc(2026, 9, 19, 9);

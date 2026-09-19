@@ -1,8 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
-import '../../../core/models/data_provenance.dart';
 import '../../../models/weather.dart';
 import '../theme/atmosphere_theme.dart';
 

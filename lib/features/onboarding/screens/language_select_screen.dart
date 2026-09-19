@@ -42,7 +42,7 @@ class LanguageSelectScreen extends ConsumerWidget {
     await Hive.box('settings').put('tts_voice_locale', ttsMap[code] ?? 'en-US');
     if (context.mounted) {
       await context.setLocale(Locale(code));
-      context.go('/onboarding/focus');
+      if (context.mounted) context.go('/onboarding/focus');
     }
   }
 

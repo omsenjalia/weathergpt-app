@@ -94,9 +94,9 @@ class _ConversationalResultScreenState
                           margin: const EdgeInsets.only(bottom: 12, left: 48),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF134E4A),
-                            borderRadius: const BorderRadius.only(
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF134E4A),
+                            borderRadius: BorderRadius.only(
                               topLeft: Radius.circular(18),
                               topRight: Radius.circular(18),
                               bottomLeft: Radius.circular(18),

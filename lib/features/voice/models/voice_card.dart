@@ -33,7 +33,8 @@ CardTone cardToneFromName(Object? value) {
 }
 
 class VoiceCardStat {
-  const VoiceCardStat({required this.label, required this.value, this.tone});
+  const VoiceCardStat(
+      {required this.label, required this.value, this.tone = CardTone.neutral});
   final String label;
   final String value;
   final CardTone tone;
