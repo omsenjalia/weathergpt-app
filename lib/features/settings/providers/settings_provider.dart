@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../../core/models/app_mode.dart';
 import '../../../core/services/api_client.dart';
+
+export '../../../core/models/app_mode.dart';
 
 enum TemperatureUnit { celsius, fahrenheit }
 
@@ -29,6 +32,16 @@ class SettingsState {
   final String ttsVoiceLocale;
   final double ttsSpeed;
   final Map<String, bool> notificationsEnabled;
+
+  /// Validated product mode derived from the persisted persona string.
+  ///
+  /// A persona value this build does not recognise de-escalates to
+  /// [AppMode.everyone]; it never escalates. A user-selected Researcher mode
+  /// grants no server permission of its own — authorization stays server-side.
+  AppMode get mode => appModeFromName(userPersona) ?? AppMode.everyone;
+
+  /// True when the persisted persona string is a recognised mode.
+  bool get hasRecognisedPersona => appModeFromName(userPersona) != null;
 
   SettingsState copyWith(
           {String? displayName,
@@ -99,9 +112,15 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     await _put('language', code);
   }
 
+  /// Stores the persona as its canonical wire name.
+  ///
+  /// Unknown values are rejected rather than persisted, so a future build can
+  /// never read a typo as a privileged mode.
   Future<void> updatePersona(String persona) async {
-    state = state.copyWith(userPersona: persona);
-    await _put('user_persona', persona);
+    final mode = appModeFromName(persona);
+    if (mode == null) throw AppModeException(persona);
+    state = state.copyWith(userPersona: mode.wire);
+    await _put('user_persona', mode.wire);
   }
 
   Future<void> updateUnits(TemperatureUnit units) async {

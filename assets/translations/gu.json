@@ -117,5 +117,20 @@
   "home.feels_like": "Feels Like",
   "chat.title": "WeatherGPT Chat",
   "chat.empty": "Ask about weather, forecasts, AQI, or farming tips.",
-  "chat.hint": "Ask WeatherGPT anything…"
+  "chat.hint": "Ask WeatherGPT anything…",
+  "home.source": "સ્રોત",
+  "home.source_not_reported": "સ્રોત ઉપલબ્ધ નથી",
+  "home.source_fallback": "વૈકલ્પિક સ્રોત",
+  "home.fresh": "અપડેટ",
+  "home.stale": "જૂનું",
+  "home.updated": "{time} વાગ્યે અપડેટ",
+  "home.data_stale": "{time} નો ડેટા — જૂનો હોઈ શકે",
+  "home.run": "રન",
+  "home.temp_spread": "આગાહી શ્રેણી p10–p90",
+  "home.next_24h_rain": "આગામી 24 કલાકનો વરસાદ",
+  "home.next_24h_rain_partial": "વરસાદ (આંશિક દિવસ)",
+  "farmer.advisory_offline_banner": "સલાહ ઉપલબ્ધ નથી — સર્વર સાથે સંપર્ક થઈ શક્યો નથી.",
+  "farmer.advisory_unavailable": "સલાહ ઉપલબ્ધ નથી",
+  "farmer.advisory_unavailable_body": "આ ખેતર માટે હાલ કોઈ ચકાસાયેલ કાર્ય-સમય નથી. અંદાજ કાઢવાને બદલે કંઈ દર્શાવ્યું નથી — ફરી પ્રયાસ કરો.",
+  "farmer.last_verified": "છેલ્લી ચકાસણી {time}"
 }

@@ -19,13 +19,18 @@ Start with the [feature handoff guide](feature/README.md):
 - **Backend — `omsenjalia/weathergpt/backend`:** [setup and file guide](feature/backend/README.md),
   [WeatherNext plan](feature/backend/weathernext_3_integration_plan.md),
   [45-feature Jev plan](feature/backend/jev_backend_plan.md), and backend-only environment templates.
+  **Not implemented** — those plans remain in place.
 - **Flutter app — this repository:** [setup and file guide](feature/app/README.md),
   [implementation plan](feature/app/implementation_plan.md), and a non-secret backend URL template.
+  The app-only work in that plan is implemented; what is still blocked on the
+  backend is listed in [the app status and remaining work](feature/app/README.md#status-and-remaining-work).
 
-These are plans and configuration examples, **not runnable feature implementations**.
-The implementing AI must [remove completed planning artifacts after verification](feature/README.md#mandatory-cleanup-after-implementation),
-after preserving permanent documentation and configuration examples.
+Durable app-side contracts — mode propagation, null semantics, provenance, the
+optional chat/voice card, advisory per-day decisions and the researcher archive
+views — live in [docs/app_data_contracts.md](docs/app_data_contracts.md).
+
 Google/IMD/AccuWeather/Jev credentials belong only on the backend, never in the Flutter `.env`.
+
 
 ## Run locally
 

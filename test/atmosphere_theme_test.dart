@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/features/home/theme/atmosphere_theme.dart';
+import 'package:weathergpt_mobile/features/home/theme/atmosphere_theme.dart';
 
 void main() {
   test('daytime palette keeps text readable on dark glass cards', () {

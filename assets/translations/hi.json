@@ -117,5 +117,20 @@
   "home.feels_like": "महसूस",
   "chat.title": "WeatherGPT चैट",
   "chat.empty": "मौसम, पूर्वानुमान, AQI या खेती के बारे में पूछें।",
-  "chat.hint": "WeatherGPT से पूछें…"
+  "chat.hint": "WeatherGPT से पूछें…",
+  "home.source": "स्रोत",
+  "home.source_not_reported": "स्रोत उपलब्ध नहीं",
+  "home.source_fallback": "वैकल्पिक स्रोत",
+  "home.fresh": "अपडेट",
+  "home.stale": "पुराना",
+  "home.updated": "{time} बजे अपडेट",
+  "home.data_stale": "{time} का डेटा — पुराना हो सकता है",
+  "home.run": "रन",
+  "home.temp_spread": "पूर्वानुमान सीमा p10–p90",
+  "home.next_24h_rain": "अगले 24 घंटे की बारिश",
+  "home.next_24h_rain_partial": "बारिश (आंशिक दिन)",
+  "farmer.advisory_offline_banner": "सलाह उपलब्ध नहीं — सर्वर से संपर्क नहीं हो सका।",
+  "farmer.advisory_unavailable": "सलाह उपलब्ध नहीं",
+  "farmer.advisory_unavailable_body": "इस खेत के लिए अभी कोई सत्यापित कार्य-समय नहीं है। अनुमान लगाने के बजाय कुछ नहीं दिखाया गया — दोबारा कोशिश करें।",
+  "farmer.last_verified": "अंतिम सत्यापन {time}"
 }

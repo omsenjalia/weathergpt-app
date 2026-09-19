@@ -23,7 +23,7 @@ class WeatherMetricStrip extends StatelessWidget {
         Icons.air,
         weather.windKmh == null
             ? '—'
-            : '${weather.windKmh!.toStringAsFixed(0)}',
+            : weather.windKmh!.toStringAsFixed(0),
         'Wind km/h'
       ),
       (

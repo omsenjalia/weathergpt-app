@@ -117,5 +117,20 @@
   "home.feels_like": "Feels Like",
   "chat.title": "WeatherGPT Chat",
   "chat.empty": "Ask about weather, forecasts, AQI, or farming tips.",
-  "chat.hint": "Ask WeatherGPT anything…"
+  "chat.hint": "Ask WeatherGPT anything…",
+  "home.source": "మూలం",
+  "home.source_not_reported": "మూలం నివేదించబడలేదు",
+  "home.source_fallback": "ప్రత్యామ్నాయ మూలం",
+  "home.fresh": "నవీకరణ",
+  "home.stale": "పాతది",
+  "home.updated": "{time} కు నవీకరించబడింది",
+  "home.data_stale": "{time} డేటా — పాతది కావచ్చు",
+  "home.run": "రన్",
+  "home.temp_spread": "సూచన పరిధి p10–p90",
+  "home.next_24h_rain": "రాబోయే 24 గంటల వర్షం",
+  "home.next_24h_rain_partial": "వర్షం (పాక్షిక రోజు)",
+  "farmer.advisory_offline_banner": "సలహా అందుబాటులో లేదు — సర్వర్‌ను చేరుకోలేకపోయాము.",
+  "farmer.advisory_unavailable": "సలహా అందుబాటులో లేదు",
+  "farmer.advisory_unavailable_body": "ఈ పొలానికి ప్రస్తుతం ధృవీకరించిన పని సమయాలు లేవు. ఊహించడానికి బదులు ఏమీ చూపడం లేదు — మళ్లీ ప్రయత్నించండి.",
+  "farmer.last_verified": "చివరి ధృవీకరణ {time}"
 }

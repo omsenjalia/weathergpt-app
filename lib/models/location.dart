@@ -1,5 +1,6 @@
 /// Location models and presets, extracted from the home/explore providers
 /// so any layer can reference them without provider machinery.
+library;
 
 class AppLocation {
   const AppLocation({

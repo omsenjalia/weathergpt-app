@@ -117,5 +117,20 @@
   "home.feels_like": "Feels Like",
   "chat.title": "WeatherGPT Chat",
   "chat.empty": "Ask about weather, forecasts, AQI, or farming tips.",
-  "chat.hint": "Ask WeatherGPT anything…"
+  "chat.hint": "Ask WeatherGPT anything…",
+  "home.source": "Source",
+  "home.source_not_reported": "Source not reported",
+  "home.source_fallback": "Fallback source",
+  "home.fresh": "Updated",
+  "home.stale": "Stale",
+  "home.updated": "Updated {time}",
+  "home.data_stale": "From {time} — may be outdated",
+  "home.run": "Run",
+  "home.temp_spread": "Forecast range p10–p90",
+  "home.next_24h_rain": "Next 24 h rain",
+  "home.next_24h_rain_partial": "Rain (partial day)",
+  "farmer.advisory_offline_banner": "Advisory unavailable — the server could not be reached.",
+  "farmer.advisory_unavailable": "Advisory unavailable",
+  "farmer.advisory_unavailable_body": "No verified action windows for this field right now. Nothing is shown rather than guessed — pull down to try again.",
+  "farmer.last_verified": "Last verified {time}"
 }

@@ -1,58 +1,24 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-import '../../../core/theme/app_colors.dart';
+import '../../../core/constants/api_endpoints.dart';
+import '../../../core/models/request_context.dart';
 import '../../../core/services/api_client.dart';
 import '../../../core/utils/markdown_utils.dart';
+import '../../farmer/providers/farm_profile_provider.dart';
+import '../mappers/voice_response_mapper.dart';
 import '../../home/providers/location_provider.dart';
 import '../../settings/providers/settings_provider.dart';
 import '../../settings/providers/developer_options_provider.dart';
 
+// Re-exported so existing screens keep importing these types from here.
+export '../mappers/voice_response_mapper.dart';
+
 enum VoiceStatus { idle, listening, processing, speaking, done, error }
-
-enum ResultType { irrigation, rainForecast, general, cropStatus, researchQuery }
-
-class ResultStat {
-  const ResultStat(this.label, this.value, {this.color});
-  final String label;
-  final String value;
-  final Color? color;
-}
-
-class ForecastDay {
-  const ForecastDay(this.day, this.icon, this.temperature, this.rainfall);
-  final String day;
-  final IconData icon;
-  final String temperature;
-  final String rainfall;
-}
-
-class VoiceResponse {
-  const VoiceResponse(
-      {required this.transcript,
-      required this.type,
-      required this.accent,
-      required this.label,
-      required this.verdict,
-      required this.explanation,
-      required this.stats,
-      required this.forecast,
-      required this.ctaLabel});
-  final String transcript;
-  final ResultType type;
-  final Color accent;
-  final String label;
-  final String verdict;
-  final String explanation;
-  final List<ResultStat> stats;
-  final List<ForecastDay> forecast;
-  final String ctaLabel;
-}
 
 class VoiceState {
   const VoiceState(
@@ -81,6 +47,10 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   final Ref _ref;
   final _speech = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
+
+  /// Monotonic guard so a slow answer cannot overwrite a newer question, and a
+  /// cancelled session cannot resurrect itself after the user starts another.
+  int _generation = 0;
 
   /// Map app language code → speech_to_text locale id.
   String _sttLocale() {
@@ -137,7 +107,6 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
       state = const VoiceState(status: VoiceStatus.listening);
       final localeId = _sttLocale();
       await _speech.listen(
-        localeId: localeId,
         onResult: (result) {
           state = state.copyWith(transcript: result.recognizedWords);
           _restartSilenceTimer();
@@ -146,6 +115,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
           }
         },
         listenOptions: stt.SpeechListenOptions(
+          localeId: localeId,
           partialResults: true,
           listenMode: stt.ListenMode.confirmation,
           cancelOnError: true,
@@ -182,9 +152,11 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   }
 
   Future<void> submitToBackend({String? audioPath}) async {
+    final generation = ++_generation;
     try {
       final settings = _ref.read(settingsProvider);
       final location = _ref.read(locationProvider);
+      final profile = _ref.read(farmProfileProvider);
       final transcript = state.transcript.trim();
       if (transcript.isEmpty) {
         state = const VoiceState(
@@ -193,16 +165,27 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
         return;
       }
 
+      // Validated mode plus the user's real farm profile, built by the same
+      // helper the chat surface uses so both send identical context.
+      final context = buildAgentRequestContext(
+        profilePersona: settings.userPersona,
+        farm: FarmContext(
+          crop: profile.crop,
+          growthStage: profile.growthStage,
+          soilType: profile.soilType,
+          irrigationType: profile.irrigationType,
+        ),
+      );
+
       // Always use /chat — /voice multipart is optional and often unavailable.
       Future<Map<String, dynamic>> postChat(String msg) =>
-          ApiClient.instance.post('/chat', data: {
+          ApiClient.instance.post(ApiEndpoints.chat, data: {
         'message': msg,
         'location': location.name,
         'lat': location.lat,
         'lon': location.lon,
         'language': settings.language,
-        'farmer_mode': settings.userPersona == 'farmer',
-        'crop': settings.userPersona == 'farmer' ? 'Wheat' : '',
+        ...context.toPayload(),
       });
 
       var result = await postChat(transcript);
@@ -221,182 +204,24 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
           }
         } catch (_) {}
       }
+      // A newer question superseded this one: never render the stale answer.
+      if (generation != _generation) return;
       state = state.copyWith(
         status: VoiceStatus.done,
-        response: _responseFromBackend(transcript, responseText),
+        response: mapBackendAnswer(transcript, responseText, raw: result),
       );
     } on AppApiError catch (error) {
+      if (generation != _generation) return;
       state = state.copyWith(
           status: VoiceStatus.error, errorMessage: error.message);
     } catch (e) {
+      if (generation != _generation) return;
       state = state.copyWith(
           status: VoiceStatus.error,
           errorMessage: 'WeatherGPT took too long to answer. Please try again.');
     }
   }
 
-  /// Greetings / intro replies should not show irrigation/rain mock cards.
-  bool _looksLikeGreetingOrIntro(String query, String lowerBody) {
-    const greetings = {
-      'hi',
-      'hello',
-      'hey',
-      'yo',
-      'sup',
-      'help',
-      'thanks',
-      'thank you',
-      'namaste',
-      'namaskar',
-      'hola',
-      'હેલો',
-      'હાય',
-      'નમસ્તે',
-      'नमस्ते',
-      'हैलो',
-      'हाय',
-    };
-    final q = query.trim().toLowerCase();
-    if (greetings.contains(q)) return true;
-    if (q.startsWith('what do you') || q.startsWith('who are you')) {
-      return true;
-    }
-    if (lowerBody.contains("i'm **weathergpt**") ||
-        lowerBody.contains('i am weathergpt') ||
-        lowerBody.contains("couldn't fetch live weather") ||
-        lowerBody.contains('try asking:') ||
-        lowerBody.contains('weathergpt છું') ||
-        lowerBody.contains('weathergpt हूं') ||
-        lowerBody.contains('weathergpt हूँ')) {
-      return true;
-    }
-    final hasNumbers =
-        RegExp(r'\d+\s*°|\d+\s*mm|\d+%').hasMatch(lowerBody);
-    if (!hasNumbers &&
-        lowerBody.contains('weathergpt') &&
-        (lowerBody.contains('help') ||
-            lowerBody.contains('ask') ||
-            lowerBody.contains('સલાહ') ||
-            lowerBody.contains('જણાવો') ||
-            lowerBody.contains('advisor') ||
-            lowerBody.contains('હવામાન'))) {
-      return true;
-    }
-    return false;
-  }
-
-  /// Explicit backend-to-UI mapping. The text response does not coerce enum values.
-  VoiceResponse _responseFromBackend(String query, String response) {
-    final normalized = query.toLowerCase().trim();
-    final bodyRaw = response.trim();
-    final lowerBody = bodyRaw.toLowerCase();
-    final isMeta = _looksLikeGreetingOrIntro(normalized, lowerBody);
-
-    final type = isMeta
-        ? ResultType.general
-        : normalized.contains('irrigat')
-            ? ResultType.irrigation
-            : normalized.contains('rain') || normalized.contains('forecast')
-                ? ResultType.rainForecast
-                : normalized.contains('crop') || normalized.contains('wheat')
-                    ? ResultType.cropStatus
-                    : ResultType.general;
-    final base = _responseFor(query);
-    final body = bodyRaw.isEmpty ? base.explanation : bodyRaw;
-    final plain = MarkdownUtils.forSpeech(body);
-    final firstLine = plain
-        .split(RegExp(r'[.!?\n]'))
-        .map((s) => s.trim())
-        .firstWhere((s) => s.isNotEmpty, orElse: () => base.verdict);
-    final verdict =
-        firstLine.length > 90 ? '${firstLine.substring(0, 90)}…' : firstLine;
-    return VoiceResponse(
-      transcript: query,
-      type: type,
-      accent: base.accent,
-      label: isMeta ? 'Assistant' : base.label,
-      verdict: verdict.isEmpty ? base.verdict : verdict,
-      explanation: body,
-      stats: isMeta ? const [] : base.stats,
-      forecast: isMeta ? const [] : base.forecast,
-      ctaLabel: isMeta ? 'Ask about weather' : base.ctaLabel,
-    );
-  }
-
-  VoiceResponse _responseFor(String query) {
-    final normalized = query.toLowerCase();
-    const days = [
-      ForecastDay('Tue', Icons.wb_sunny_outlined, '24°', '0 mm'),
-      ForecastDay('Wed', Icons.thunderstorm_outlined, '26°', '12 mm'),
-      ForecastDay('Thu', Icons.water_drop_outlined, '25°', '4 mm')
-    ];
-    if (normalized.contains('rain') || normalized.contains('forecast')) {
-      return VoiceResponse(
-          transcript: query.isEmpty ? 'Will it rain tomorrow?' : query,
-          type: ResultType.rainForecast,
-          accent: AppColors.researcherBlue,
-          label: 'Rain Forecast',
-          verdict: 'Rain expected tomorrow',
-          explanation:
-              'A moderate spell is likely from late morning, bringing around 12 mm of rainfall.',
-          stats: const [
-            ResultStat('Chance of rain', '78%'),
-            ResultStat('Expected rain', '12 mm',
-                color: AppColors.researcherBlue),
-            ResultStat('Wind', '14 km/h')
-          ],
-          forecast: days,
-          ctaLabel: 'View Detailed Forecast');
-    }
-    if (normalized.contains('irrigat')) {
-      return VoiceResponse(
-          transcript:
-              query.isEmpty ? 'Should I irrigate my wheat field today?' : query,
-          type: ResultType.irrigation,
-          accent: AppColors.statusAmber,
-          label: 'Irrigation Recommendation',
-          verdict: 'Not recommended today',
-          explanation:
-              'Rain is likely tomorrow (12 mm), which should provide enough moisture for your wheat field.',
-          stats: const [
-            ResultStat('Rain (tomorrow)', '12 mm'),
-            ResultStat('Soil Moisture', 'Adequate',
-                color: AppColors.statusGreenText),
-            ResultStat('Field Condition', 'Good',
-                color: AppColors.statusGreenText)
-          ],
-          forecast: days,
-          ctaLabel: 'View Detailed Forecast');
-    }
-    if (normalized.contains('crop') || normalized.contains('wheat')) {
-      return VoiceResponse(
-          transcript: query.isEmpty ? 'How is my wheat crop doing?' : query,
-          type: ResultType.cropStatus,
-          accent: AppColors.farmerGreen,
-          label: 'Crop Status',
-          verdict: 'Crop conditions look healthy',
-          explanation:
-              'Your wheat is in a favourable moisture range. Watch for rain tomorrow before scheduling field work.',
-          stats: const [
-            ResultStat('Soil Moisture', 'Adequate',
-                color: AppColors.statusGreenText),
-            ResultStat('Growth stage', 'Flowering'),
-            ResultStat('Disease risk', 'Low', color: AppColors.statusGreenText)
-          ],
-          forecast: days,
-          ctaLabel: 'View Farm Action Windows');
-    }
-    return VoiceResponse(
-        transcript: query.isEmpty ? 'Weather question' : query,
-        type: ResultType.general,
-        accent: AppColors.researcherBlue,
-        label: 'WeatherGPT',
-        verdict: 'WeatherGPT',
-        explanation: '',
-        stats: const [],
-        forecast: const [],
-        ctaLabel: 'Ask about weather');
-  }
 
   Future<void> speak(String text) async {
     state = state.copyWith(status: VoiceStatus.speaking);
@@ -429,6 +254,7 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
   }
 
   void cancel() {
+    _generation++;
     _silenceTimer?.cancel();
     try {
       _speech.stop();
