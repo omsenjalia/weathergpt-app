@@ -304,7 +304,7 @@ Future<void> showDayDetailSheet(
       icon: Icons.water_drop_outlined,
       note: partial
           ? 'home.covers_only'.tr(namedArgs: {'interval': day.precipIntervalLabel ?? '${day.hoursCovered ?? '?'}h'})
-          : (day.precipIntervalLabel != null ? day.precipIntervalLabel! : null),
+          : day.precipIntervalLabel,
     ),
     _Row('home.max_wind'.tr(), day.windKmhMax == null ? '—' : '${day.windKmhMax!.toStringAsFixed(0)} km/h', icon: Icons.air_rounded),
     _Row('home.sunrise'.tr(), formatClock(day.sunrise), icon: Icons.wb_twilight_rounded, field: index == 0 ? 'sunrise' : null,

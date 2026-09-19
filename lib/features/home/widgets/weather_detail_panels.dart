@@ -97,7 +97,6 @@ class _OverviewTile {
     required this.icon,
     this.field,
     this.accent,
-    this.unavailableReason,
   });
   final String title;
   final String value;
@@ -107,9 +106,6 @@ class _OverviewTile {
   /// Backend field name used for per-field attribution.
   final String? field;
   final Color? accent;
-
-  /// Shown instead of a plain "—" when the backend told us why.
-  final String? unavailableReason;
 }
 
 /// Tab body: grid of secondary conditions (AQI, UV, sun, …).

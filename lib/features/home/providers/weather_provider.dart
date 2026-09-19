@@ -119,7 +119,7 @@ final weatherProvider = FutureProvider<WeatherSnapshot>((ref) async {
     endpoint: ApiEndpoints.weather,
     query: legacyQuery,
     usedLegacyFallback: true,
-    v2Error: v2Error?.toString(),
+    v2Error: v2Error.toString(),
   );
   return parseWeatherSnapshot(data, cityName: cityName);
 });

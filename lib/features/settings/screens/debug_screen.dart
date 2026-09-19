@@ -120,16 +120,14 @@ Widget _card(Widget child) => Container(
     );
 
 class _KV extends StatelessWidget {
-  const _KV(this.k, this.v, {this.mono = false, this.color, this.onTap});
+  const _KV(this.k, this.v, {this.mono = false, this.color});
   final String k;
   final String v;
   final bool mono;
   final Color? color;
-  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
         onLongPress: () {
           Clipboard.setData(ClipboardData(text: v));
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Copied $k')));
