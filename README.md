@@ -78,3 +78,22 @@ Set the `BACKEND_URL` repository secret in **Settings → Secrets and variables 
 ## Team
 
 Om Senjalia — mobile + backend; Om Vaghela — frontend/UI reference; Chaitanya Ghodasara — beta testing; Nidhi Patel — data curation; Vishrut Gandhi — presentations; Prachi — research.
+
+## Developer options & Debug screen
+
+Settings → Developer → *Enable developer options* unlocks:
+
+| Control | Effect |
+|---|---|
+| Debug & state | Opens `/debug`: parsed snapshot, per-field sources, provider chain & fallback reasons, request log (last 60 calls), `/v2/weather/health` |
+| Pin forecast source | Sends `requested_source=<pin>`; an unavailable pin surfaces the backend error instead of silently falling back |
+| WeatherNext model | Pins `model=` (WN3 0.1° default, WN2) |
+| Hourly horizon / Forecast days | `hourly_hours` (6–168) and `forecast_days` (1–15) request parameters and the number of rows shown |
+| Fill missing fields from Open-Meteo | `supplement=` toggle; off = raw provider only, so "—" shows exactly what the primary source lacks |
+| Disable legacy /weather fallback | Surface `/v2/weather` errors instead of retrying `/weather` |
+| Show provenance bar on Home | Brings the source/run/freshness chip row back under the hero card (off by default; the compact status line is shown instead) |
+| Per-field source badges | "via Open-Meteo" pills on supplemented tiles |
+| Record request log | Feed the Debug screen's Requests tab |
+
+Everything in this section is developer-only: none of it changes what users
+see unless developer options are enabled.

@@ -21,6 +21,7 @@ import '../features/researcher/screens/anomaly_trends_screen.dart';
 import '../features/researcher/screens/comparison_screen.dart';
 import '../features/researcher/screens/historical_data_screen.dart';
 import '../features/researcher/providers/anomaly_trends_provider.dart';
+import '../features/settings/screens/debug_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -67,6 +68,11 @@ final GoRouter appRouter = GoRouter(
       builder: (_, state) => ConversationalResultScreen(
         response: state.extra! as VoiceResponse,
       ),
+    ),
+    GoRoute(
+      path: '/debug',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (_, __) => const DebugScreen(),
     ),
     GoRoute(
       path: '/farmer/farm-profile',

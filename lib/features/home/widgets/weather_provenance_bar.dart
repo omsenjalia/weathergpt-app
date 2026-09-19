@@ -37,6 +37,14 @@ class WeatherProvenanceBar extends StatelessWidget {
     };
   }
 
+  String _displayName(String id) => switch (providerFromName(id)) {
+        WeatherProvider.imd => 'IMD',
+        WeatherProvider.weathernext => 'WeatherNext',
+        WeatherProvider.accuweather => 'AccuWeather',
+        WeatherProvider.openMeteo => 'Open-Meteo',
+        WeatherProvider.unknown => id,
+      };
+
   String? _freshnessLabel() {
     final stamp = weather.provenance.effectiveAtUtc;
     if (stamp == null) return null;
@@ -82,8 +90,18 @@ class WeatherProvenanceBar extends StatelessWidget {
         _chip(
           icon: Icons.warning_amber_rounded,
           label: 'WeatherNext',
-          value: prov.fallbackReasons.firstWhere((r) => r.isWeatherNext).reason,
+          value: prov.fallbackReasons.firstWhere((r) => r.isWeatherNext && r.isRealFailure).humanReason,
           warn: true,
+        ),
+      if (weather.fieldSources.contributors.length > 1 ||
+          weather.fieldSources.contributors.any((c) => providerFromName(c) != prov.provider))
+        _chip(
+          icon: Icons.alt_route_rounded,
+          label: 'home.secondary'.tr(),
+          value: weather.fieldSources.contributors
+              .where((c) => providerFromName(c) != prov.provider)
+              .map(_displayName)
+              .join(', '),
         ),
     ];
 

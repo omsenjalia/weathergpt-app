@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/api_error_view.dart';
 import '../../../models/location.dart';
+import '../../../models/weather.dart';
 import '../../explore/providers/saved_locations_provider.dart';
 import '../../settings/providers/developer_options_provider.dart';
 import '../../settings/providers/settings_provider.dart';
@@ -183,13 +184,21 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                         child: WeatherHeroCard(weather: w, palette: palette),
                       ),
                     ),
-                    SliverToBoxAdapter(
-                      child: WeatherProvenanceBar(
-                        weather: w,
-                        palette: palette,
-                        showEnrichments: mode == AppMode.everyone,
+                    // Source / run / freshness chips live on the developer
+                    // Debug screen; they only return to the home screen when a
+                    // developer explicitly asks for them.
+                    if (dev.enabled && dev.showProvenanceOnHome)
+                      SliverToBoxAdapter(
+                        child: WeatherProvenanceBar(
+                          weather: w,
+                          palette: palette,
+                          showEnrichments: mode == AppMode.everyone,
+                        ),
+                      )
+                    else
+                      SliverToBoxAdapter(
+                        child: _CompactStatusLine(weather: w, palette: palette, devEnabled: dev.enabled),
                       ),
-                    ),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -211,10 +220,22 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
                         child: _tab == 0
-                            ? WeatherOverviewGrid(weather: w, palette: palette)
+                            ? WeatherOverviewGrid(
+                                weather: w,
+                                palette: palette,
+                                showSourceBadges: !dev.enabled || dev.showFieldSourceBadges,
+                              )
                             : _tab == 1
-                                ? WeatherHourlyPanel(weather: w, palette: palette)
-                                : WeatherDailyPanel(weather: w, palette: palette),
+                                ? WeatherHourlyPanel(
+                                    weather: w,
+                                    palette: palette,
+                                    maxHours: dev.enabled ? dev.hourlyHours : 48,
+                                  )
+                                : WeatherDailyPanel(
+                                    weather: w,
+                                    palette: palette,
+                                    maxDays: dev.enabled ? dev.forecastDays : 7,
+                                  ),
                       ),
                     ),
                     SliverToBoxAdapter(child: SizedBox(height: bottomInset + 24)),
@@ -238,6 +259,70 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// One quiet line under the hero: honest source attribution, a stale/degraded
+/// warning when — and only when — the backend says so, and a shortcut to the
+/// Debug screen in developer mode.
+class _CompactStatusLine extends StatelessWidget {
+  const _CompactStatusLine({required this.weather, required this.palette, required this.devEnabled});
+  final WeatherSnapshot weather;
+  final AtmospherePalette palette;
+  final bool devEnabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = weather.provenance;
+    final name = !p.hasSource
+        ? 'home.source_not_reported'.tr()
+        : switch (p.provider) {
+            WeatherProvider.imd => 'IMD',
+            WeatherProvider.weathernext => 'WeatherNext',
+            WeatherProvider.accuweather => 'AccuWeather',
+            WeatherProvider.openMeteo => 'Open-Meteo',
+            WeatherProvider.unknown => p.selectedSource ?? p.source!,
+          };
+    final stale = p.isStaleAt(DateTime.now().toUtc(), maxAge: const Duration(hours: 24));
+    final warn = (weather.degraded ?? p.fallback) || stale;
+    final stamp = p.issuedAtUtc;
+    final when = stamp == null ? null : DateFormat('HH:mm').format(weather.toLocationLocal(stamp));
+    final parts = <String>[
+      name,
+      if (when != null) 'home.run_at'.tr(namedArgs: {'time': when}),
+      if (stale) 'home.stale'.tr(),
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+      child: GestureDetector(
+        onTap: devEnabled ? () => context.push('/debug') : null,
+        child: Row(
+          children: [
+            Icon(
+              warn ? Icons.report_gmailerrorred_outlined : (p.isWeatherNext ? Icons.auto_awesome : Icons.public),
+              size: 13,
+              color: warn ? const Color(0xFFFBBF24) : palette.textMuted,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                parts.join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: warn ? const Color(0xFFFBBF24) : palette.textMuted,
+                  shadows: const [Shadow(color: Colors.black45, blurRadius: 6)],
+                ),
+              ),
+            ),
+            if (devEnabled)
+              Icon(Icons.bug_report_outlined, size: 14, color: palette.textMuted),
+          ],
+        ),
       ),
     );
   }
