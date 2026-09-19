@@ -44,7 +44,14 @@ class _ActionWindowsScreenState extends ConsumerState<ActionWindowsScreen> {
             ]),
       ),
       body: SafeArea(
-          child: ListView(
+          // Pull to retry: after a failed load the screen stays explicitly
+          // unavailable instead of guessing, so an explicit retry is needed.
+          child: RefreshIndicator(
+              color: AppColors.farmerGreen,
+              onRefresh:
+                  () => ref.read(actionWindowsProvider.notifier).refresh(),
+              child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               children: [
             if (state.status == AdvisoryStatus.loading)
@@ -150,7 +157,7 @@ class _ActionWindowsScreenState extends ConsumerState<ActionWindowsScreen> {
                                   ]))),
                       ])),
                 ])),
-          ])),
+          ]))),
     );
   }
 }

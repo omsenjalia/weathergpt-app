@@ -98,22 +98,37 @@
       "id": "s13",
       "name": "Verify with the project's own runner (CI flutter test + analyze)",
       "output": "gh run result",
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "id": "s14",
       "name": "Self-critique + completion report incl. remaining work",
       "output": "final message + feature/app/REMAINING_WORK.md",
-      "status": "pending"
+      "status": "done"
     }
   ],
   "cleanup_decision": {
     "delete_feature_app_plans": false,
-    "reason": "AGENTS.md and feature/README.md forbid deleting plans while required tests/access checks are blocked or the component is unfinished. The plan's own Done bar is 'implemented and tested app code PLUS a compatible authorized backend'; the backend plan in feature/backend/ is unimplemented and several app items are explicitly gated on backend contracts. Record remaining work instead of claiming completion."
+    "reason": "AGENTS.md and feature/README.md forbid deleting plans while required tests/access checks are blocked or the component is unfinished. The plan's own Done bar is 'implemented and tested app code PLUS a compatible authorized backend'; the backend plan in feature/backend/ is unimplemented and several app items are explicitly gated on backend contracts. Record remaining work instead of claiming completion.",
+    "documentation_destinations": {
+      "contracts": "docs/app_data_contracts.md",
+      "api_additions": "docs/web_app_api_contract.md",
+      "status_and_remaining": "feature/app/README.md#status-and-remaining-work"
+    }
   },
   "delegation_note": "No Task/Agent-Teams subagent tool is exposed in this environment, so stages run sequentially in one context; independent read/recon batches are parallelised at the tool-call level. This is an honest adaptation, not delegated execution.",
   "verification": {
     "local": "impossible (no flutter/dart, pub.dev + storage.googleapis.com blocked)",
     "runner": ".github/workflows/ci-test.yml on the pull request; flutter analyze step added"
-  }
+  },
+  "ci_runs": {
+    "analyze_test_35417587236": "success (flutter analyze 0 issues + flutter test all green)",
+    "apk_35417587229": "success (signed release APK + AAB built)"
+  },
+  "self_critique": [
+    "Translations for the 8 non-English locales are machine-written; native-speaker review required before release.",
+    "No widget tests for new screens (headless CI limitation in this repo); logic covered via plugin-free unit libraries instead.",
+    "ActionWindowsNotifier calls ref.listen in its constructor; unit tests cover the static mapping only, so the listen wiring needs a device smoke test.",
+    "RefreshIndicator retry added; tab switches after a failure intentionally show the cached unavailable state until the user pulls to refresh or re-enters the screen."
+  ]
 }
