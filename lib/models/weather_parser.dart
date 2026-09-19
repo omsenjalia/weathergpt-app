@@ -8,9 +8,16 @@ library;
 
 import '../core/models/json_values.dart';
 import 'weather.dart';
+import 'weather_v2_parser.dart' show hourLabelFor, parseUtcOffset;
 
-String _hourLabel(String? iso) {
+String _hourLabel(String? iso, Duration? offset) {
   if (iso == null || iso.length < 13) return '';
+  // Legacy payloads carry naive local timestamps ("2026-09-19T09:00"): the
+  // hour digits are already local. Offset-bearing stamps are converted.
+  final utc = jsonUtc(iso);
+  if (utc != null && !naiveTimestampAssumedUtc(iso)) {
+    return hourLabelFor(utc, offset);
+  }
   final h = int.tryParse(iso.substring(11, 13)) ?? 0;
   if (h == 0) return '12AM';
   if (h == 12) return '12PM';
@@ -28,6 +35,8 @@ WeatherSnapshot parseWeatherSnapshot(
   required String cityName,
 }) {
   final provenance = WeatherProvenance.fromJson(data);
+  final utcOffset = parseUtcOffset(jsonMap(data['location']) ??
+      {'timezone': data['timezone'], 'utc_offset_seconds': data['utc_offset_seconds']});
 
   final hourly = <HourlyPoint>[];
   for (final item in jsonList(data['hourly'])) {
@@ -39,12 +48,15 @@ WeatherSnapshot parseWeatherSnapshot(
     if (temp == null) continue;
     final rawTime = row['time'];
     hourly.add(HourlyPoint(
-      label: _hourLabel(jsonString(rawTime)),
+      label: _hourLabel(jsonString(rawTime), utcOffset),
       tempC: temp,
       timeUtc: jsonUtc(rawTime),
       rainProbability: jsonNum(row['rain_probability']),
       precipMm: jsonNum(row['precipitation'] ?? row['precipitation_mm']),
       windKmh: jsonNum(row['wind_kmh']),
+      humidity: jsonNum(row['humidity']),
+      condition: jsonString(row['condition']),
+      weatherCode: jsonInt(row['weather_code']),
     ));
   }
 
@@ -64,6 +76,10 @@ WeatherSnapshot parseWeatherSnapshot(
       precipIntervalLabel: jsonString(row['precipitation_interval']),
       coversFullDay: jsonBool(row['covers_full_day']),
       windKmhMax: jsonNum(row['wind_kmh_max']),
+      weatherCode: jsonInt(row['weather_code']),
+      sunrise: jsonString(row['sunrise']),
+      sunset: jsonString(row['sunset']),
+      uvIndexMax: jsonNum(row['uv_index_max']),
     ));
   }
 
@@ -94,5 +110,12 @@ WeatherSnapshot parseWeatherSnapshot(
         data['temperature_spread'] ?? data['temperature_range']),
     precipNext24h: PrecipitationInterval.fromJson(
         data['precip_next_24h'] ?? data['precipitation_next_24h']),
+    fieldSources: FieldSources.fromJson(data['field_sources']),
+    precipMm: jsonNum(data['precipitation_mm']),
+    timezoneId: jsonString(data['timezone']) ?? provenance.timezoneId,
+    utcOffset: utcOffset,
+    endpoint: '/weather',
+    fetchedAtUtc: jsonUtc(data['fetched_at']),
+    rawPayload: data,
   );
 }

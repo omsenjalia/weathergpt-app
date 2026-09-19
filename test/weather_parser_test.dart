@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:weathergpt_mobile/models/weather.dart';
 import 'package:weathergpt_mobile/models/weather_parser.dart';
+import 'package:weathergpt_mobile/models/weather_v2_parser.dart';
 
 void main() {
   group('parseWeatherSnapshot — legacy contract', () {
@@ -266,6 +267,153 @@ void main() {
       expect(snapshot.provenance.isMissing('uv_index'), isTrue);
       expect(snapshot.provenance.isMissing('wind_kmh'), isFalse);
       expect(snapshot.provenance.missingFields, ['aqi', 'uv_index']);
+    });
+  });
+
+  group('parseWeatherSnapshotV2 — WeatherNext + supplement contract', () {
+    Map<String, dynamic> payload() => {
+          'schema_version': '2.0.0',
+          'location': {'lat': 22.3, 'lon': 70.8, 'timezone': 'Asia/Kolkata', 'utc_offset_seconds': 19800},
+          'provenance': {
+            'requested_source': 'auto',
+            'selected_source': 'weathernext',
+            'model': 'weathernext_3_0_0',
+            'run_id': 'weathernext_3_0_0_2026091906',
+            'init_time_utc': '2026-09-19T06:00:00Z',
+            'served_at_utc': '2026-09-19T09:10:00Z',
+            'freshness_status': 'fresh',
+            'is_stale': false,
+            'horizon_hours': 96,
+            'expected_member_count': 64,
+            'fallback_reasons': [
+              {'provider': 'imd', 'reason': 'missing_credentials'},
+            ],
+            'tried_providers': ['imd', 'weathernext'],
+            'query_diagnostics': {'served_from_cache': true},
+          },
+          'degraded': false,
+          'hourly_available': 96,
+          'current': {
+            'time_utc': '2026-09-19T09:00:00Z',
+            'temperature_c': 30.2,
+            'weather_code': 3,
+            'condition': 'Overcast',
+            'humidity_percent': 71,
+            'uv_index': null,
+            'is_ensemble_mean': true,
+          },
+          'hourly': [
+            {'time_utc': '2026-09-19T09:00:00Z', 'temperature_c': 30.2, 'precipitation_probability': 20},
+            {'time_utc': '2026-09-19T10:00:00Z', 'temperature_c': 31.0, 'precipitation_probability': 25},
+          ],
+          'daily': [
+            {
+              'date': '2026-09-19',
+              'high_c': 33.0,
+              'low_c': 26.0,
+              'covers_full_day': false,
+              'hours_covered': 15,
+              'sunrise': '06:31',
+              'sunset': '18:49',
+              'uv_index_max': 8.1,
+              'field_sources': {'sunrise': 'open_meteo', 'sunset': 'open_meteo', 'uv_index_max': 'open_meteo'},
+            },
+            {'date': '2026-09-20', 'high_c': 32.0, 'low_c': 25.5, 'covers_full_day': true, 'hours_covered': 24},
+          ],
+          'field_sources': {
+            'temperature_c': 'weathernext',
+            'humidity_percent': 'open_meteo',
+            'uv_index': null,
+            'sunrise': 'open_meteo',
+            '_supplement': {
+              'provider': 'open_meteo',
+              'enabled': true,
+              'attempted': true,
+              'filled': ['humidity_percent', 'sunrise'],
+              'errors': [
+                {'call': 'air_quality', 'reason': 'timeout'},
+              ],
+              'cache_hit': false,
+            },
+          },
+        };
+
+    test('attributes each field to the provider that supplied it', () {
+      final w = parseWeatherSnapshotV2(payload(), cityName: 'Rajkot');
+      expect(w.provenance.selectedSource, 'weathernext');
+      expect(w.sourceOf('temperature_c'), 'weathernext');
+      expect(w.sourceOf('humidity_percent'), 'open_meteo');
+      expect(w.isSupplemented('humidity_percent'), isTrue);
+      expect(w.isSupplemented('temperature_c'), isFalse);
+      // Explicit null = nobody could supply it; must stay null, not "weathernext".
+      expect(w.sourceOf('uv_index'), isNull);
+      expect(w.uvIndex, isNull);
+      expect(w.fieldSources.contributors, {'weathernext', 'open_meteo'});
+      expect(w.fieldSources.supplementFilled, ['humidity_percent', 'sunrise']);
+      expect(w.fieldSources.supplementErrors, ['air_quality: timeout']);
+    });
+
+    test('not-configured providers do not mark the snapshot as a fallback', () {
+      final w = parseWeatherSnapshotV2(payload(), cityName: 'Rajkot');
+      expect(w.provenance.fallbackReasons, hasLength(1));
+      expect(w.provenance.fallbackReasons.single.isNotConfigured, isTrue);
+      expect(w.provenance.realFailures, isEmpty);
+      expect(w.provenance.fallback, isFalse);
+      expect(w.provenance.weatherNextFailed, isFalse);
+      expect(w.degraded, isFalse);
+      expect(w.provenance.triedProviders, ['imd', 'weathernext']);
+      expect(w.provenance.servedFromCache, isTrue);
+      expect(w.provenance.expectedMemberCount, 64);
+    });
+
+    test('a real WeatherNext failure is reported as degraded', () {
+      final p = payload();
+      final prov = p['provenance'] as Map<String, dynamic>;
+      prov['selected_source'] = 'open_meteo';
+      prov['fallback_reasons'] = [
+        {'provider': 'imd', 'reason': 'missing_credentials'},
+        {'provider': 'weathernext', 'reason': 'query_timeout'},
+      ];
+      p.remove('degraded');
+      final w = parseWeatherSnapshotV2(p, cityName: 'Rajkot');
+      expect(w.provenance.fallback, isTrue);
+      expect(w.provenance.weatherNextFailed, isTrue);
+      expect(w.provenance.realFailures.single.humanReason, 'query timed out');
+    });
+
+    test('daily rows keep partial-day flags, sun times and per-day sources', () {
+      final w = parseWeatherSnapshotV2(payload(), cityName: 'Rajkot');
+      expect(w.forecast, hasLength(2));
+      final today = w.forecast.first;
+      expect(today.coversFullDay, isFalse);
+      expect(today.hoursCovered, 15);
+      expect(today.sunrise, '06:31');
+      expect(today.uvIndexMax, 8.1);
+      expect(today.fieldSources['sunrise'], 'open_meteo');
+      expect(w.sunrise, '06:31');
+      expect(w.sunset, '18:49');
+      expect(w.forecast[1].coversFullDay, isTrue);
+      expect(w.forecast[1].sunrise, isNull);
+    });
+
+    test('hourly points carry UTC instants and the location offset', () {
+      final w = parseWeatherSnapshotV2(payload(), cityName: 'Rajkot');
+      expect(w.hourly, hasLength(2));
+      expect(w.hourly.first.timeUtc, DateTime.utc(2026, 9, 19, 9));
+      expect(w.utcOffset, const Duration(hours: 5, minutes: 30));
+      expect(w.timezoneId, 'Asia/Kolkata');
+      expect(w.toLocationLocal(w.hourly.first.timeUtc!).hour, 14);
+      expect(w.hourlyAvailable, 96);
+      expect(w.currentIsEnsembleMean, isTrue);
+      expect(w.humidity, 71);
+    });
+
+    test('missing field_sources falls back to the selected source, never invents', () {
+      final p = payload()..remove('field_sources');
+      final w = parseWeatherSnapshotV2(p, cityName: 'Rajkot');
+      expect(w.fieldSources.isEmpty, isTrue);
+      expect(w.sourceOf('temperature_c'), 'weathernext');
+      expect(w.isSupplemented('humidity_percent'), isFalse);
     });
   });
 }

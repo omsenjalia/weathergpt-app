@@ -172,13 +172,130 @@ class SettingsScreen extends ConsumerWidget {
                 children: [
                   SwitchListTile(
                     title: const Text('Enable developer options'),
-                    subtitle: const Text('Override sky, weather, TTS for testing'),
+                    subtitle: const Text('Data source pins, debug screen, sky & TTS overrides'),
                     value: dev.enabled,
                     activeThumbColor: AppColors.accent,
                     onChanged: devN.setEnabled,
                   ),
                   if (dev.enabled) ...[
                     const Divider(height: 1),
+                    ListTile(
+                      leading: const Icon(Icons.bug_report_outlined, color: AppColors.accent),
+                      title: const Text('Debug & state'),
+                      subtitle: const Text('Snapshot, per-field sources, provider chain, request log, backend health'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.push('/debug'),
+                    ),
+                    const Divider(height: 1),
+                    const ListTile(
+                      dense: true,
+                      title: Text('DATA SOURCE', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: AppColors.textTertiary)),
+                    ),
+                    ListTile(
+                      title: const Text('Pin forecast source'),
+                      subtitle: Text(dev.sourcePin.label),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: DropdownButtonFormField<DevSourcePin>(
+                        initialValue: dev.sourcePin,
+                        items: [
+                          for (final v in DevSourcePin.values)
+                            DropdownMenuItem(value: v, child: Text(v.label)),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) devN.setSourcePin(v);
+                        },
+                      ),
+                    ),
+                    ListTile(
+                      title: const Text('WeatherNext model'),
+                      subtitle: Text(dev.wnModel.label),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: DropdownButtonFormField<DevWnModel>(
+                        initialValue: dev.wnModel,
+                        items: [
+                          for (final v in DevWnModel.values)
+                            DropdownMenuItem(value: v, child: Text(v.label)),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) devN.setWnModel(v);
+                        },
+                      ),
+                    ),
+                    ListTile(
+                      title: const Text('Hourly horizon'),
+                      subtitle: Text('${dev.hourlyHours} h requested (backend caps at provider horizon)'),
+                    ),
+                    Slider(
+                      value: dev.hourlyHours.toDouble(),
+                      min: 6,
+                      max: 168,
+                      divisions: 27,
+                      label: '${dev.hourlyHours} h',
+                      activeColor: AppColors.accent,
+                      onChanged: (v) => devN.setHourlyHours(v.round()),
+                    ),
+                    ListTile(
+                      title: const Text('Forecast days'),
+                      subtitle: Text('${dev.forecastDays} days requested'),
+                    ),
+                    Slider(
+                      value: dev.forecastDays.toDouble(),
+                      min: 1,
+                      max: 15,
+                      divisions: 14,
+                      label: '${dev.forecastDays} d',
+                      activeColor: AppColors.accent,
+                      onChanged: (v) => devN.setForecastDays(v.round()),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Fill missing fields from Open-Meteo'),
+                      subtitle: const Text('Humidity, UV, sunrise/sunset, AQI… when the primary source lacks them. Off = raw provider only.'),
+                      value: dev.supplementSecondaryFields,
+                      activeThumbColor: AppColors.accent,
+                      onChanged: devN.setSupplementSecondaryFields,
+                    ),
+                    SwitchListTile(
+                      title: const Text('Disable legacy /weather fallback'),
+                      subtitle: const Text('Surface /v2/weather errors instead of silently retrying the old endpoint'),
+                      value: dev.disableV2Fallback,
+                      activeThumbColor: AppColors.accent,
+                      onChanged: devN.setDisableV2Fallback,
+                    ),
+                    const Divider(height: 1),
+                    const ListTile(
+                      dense: true,
+                      title: Text('DISPLAY', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: AppColors.textTertiary)),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Show provenance bar on Home'),
+                      subtitle: const Text('Source / run / freshness chips under the hero card'),
+                      value: dev.showProvenanceOnHome,
+                      activeThumbColor: AppColors.accent,
+                      onChanged: devN.setShowProvenanceOnHome,
+                    ),
+                    SwitchListTile(
+                      title: const Text('Per-field source badges'),
+                      subtitle: const Text('Mark tiles that came from a secondary provider'),
+                      value: dev.showFieldSourceBadges,
+                      activeThumbColor: AppColors.accent,
+                      onChanged: devN.setShowFieldSourceBadges,
+                    ),
+                    SwitchListTile(
+                      title: const Text('Record request log'),
+                      subtitle: const Text('Keep the last 60 backend calls for the Debug screen'),
+                      value: dev.logRequests,
+                      activeThumbColor: AppColors.accent,
+                      onChanged: devN.setLogRequests,
+                    ),
+                    const Divider(height: 1),
+                    const ListTile(
+                      dense: true,
+                      title: Text('SKY & TTS OVERRIDES', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: AppColors.textTertiary)),
+                    ),
                     ListTile(
                       title: const Text('Force time of day'),
                       subtitle: Text(dev.forcePeriod?.name ?? 'Auto (device time)'),

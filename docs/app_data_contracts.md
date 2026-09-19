@@ -92,6 +92,58 @@ A payload with no metadata reports **no source** — the UI says "Source not
 reported" rather than naming a provider. An unknown age is never labelled
 stale; staleness needs a timestamp and defaults to a 6-hour threshold.
 
+### What counts as "degraded"
+
+`fallback_reasons` lists every provider the backend skipped. A provider that
+was *never configured* (`missing_credentials`, `credentials_*`, `disabled`,
+`not_configured`, …) is **not** a degradation — WeatherNext answering after
+IMD was skipped for lack of a key is the normal path. `WeatherProvenance`
+therefore:
+
+- prefers the backend's explicit `degraded` boolean;
+- otherwise sets `fallback` only when a reason is a *real failure*
+  (`FallbackReason.isRealFailure`) or the run is `is_stale`;
+- exposes `realFailures` / `skippedUnconfigured` separately for the Debug
+  screen, and `weatherNextFailed` is true only when WeatherNext was configured,
+  tried, and lost.
+
+The full provider-chain metadata (`tried_providers`, `selection_policy_version`,
+`query_diagnostics`, `methods`, `sampled_coordinates`, `expected_member_count`,
+`validity_*`, …) is parsed verbatim for developers but never rendered on the
+Home screen.
+
+### Per-field attribution (`field_sources`)
+
+Both `/v2/weather` and `/weather` may return
+
+```json
+"field_sources": {
+  "temperature_c": "weathernext",
+  "humidity_percent": "open_meteo",
+  "uv_index": null,
+  "_supplement": {"provider": "open_meteo", "enabled": true, "attempted": true,
+                   "filled": ["humidity_percent"], "errors": [], "cache_hit": false}
+}
+```
+
+`FieldSources` keeps that map exactly: a field mapped to a provider is shown
+with a "via <provider>" badge when that provider differs from the selected
+source; a field mapped to `null` renders "—" with the explanation *no provider
+supplied this value*; a field that is absent from the map is attributed to the
+selected source only when the map is entirely missing (older backend). Daily
+rows carry their own `field_sources` for sunrise/sunset/UV max. The app never
+promotes a supplemented value to the headline provider's name.
+
+### Request shape the app sends to `/v2/weather`
+
+`lat`, `lon`, `mode`, `requested_source` (developer pin, else `weathernext` in
+Researcher mode, else `auto`), `forecast_days` (7, or the developer slider),
+`hourly_hours` (48, or the developer slider), `supplement=false` only when the
+developer switched the Open-Meteo supplement off, `model` only when a
+non-default WeatherNext model is pinned. `lastWeatherRequestProvider` exposes
+the exact query, whether the legacy `/weather` fallback was used, and the v2
+error, for the Debug screen.
+
 ## Everyone-mode enrichments
 
 Exactly two, both optional and additive. Cards are hidden when absent.

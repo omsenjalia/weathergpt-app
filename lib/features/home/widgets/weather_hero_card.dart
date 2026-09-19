@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/weather.dart';
 import '../theme/atmosphere_theme.dart';
+import 'weather_detail_panels.dart';
 
 /// The big temperature card at the top of the home screen.
 class WeatherHeroCard extends StatelessWidget {
@@ -12,7 +13,7 @@ class WeatherHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = DateFormat('EEEE, MMM d').format(DateTime.now());
+    final date = DateFormat('EEEE, MMM d').format(weather.localNow());
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: const Duration(milliseconds: 700),
@@ -65,12 +66,12 @@ class WeatherHeroCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(_iconFor(weather.condition),
+                Icon(iconForCondition(weather.condition, weather.weatherCode),
                     size: 48, color: palette.accent),
               ],
             ),
             const SizedBox(height: 6),
-            Text(weather.condition,
+            Text(weather.condition == '—' ? 'home.condition_unknown'.tr() : weather.condition,
                 style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
@@ -109,14 +110,4 @@ class WeatherHeroCard extends StatelessWidget {
                 color: p.textMuted)),
       );
 
-  IconData _iconFor(String c) {
-    final s = c.toLowerCase();
-    if (s.contains('thunder')) return Icons.thunderstorm_rounded;
-    if (s.contains('rain') || s.contains('drizzle')) {
-      return Icons.water_drop_rounded;
-    }
-    if (s.contains('cloud') || s.contains('overcast')) return Icons.cloud_rounded;
-    if (s.contains('clear') || s.contains('sun')) return Icons.wb_sunny_rounded;
-    return Icons.wb_cloudy_rounded;
-  }
 }

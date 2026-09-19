@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 import '../../../models/weather.dart';
@@ -17,31 +18,31 @@ class WeatherMetricStrip extends StatelessWidget {
         weather.rainProbability == null
             ? '—'
             : '${weather.rainProbability!.round()}%',
-        'Rain'
+        'home.rain_chance'.tr()
       ),
       (
         Icons.air,
         weather.windKmh == null
             ? '—'
-            : weather.windKmh!.toStringAsFixed(0),
-        'Wind km/h'
+            : '${weather.windKmh!.toStringAsFixed(0)}${weather.windDirection == null ? '' : ' ${windDirLabel(weather.windDirection)}'}',
+        'home.wind_kmh'.tr()
       ),
       (
         Icons.opacity,
         weather.humidity == null ? '—' : '${weather.humidity!.round()}%',
-        'Humidity'
+        'home.humidity'.tr()
       ),
       (
         Icons.compress,
         weather.pressureHpa == null
             ? '—'
             : '${weather.pressureHpa!.round()}',
-        'hPa'
+        'home.pressure_hpa'.tr()
       ),
       (
-        Icons.explore_outlined,
-        windDirLabel(weather.windDirection),
-        'Direction'
+        Icons.cloud_outlined,
+        weather.cloudCover == null ? '—' : '${weather.cloudCover!.round()}%',
+        'home.cloud_cover'.tr()
       ),
     ];
     return SizedBox(
@@ -77,12 +78,18 @@ class WeatherMetricStrip extends StatelessWidget {
                 children: [
                   Icon(it.$1, size: 18, color: palette.accent),
                   const Spacer(),
-                  Text(it.$2,
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: palette.text)),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(it.$2,
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: it.$2 == '—' ? palette.textMuted : palette.text)),
+                  ),
                   Text(it.$3,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontSize: 11, color: palette.textMuted)),
                 ],
