@@ -337,3 +337,22 @@ You have billing in cool-archery-296710, but personal account fails. For SIH:
 - [ ] Flutter shows WeatherNext badge
 
 Once done, Flutter app receives WeatherNext data automatically.
+
+---
+
+## 8. Publish status (2026-09-19)
+
+The separate-dataset change is implemented in the backend submodule
+(`services/config.py`, `services/weathernext_bigquery.py`, `services/weathernext_catalog.py`,
+`main.py`, `routers/dev.py`) and covered by `backend/tests/test_weathernext_datasets.py`.
+
+- Confirmed with the project owner: WN2 dataset `weathernext_2` holds
+  `weathernext_2_0_0` and `weathernext_2_0_0_mean`; WN3 stays in `weathernext`.
+- The backend commit could **not** be pushed to `omsenjalia/weathergpt` from the
+  Arena session (HTTP 403 — the session identity has no write access to that
+  repository). A ready-to-apply patch is kept outside the repositories as
+  `weathergpt-wn2-dataset-fix.patch`.
+- Because of that, the `backend/` submodule pointer in this repository is
+  intentionally still `fc78632`. Push the submodule (then `./scripts/push-all.sh`)
+  or apply the patch and bump the pointer once repository access is restored.
+
