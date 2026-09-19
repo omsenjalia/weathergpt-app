@@ -1,5 +1,19 @@
 # Instructions for implementing agents
 
+## Pushing changes — use the script (REQUIRED)
+
+The linked backend (`omsenjalia/weathergpt`) is a git submodule at `backend/`.
+Always publish with `./scripts/push-all.sh "<message>"`. Do **not** use a bare
+`git push`: it only updates `omsenjalia/weathergpt-app`, leaving backend commits
+unpushed inside `backend/` and the submodule pointer stale.
+
+- `./scripts/push-all.sh "message"` pushes both repos in order: first
+  `backend/` → `omsenjalia/weathergpt`, then this repo →
+  `omsenjalia/weathergpt-app` (current branch). It also commits pending
+  changes when needed.
+- On a fresh clone, run `git submodule update --init --recursive` before
+  working (the script also initialises the submodule if it is missing).
+
 ## Temporary feature-plan cleanup
 
 The user explicitly requires the temporary plans in `feature/backend/` and

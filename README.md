@@ -41,6 +41,34 @@ Google/IMD/AccuWeather/Jev credentials belong only on the backend, never in the 
 
 For Render, deploy the backend first, then replace `BACKEND_URL` with its `https://…onrender.com` URL. API keys belong only in Render environment variables, never in the Flutter app.
 
+## Pushing changes (required)
+
+This repository links the backend as a git submodule, so changes go to **two remote repositories**:
+
+| Where the change lives | Remote it is pushed to |
+|---|---|
+| Files under `backend/` (the `omsenjalia/weathergpt` submodule) | `github.com/omsenjalia/weathergpt` |
+| Everything else, plus the `backend/` submodule pointer | `github.com/omsenjalia/weathergpt-app` |
+
+**Always publish with [`scripts/push-all.sh`](scripts/push-all.sh) — never a bare `git push`:**
+
+```bash
+./scripts/push-all.sh "describe your change"
+```
+
+A bare `git push` only updates `weathergpt-app`. It would leave backend commits
+unpushed inside `backend/` and would not move the submodule pointer that other
+contributors and clones rely on.
+
+On a fresh clone, initialise the submodule first (the script does this for you
+too if it is missing):
+
+```bash
+git clone https://github.com/omsenjalia/weathergpt-app.git
+cd weathergpt-app
+git submodule update --init --recursive
+```
+
 ## Stack and release
 
 Flutter, Riverpod, Dio, Hive, Easy Localization, FL Chart, Open-Meteo, FastAPI, and Groq. Run `flutter test`, `flutter analyze`, then `flutter build apk --release` (output: `build/app/outputs/flutter-apk/app-release.apk`).
