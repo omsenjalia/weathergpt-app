@@ -11,7 +11,11 @@ import 'router/app_router.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {
+    // .env missing is ok — fallback to production URL via backend_config.dart
+  }
   await Hive.initFlutter();
   await Hive.openBox('settings');
   final savedLang =
