@@ -12,6 +12,21 @@ is fully backward-compatible: without a backend key everything falls back to det
 thresholds. The ready-to-apply backend change lives in `backend-integration/` (see its
 README); API keys stay server-side.
 
+## WeatherNext and Jev feature plans
+
+Start with the [feature handoff guide](feature/README.md):
+
+- **Backend — `omsenjalia/weathergpt/backend`:** [setup and file guide](feature/backend/README.md),
+  [WeatherNext plan](feature/backend/weathernext_3_integration_plan.md),
+  [45-feature Jev plan](feature/backend/jev_backend_plan.md), and backend-only environment templates.
+- **Flutter app — this repository:** [setup and file guide](feature/app/README.md),
+  [implementation plan](feature/app/implementation_plan.md), and a non-secret backend URL template.
+
+These are plans and configuration examples, **not runnable feature implementations**.
+The implementing AI must [remove completed planning artifacts after verification](feature/README.md#mandatory-cleanup-after-implementation),
+after preserving permanent documentation and configuration examples.
+Google/IMD/AccuWeather/Jev credentials belong only on the backend, never in the Flutter `.env`.
+
 ## Run locally
 
 1. Start the API: follow `Web App/backend/README.md`.
