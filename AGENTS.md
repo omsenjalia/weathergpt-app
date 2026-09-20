@@ -1,5 +1,27 @@
 # Instructions for implementing agents
 
+## ⚠️ Architecture Documentation Policy (MANDATORY)
+
+Whenever any change happens in this codebase — whether it is an architectural modification, API contract update, new provider/notifier, new screen/widget, new data model, modified endpoint, changed dependency, or altered workflow:
+
+**You MUST update `ARCHITECTURE.md` in the repository root synchronously.**
+
+`ARCHITECTURE.md` is the canonical, judge-facing technical architecture annex for WeatherGPT (SIH 2026). It must always accurately reflect the current state of:
+- End-to-end system topology and Mermaid diagrams (Section 2)
+- Tech stack and package versions in `pubspec.yaml` (Section 3)
+- Repository file footprint and directory layout (Section 4)
+- API endpoint surface, parameters, and contract shapes (Sections 6 & 11)
+- State management and Riverpod providers (Section 7)
+- Data flow, null semantics, and generation guards (Section 8)
+- Ensemble fusion algorithm and provider trust weights (Section 10)
+- Multilingual mappings and voice locales (Section 13)
+- Developer options and Debug screen capabilities (Section 16)
+- SIH problem statement compliance matrix (Section 18)
+
+Never leave `ARCHITECTURE.md` stale or out of sync with code changes.
+
+---
+
 ## Pushing changes — use the script (REQUIRED)
 
 The linked backend (`omsenjalia/weathergpt`) is a git submodule at `backend/`.
@@ -13,6 +35,8 @@ unpushed inside `backend/` and the submodule pointer stale.
   changes when needed.
 - On a fresh clone, run `git submodule update --init --recursive` before
   working (the script also initialises the submodule if it is missing).
+
+---
 
 ## Temporary feature-plan cleanup
 

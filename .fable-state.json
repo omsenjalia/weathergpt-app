@@ -1,134 +1,50 @@
 {
   "skill": "fable-mode",
-  "task": "Execute feature/app (WeatherNext + Jev Flutter app implementation plan)",
-  "session_branch": "arena/01a0b77f-weathergpt-app",
-  "started": "2026-09-19",
-  "environment_findings": {
-    "flutter_sdk": "NOT installed in sandbox; no `flutter` or `dart` binary on PATH",
-    "pub_dev": "BLOCKED (curl -4 https://pub.dev -> exit/000, SSL_ERROR_SYSCALL); flutter/pub artifacts are served from storage.googleapis.com which is also blocked",
-    "dart_sdk_via_github": "404 - Dart SDK zips are not published as GitHub release assets",
-    "network_allowlist_ok": [
-      "github.com",
-      "api.github.com",
-      "pypi.org",
-      "registry.npmjs.org",
-      "codeload.github.com"
-    ],
-    "verification_strategy": "Local `flutter test`/`flutter analyze` impossible. The repository's own CI (.github/workflows/ci-test.yml, Flutter 3.44.0 stable) runs `flutter test`; `flutter analyze` added to the same workflow so the project's own runner verifies both. `gh` is authenticated as arena-ai-coding-agent[bot]."
-  },
-  "scope_boundary": {
-    "allowed": "App-only work that is safe against the CURRENT documented backend contract (docs/web_app_api_contract.md) plus strictly additive tolerant parsing of future fields.",
-    "forbidden": "Wiring screens to proposed /v2/... endpoints; implementing Jev/LangGraph/provider-selection/scientific ensemble logic; putting credentials in the app; presenting demo data as live advice.",
-    "reason": "implementation_plan.md sections 1 and 5 gate live integration on an implemented, versioned, authorized backend that does not exist yet."
-  },
+  "task": "Create very detailed ARCHITECTURE.md matching reference, update CLAUDE.md/agent.md/AGENTS.md to mandate architecture updates, update README.md to SIH-ready with easy app download guide, create and merge PR",
+  "session_branch": "arena/01a0bff1-weathergpt-app",
+  "started": "2026-09-20",
   "stages": [
     {
       "id": "s1",
-      "name": "Recon: repo, specs, tooling, blast radius",
-      "output": "Findings above + file inventory",
+      "name": "Stage 1: Architecture Reconnaissance & Section Mapping",
+      "output": "Mapped 19-section structure of frontend/Architecture.md to weathergpt-app specifications",
       "status": "done"
     },
     {
       "id": "s2",
-      "name": "Stage map + state file",
-      "output": ".fable-state.json (this file)",
+      "name": "Stage 2: Author comprehensive ARCHITECTURE.md",
+      "output": "877-line canonical ARCHITECTURE.md created with 19 sections, Judge Navigation Panel, Mermaid diagrams, tables, formulas, and matrices",
       "status": "done"
     },
     {
       "id": "s3",
-      "name": "Core contracts: AppMode, safe JSON coercion, DataProvenance",
-      "output": "3 pure-Dart files under lib/core/models/",
+      "name": "Stage 3: Agent Configuration (CLAUDE.md, agent.md, AGENTS.md)",
+      "output": "CLAUDE.md, agent.md, claude.md created, AGENTS.md updated mandating synchronous ARCHITECTURE.md updates and Fable Mode integration",
       "status": "done"
     },
     {
       "id": "s4",
-      "name": "Mode propagation + real farm context",
-      "output": "weather/chat/voice providers send validated mode; Wheat hardcode removed",
+      "name": "Stage 4: SIH-Ready README.md Rework",
+      "output": "SIH-ready README.md with prominent Judge & Evaluator APK download guide, personas, architecture, 10 languages, developer diagnostics",
       "status": "done"
     },
     {
       "id": "s5",
-      "name": "Weather snapshot: provenance, nullable weather code, no truncation, 2 Everyone enrichments",
-      "output": "lib/models/weather.dart + weather_provider.dart",
+      "name": "Stage 5: Verification & Self-Critique",
+      "output": "Verified all anchors, links, contracts, and git statuses",
       "status": "done"
     },
     {
       "id": "s6",
-      "name": "Farmer: remove canned favourable windows, per-day verdict, refetch on location/profile change",
-      "output": "action_windows_provider.dart + advisory_models.dart",
-      "status": "done"
-    },
-    {
-      "id": "s7",
-      "name": "Voice/chat: remove canned 78%/12mm/weekday cards",
-      "output": "voice_provider.dart",
-      "status": "done"
-    },
-    {
-      "id": "s8",
-      "name": "Researcher: real /historical + /comparison instead of constant demo charts",
-      "output": "researcher providers + screens",
-      "status": "done"
-    },
-    {
-      "id": "s9",
-      "name": "Lifecycle: generation guards so stale responses cannot overwrite newer selection",
-      "output": "guards in StateNotifier providers",
-      "status": "done"
-    },
-    {
-      "id": "s10",
-      "name": "Localization: new keys in all 9 locales",
-      "output": "assets/translations/*.json",
-      "status": "done"
-    },
-    {
-      "id": "s11",
-      "name": "Tests: parser fixtures, mode, farmer/voice regressions, widget + keyset",
-      "output": "test/*_test.dart",
-      "status": "done"
-    },
-    {
-      "id": "s12",
-      "name": "Docs: migrate lasting docs, keep feature/ plans (backend unfinished), repair links",
-      "output": "docs/ + README.md + AGENTS.md",
-      "status": "done"
-    },
-    {
-      "id": "s13",
-      "name": "Verify with the project's own runner (CI flutter test + analyze)",
-      "output": "gh run result",
-      "status": "done"
-    },
-    {
-      "id": "s14",
-      "name": "Self-critique + completion report incl. remaining work",
-      "output": "final message + feature/app/REMAINING_WORK.md",
-      "status": "done"
+      "name": "Stage 6: Git Commit, Push, PR Creation & Merge",
+      "output": "Branch pushed to origin, PR created and merged into main",
+      "status": "in_progress"
     }
   ],
-  "cleanup_decision": {
-    "delete_feature_app_plans": false,
-    "reason": "AGENTS.md and feature/README.md forbid deleting plans while required tests/access checks are blocked or the component is unfinished. The plan's own Done bar is 'implemented and tested app code PLUS a compatible authorized backend'; the backend plan in feature/backend/ is unimplemented and several app items are explicitly gated on backend contracts. Record remaining work instead of claiming completion.",
-    "documentation_destinations": {
-      "contracts": "docs/app_data_contracts.md",
-      "api_additions": "docs/web_app_api_contract.md",
-      "status_and_remaining": "feature/app/README.md#status-and-remaining-work"
-    }
-  },
-  "delegation_note": "No Task/Agent-Teams subagent tool is exposed in this environment, so stages run sequentially in one context; independent read/recon batches are parallelised at the tool-call level. This is an honest adaptation, not delegated execution.",
-  "verification": {
-    "local": "impossible (no flutter/dart, pub.dev + storage.googleapis.com blocked)",
-    "runner": ".github/workflows/ci-test.yml on the pull request; flutter analyze step added"
-  },
-  "ci_runs": {
-    "analyze_test_35417587236": "success (flutter analyze 0 issues + flutter test all green)",
-    "apk_35417587229": "success (signed release APK + AAB built)"
-  },
   "self_critique": [
-    "Translations for the 8 non-English locales are machine-written; native-speaker review required before release.",
-    "No widget tests for new screens (headless CI limitation in this repo); logic covered via plugin-free unit libraries instead.",
-    "ActionWindowsNotifier calls ref.listen in its constructor; unit tests cover the static mapping only, so the listen wiring needs a device smoke test.",
-    "RefreshIndicator retry added; tab switches after a failure intentionally show the cached unavailable state until the user pulls to refresh or re-enters the screen."
+    "Ensured all 19 sections from reference Architecture.md are fully represented with equal or greater technical depth tailored to Flutter mobile.",
+    "Verified anchor navigation tags in Judge Navigation Panel strictly match GitHub markdown anchor formatting rules.",
+    "Added both direct GitHub Actions pre-built signed APK download instructions and local build instructions for SIH judges.",
+    "Created both CLAUDE.md, claude.md, and agent.md to guarantee that whichever agent prompt or tool reads instructions, the architecture update policy is strictly enforced."
   ]
 }
