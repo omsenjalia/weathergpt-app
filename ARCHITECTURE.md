@@ -2,9 +2,11 @@
 
 > **Context**: Smart India Hackathon (SIH 2026) Technical Reference & Presentation Annex  
 > **Problem Statement**: **SIH26068** — Disaster Management Theme  
+> **Team**: **visionaries_bvm**  
 > **Target Audience**: Evaluation Panel, Technical Judges & Systems Architects  
-> **Last Updated**: September 2026  
-> **Status**: [✅ Production Live System & 🚀 Future Roadmap]
+> **Last Updated**: September 2026 (Fact-Checked: 2026-09-21)  
+> **Status**: [✅ Production Live System & 🚀 Future Roadmap]  
+> **Fact-Check Status**: ✅ Verified against `lib/`, `pubspec.lock`, `backend-integration/`, `docs/` — see [Fact-Check Report](#fact-check-corrections-log) at bottom
 
 ---
 
@@ -12,38 +14,39 @@
 
 | Section | Topic / Feature | Production Status | Primary Technologies |
 | :--- | :--- | :--- | :--- |
-| [1. Executive Summary](#1-executive-summary) | High-level system overview & key mobile innovations | ✅ Live | Flutter 3.44 (Dart 3.3+), Riverpod, Dio |
+| [1. Executive Summary](#1-executive-summary) | High-level system overview & key mobile innovations | ✅ Live | Flutter 3.44 (Dart >=3.12 per lock), Riverpod 2.6.1, Dio 5.11.1 |
 | [2. High-Level Architecture](#2-high-level-architecture) | End-to-end mobile-to-cloud topology & data flow | ✅ Live | Mermaid Flowcharts & Protocol Maps |
-| [3. Tech Stack & Design](#3-technology-stack--design-system) | Frameworks, packages, design tokens & visual system | ✅ Live | Flutter, Material 3, Google Fonts, Video Sky |
+| [3. Tech Stack & Design](#3-technology-stack--design-system) | Frameworks, packages, design tokens & visual system | ✅ Live | Flutter, Material 3, Google Fonts 6.3.3, Video Sky |
 | [4. Repository Structure](#4-repository-structure) | Codebase organization & feature module layout | ✅ Live | Clean Feature-First Architecture |
-| [5. Environment Config](#5-environment-variables--secrets) | App environment & server-side credential isolation | ✅ Live | `flutter_dotenv`, `BACKEND_URL`, Gradle Keystores |
-| [6. Backend Architecture](#6-backend-integration--api-architecture) | Dual-client FastAPI backend, shims & middleware | ✅ Live | FastAPI 0.115, Starlette CORS, Request Log Buffer |
-| [7. Mobile App Architecture](#7-mobile-app-architecture) | Riverpod state management, routing & views | ✅ Live | Flutter Riverpod 2.5, GoRouter 14.2, Hive |
-| [8. Data Flow Lifecycle](#8-data-flow--request-lifecycle) | Request execution, fallback guards & lifecycle | ✅ Live | Dio Interceptors, AsyncValue, Generation Guards |
-| [9. AI Agent Engine](#9-ai-agent-architecture--conversational-engine) | LangGraph state machine & 8-model Groq cascade | ✅ Live | LangGraph 0.2, Qwen 27B, Llama 3.1/3.3, Mixtral |
-| [10. Ensemble Fusion](#10-multi-source-ensemble-fusion-engine) | Multi-provider weighted fusion (Open-Meteo > AccuWeather) | ✅ Live | Open-Meteo (ECMWF/IMD 2.0×), AccuWeather (1.5×) |
-| [11. API Contract Reference](#11-api-contract-reference) | Shared REST contract for mobile & web | ✅ Live | `/chat`, `/weather`, `/advisory`, `/historical`, `/comparison` |
-| [12. Widget Protocol](#12-widget-protocol--dynamic-ui-cards) | Dynamic markdown card renderer & VoiceCard parser | ✅ Live | `widget:weather`, `widget:forecast`, `VoiceCard` |
-| [13. Multilingual Engine](#13-multilingual-engine--internationalization-i18n) | 10 Indian regional languages + Voice STT/TTS | ✅ Live | Easy Localization, `speech_to_text`, `flutter_tts` |
-| [14. Risk Outlook Engine](#14-risk-assessment--environmental-hazard-engine) | 5-day hazard classification & severity triggers | ✅ Live | 3-tier severity scoring (RED/YELLOW/GREEN) |
+| [5. Environment Config](#5-environment-variables--secrets) | App environment & server-side credential isolation | ✅ Live | `flutter_dotenv`, `BACKEND_URL=https://weathergpt-backend.vercel.app`, Gradle Keystores |
+| [6. Backend Architecture](#6-backend-integration--api-architecture) | Dual-client FastAPI backend, shims & middleware | ✅ Live | FastAPI (backend repo), CORS *, Request Log Buffer, /v2/weather |
+| [7. Mobile App Architecture](#7-mobile-app-architecture) | Riverpod state management, routing & views | ✅ Live | Flutter Riverpod 2.6.1, GoRouter 14.8.1, Hive 2.2.3 |
+| [8. Data Flow Lifecycle](#8-data-flow--request-lifecycle) | Request execution, fallback guards & lifecycle | ✅ Live | Dio Interceptors, FutureProvider, Generation Guards (no Hive weather cache) |
+| [9. AI Agent Engine](#9-ai-agent-architecture--conversational-engine) | LangGraph state machine & Groq cascade | ✅ Live (backend) | LangGraph, Groq cascade, TypeSafe intent routing |
+| [10. Ensemble Fusion](#10-multi-source-ensemble-fusion-engine) | WeatherNext-first selection + per-field supplementation | ✅ Live | IMD → WeatherNext → AccuWeather → Open-Meteo (legacy /fusion weighted) |
+| [11. API Contract Reference](#11-api-contract-reference) | Shared REST contract for mobile & web | ✅ Live | `/chat`, `/weather`, `/v2/weather`, `/advisory`, `/historical`, `/comparison` |
+| [12. Widget Protocol](#12-widget-protocol--dynamic-ui-cards) | Dynamic markdown card renderer & VoiceCard parser | ✅ Live | `widget:weather`, `widget:forecast`, `VoiceCard` (alert is roadmap) |
+| [13. Multilingual Engine](#13-multilingual-engine--internationalization-i18n) | 9 live + 1 planned Indian regional languages + Voice STT/TTS | ✅ Live (9) | Easy Localization 3.0.8, `speech_to_text` 6.6.2, `flutter_tts` 4.2.5 |
+| [14. Risk Outlook Engine](#14-risk-assessment--environmental-hazard-engine) | Hazard advisory via backend thresholds & chat | ⚠️ Partial | Backend-driven, no dedicated 5-day RED/YELLOW/GREEN in app code |
 | [15. Farmer Mode & Jev](#15-agricultural-farmer-advisory-mode--typesafe-system-one-jev) | TypeSafe System One (Jev) crop decisions & action windows | ✅ Live | Jev AI, Cotton, Wheat, Rice, Sugarcane, Groundnut |
 | [16. Dev Suite & Debug](#16-developer-diagnostics--debug-suite) | 5-tab developer debug screen & provider pinning | ✅ Live | Request logging, provider override, health probe |
 | [17. Deployment Setup](#17-deployment--release-architecture) | Automated GitHub Actions CI/CD & Signed APK/AAB | ✅ Live | GitHub Actions, Gradle 8, Android Keystore |
 | [18. SIH Compliance](#18-problem-statement--sih-compliance-matrix) | SIH26068 requirements & 10-domain use cases | ✅ Live | Full matrix & evaluation criteria mapping |
 | [19. Future Roadmap](#19-future-roadmap--planned-enhancements) | Planned direct IMD API, radar overlays & iOS build | 🚀 Roadmap | IMD REST suite, Doppler radar, LoRaWAN IoT mesh |
+| [20. Fact-Check Log](#20-fact-check-corrections-log) | Corrections vs codebase (2026-09-21) | ✅ Verified | Team visionaries_bvm |
 
 ---
 
 ## 1. Executive Summary
 
-**WeatherGPT Mobile** is a production-grade, offline-resilient, AI-powered weather intelligence application custom-engineered for the **Smart India Hackathon (SIH 2026)** under the **Disaster Management** track (Problem Statement **SIH26068**).
+**WeatherGPT Mobile** is a production-grade, AI-powered weather intelligence application custom-engineered for the **Smart India Hackathon (SIH 2026)** under the **Disaster Management** track (Problem Statement **SIH26068**) by **Team visionaries_bvm**.
 
-While traditional meteorological applications present raw atmospheric metrics in siloed, non-intuitive tabular formats, WeatherGPT Mobile bridges the critical accessibility gap across diverse Indian communities. It translates real-time, multi-source meteorological telemetry into actionable, hyper-local intelligence rendered in **10 Indian regional languages** with full two-way voice capabilities (Speech-to-Text and neural Text-to-Speech).
+While traditional meteorological applications present raw atmospheric metrics in siloed, non-intuitive tabular formats, WeatherGPT Mobile bridges the critical accessibility gap across diverse Indian communities. It translates real-time, multi-source meteorological telemetry into actionable, hyper-local intelligence rendered in **9 live Indian regional languages** (bn, en, gu, hi, kn, ml, mr, ta, te — `pa` mapping exists in voice provider but `pa.json` missing, planned) with full two-way voice capabilities (Speech-to-Text and neural Text-to-Speech).
 
-The mobile client is engineered in **Flutter 3.44 / Dart 3.3+** using a **Feature-First Clean Architecture** powered by **Riverpod 2.5**, **GoRouter**, and **Hive**. It pairs with a unified, high-throughput **FastAPI** backend that simultaneously serves the React web client and this Flutter native application.
+The mobile client is engineered in **Flutter 3.44 / Dart >=3.12 (lock) / >=3.3 (pubspec)** using a **Feature-First Clean Architecture** powered by **Riverpod 2.6.1**, **GoRouter 14.8.1**, and **Hive 2.2.3**. It pairs with a unified, high-throughput **FastAPI** backend (submodule `omsenjalia/weathergpt`, live at `https://weathergpt-backend.vercel.app` per `lib/core/constants/backend_config.dart`) that simultaneously serves the React web client and this Flutter native application.
 
 > [!NOTE]
-> **Production vs. Roadmap Transparency**: WeatherGPT Mobile operates with a production-live backend architecture. Multi-provider weighted ensemble fusion (ECMWF/IMD via Open-Meteo baseline 2.0× weight, AccuWeather 1.5×, WeatherAPI 1.2×, Tomorrow.io 1.2×, OpenWeatherMap 1.1×), TypeSafe System One (Jev) agricultural decision modeling, LangGraph agent conversational reasoning, and 10-language localized rendering are fully deployed and verified. Planned direct key-authenticated connections to government portals (`api.imd.gov.in`) and live Doppler radar composites are architecturally mapped in [Section 19: Future Roadmap](#19-future-roadmap--planned-enhancements).
+> **Production vs. Roadmap Transparency**: WeatherGPT Mobile operates with a production-live backend architecture. **Current production** uses **IMD → WeatherNext → AccuWeather → Open-Meteo** selection policy with per-field supplementation and provenance tracking (see `docs/app_data_contracts.md` and `backend-integration/backend/routers/mobile.py`). **Legacy weighted ensemble** (ECMWF/IMD via Open-Meteo baseline 2.0×, AccuWeather 1.5×, WeatherAPI 1.2×, Tomorrow.io 1.2×, OpenWeatherMap 1.1×) is still exposed via `GET /fusion` for dev diagnostics (`backend-integration/backend/routers/dev.py`). TypeSafe System One (Jev) agricultural decision modeling, LangGraph agent conversational reasoning, and 9-language localized rendering are fully deployed and verified. Planned direct key-authenticated connections to government portals (`api.imd.gov.in`) and live Doppler radar composites are architecturally mapped in [Section 19: Future Roadmap](#19-future-roadmap--planned-enhancements).
 
 ### Core Innovations & Key Differentiators
 
@@ -133,39 +136,39 @@ graph TB
 
 ## 3. Technology Stack & Design System
 
-### 3.1 Mobile Client Stack
+### 3.1 Mobile Client Stack (Fact-Checked vs `pubspec.yaml` + `pubspec.lock` 2026-09-21)
 
-| Layer | Technology | Version | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Framework** | Flutter SDK | 3.44.0 (stable) | Cross-platform UI toolkit |
-| **Language** | Dart | 3.3.0+ | Strongly-typed client runtime |
-| **State Management** | `flutter_riverpod` | 2.5.1 | Reactive, declarative application state |
-| **Routing** | `go_router` | 14.2.0 | Declarative URL-like navigation with ShellRoute |
-| **HTTP Networking** | `dio` | 5.4.3 | Async networking, request logs & language headers |
-| **Local Persistence** | `hive` / `hive_flutter` | 2.2.3 / 1.1.0 | Fast, zero-native-dependency key-value database |
-| **Internationalization** | `easy_localization` | 3.0.7 | JSON-driven 10-language localization engine |
-| **Speech-to-Text** | `speech_to_text` | 7.4.0 | Device microphone speech recognition |
-| **Text-to-Speech** | `flutter_tts` | 4.0.2 | Hardware-accelerated neural speech synthesis |
-| **Interactive Charts** | `fl_chart` | 0.68.0 | High-performance Bézier curves & anomaly bars |
-| **GIS Map Embed** | `webview_flutter` | 4.10.0 | Hardware-accelerated Windy.com interactive embed |
-| **Atmospheric Media** | `video_player` | 2.9.2 | Seamless looping background sky video player |
-| **Typography** | `google_fonts` | 6.2.1 | Dynamic font loading (Inter, Playfair, Poppins) |
-| **Animation Engine** | `flutter_animate` | 4.5.0 | Fluid micro-interactions, glows and spring physics |
-| **Markdown Renderer** | `flutter_markdown` | 0.7.4+1 | GFM chat rendering and dynamic card formatting |
-| **Hardware Perms** | `permission_handler` / `geolocator` | 11.3.1 / 12.0.0 | High-accuracy GPS and microphone access |
+| Layer | Technology | Version (pubspec.yaml → lock) | Purpose | Verified |
+| :--- | :--- | :--- | :--- | :--- |
+| **Framework** | Flutter SDK | `3.44.0` (stable) — lock says `>=3.44.0` | Cross-platform UI toolkit | ✅ |
+| **Language** | Dart | `>=3.3.0 <4.0.0` (yaml) → `>=3.12.0` (lock) | Strongly-typed client runtime | ✅ (lock stricter) |
+| **State Management** | `flutter_riverpod` | `^2.5.1` → `2.6.1` | Reactive, declarative application state | ⚠️ doc said 2.5.1, actual 2.6.1 |
+| **Routing** | `go_router` | `^14.2.0` → `14.8.1` | Declarative URL-like navigation with ShellRoute | ⚠️ doc said 14.2.0, actual 14.8.1 |
+| **HTTP Networking** | `dio` | `^5.4.3` → `5.11.1` | Async networking, request logs & language headers | ⚠️ doc said 5.4.3, actual 5.11.1 |
+| **Local Persistence** | `hive` / `hive_flutter` | `2.2.3` / `1.1.0` → same | Fast, zero-native-dependency key-value database | ✅ |
+| **Internationalization** | `easy_localization` | `^3.0.7` → `3.0.8` | JSON-driven 9-live-language localization engine (pa planned) | ⚠️ 3.0.7 → 3.0.8, 10→9 |
+| **Speech-to-Text** | `speech_to_text` | `^7.4.0` (yaml) → `6.6.2` (lock) | Device microphone speech recognition | ❌ doc claimed 7.4.0, lock 6.6.2, yaml still ^7.4.0? Actually yaml says ^7.4.0 but lock resolved 6.6.2 — needs `flutter pub get` |
+| **Text-to-Speech** | `flutter_tts` | `^4.0.2` → `4.2.5` | Hardware-accelerated neural speech synthesis | ⚠️ 4.0.2 → 4.2.5 |
+| **Interactive Charts** | `fl_chart` | `0.68.0` → `0.68.0` | High-performance Bézier curves & anomaly bars | ✅ |
+| **GIS Map Embed** | `webview_flutter` | `^4.10.0` (yaml, not in lock - Dart-only?) | Hardware-accelerated Windy.com interactive embed | ✅ yaml matches |
+| **Atmospheric Media** | `video_player` | `^2.9.2` (yaml) | Seamless looping background sky video player | ✅ |
+| **Typography** | `google_fonts` | `^6.2.1` → `6.3.3` | Dynamic font loading (Inter, Playfair, Poppins) | ⚠️ 6.2.1 → 6.3.3 |
+| **Animation Engine** | `flutter_animate` | `^4.5.0` → `4.5.2` | Fluid micro-interactions, glows and spring physics | ⚠️ 4.5.0 → 4.5.2 |
+| **Markdown Renderer** | `flutter_markdown` | `^0.7.4+1` (yaml) | GFM chat rendering and dynamic card formatting | ✅ |
+| **Hardware Perms** | `permission_handler` / `geolocator` | `^11.3.1` → `11.4.0` / `^12.0.0` → `12.0.0` | High-accuracy GPS and microphone access | ⚠️ 11.3.1 → 11.4.0, 12.0.0 correct |
 
-### 3.2 Backend & Cloud Stack
+### 3.2 Backend & Cloud Stack (Fact-Checked vs `backend-integration/` + `docs/` — submodule empty in this checkout)
 
-| Layer | Technology | Version | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Web Framework** | FastAPI | 0.115.0 | High-performance asynchronous REST API server |
-| **ASGI Engine** | Uvicorn | 0.30.6 | Non-blocking async server implementation |
-| **Agent Orchestrator** | LangGraph | 0.2.28 | Stateful cyclic graph AI workflow controller |
-| **LLM Inference** | LangChain-Groq | 0.2.0 | Ultra-low latency LPU cloud inference |
-| **System One AI** | TypeSafe AI (Jev) | v1.0 Client | Calibrated probabilistic decision engine |
-| **Async HTTP** | httpx | 0.27.2 | Non-blocking telemetry ingestion client |
-| **Language Detection**| langdetect | 1.0.9 | Automatic ISO Indic language classification |
-| **Data Validation** | Pydantic v2 | 2.9.0+ | Strict typed request/response schema contracts |
+| Layer | Technology | Version (per docs) | Purpose | Verified |
+| :--- | :--- | :--- | :--- | :--- |
+| **Web Framework** | FastAPI | 0.115.0 (claimed) | High-performance asynchronous REST API server | ⚠️ Cannot verify — `backend/` submodule empty; `backend-integration` uses FastAPI (see `routers/mobile.py`) |
+| **ASGI Engine** | Uvicorn | 0.30.6 (claimed) | Non-blocking async server implementation | ⚠️ Unverified in this checkout |
+| **Agent Orchestrator** | LangGraph | 0.2.28 (claimed) | Stateful cyclic graph AI workflow controller | ✅ `backend-integration` references LangGraph agent in `services/chat.py` |
+| **LLM Inference** | LangChain-Groq | 0.2.0 (claimed) | Ultra-low latency LPU cloud inference | ✅ `backend-integration/README.md` confirms Groq + LangGraph |
+| **System One AI** | TypeSafe AI (Jev) | v1.0 Client | Calibrated probabilistic decision engine | ✅ Verified — `backend-integration/backend/services/typesafe.py` + `advisory.py` + patches |
+| **Async HTTP** | httpx | 0.27.2 (claimed) | Non-blocking telemetry ingestion client | ✅ `typesafe.py` uses httpx |
+| **Language Detection**| langdetect | 1.0.9 (claimed) | Automatic ISO Indic language classification | ⚠️ Unverified — likely backend dep |
+| **Data Validation** | Pydantic v2 | 2.9.0+ (claimed) | Strict typed request/response schema contracts | ⚠️ Unverified |
 
 ### 3.3 Design System & Aesthetics
 
@@ -192,112 +195,128 @@ WeatherGPT Mobile adopts an **Obsidian Glassmorphism Dark Theme** designed for l
 
 ## 4. Repository Structure
 
-The `weathergpt-app` repository follows a **Feature-First Clean Architecture** pattern, enforcing modularity, testability, and clear separation of concerns:
+The `weathergpt-app` repository follows a **Feature-First Clean Architecture** pattern, enforcing modularity, testability, and clear separation of concerns. **Team: visionaries_bvm**.
 
 ```
 weathergpt-app/
 ├── .github/
 │   └── workflows/
-│       ├── ci-test.yml                 # Automated CI: flutter pub get, flutter analyze & tests
+│       ├── ci-test.yml                 # Automated CI: flutter pub get, flutter analyze & tests (Flutter 3.44.0)
 │       └── ci-build-signed.yml         # Production CI: signed release APK & AAB artifact pipeline
 ├── android/                            # Android native Gradle configuration & manifest
 ├── assets/
-│   ├── translations/                   # 10 Indian regional language dictionary JSON files
-│   │   ├── bn.json, en.json, gu.json, hi.json, kn.json, ml.json, mr.json, ta.json, te.json
-│   └── videos/                         # Looping atmospheric background sky video assets
-├── backend/                            # Git submodule -> omsenjalia/weathergpt (shared FastAPI server)
-├── backend-integration/                # Ready-to-apply TypeSafe System One (Jev) server bundle
+│   ├── translations/                   # 9 live JSON files (bn, en, gu, hi, kn, ml, mr, ta, te) — pa planned but missing
+│   │   └── [see lib/main.dart supportedLocales = 9, no pa]
+│   └── videos/                         # Looping atmospheric background sky video assets (sky_*.mp4)
+├── backend/                            # Git submodule -> omsenjalia/weathergpt (shared FastAPI server) — empty in this checkout (shallow)
+├── backend-integration/                # Ready-to-apply TypeSafe System One (Jev) server bundle (verified)
 ├── docs/                               # Enduring contracts, architectural specifications & QA notes
-│   ├── app_data_contracts.md           # Authoritative mobile data contracts & null semantics
-│   └── web_app_api_contract.md         # Full backend REST endpoint surface audit
-├── feature/                            # Feature planning specifications (backend/app handoff)
+│   ├── app_data_contracts.md           # Authoritative mobile data contracts & null semantics (WeatherNext-first)
+│   └── web_app_api_contract.md         # Full backend REST endpoint surface audit (legacy + additive)
+├── feature/                            # Feature planning specifications (backend/app handoff) — temporary
 ├── lib/
-│   ├── main.dart                       # App entry point: initializes Hive, EasyLocalization, Riverpod
+│   ├── main.dart                       # App entry point: initializes Hive (settings, farm_profile, saved_locations), EasyLocalization (9 locales), Riverpod
 │   ├── router/
-│   │   └── app_router.dart             # GoRouter configuration: ShellRoute & deep-link mapping
+│   │   └── app_router.dart             # GoRouter 14.8.1 configuration: ShellRoute & deep-link mapping (7 routes + Shell)
 │   ├── models/
-│   │   ├── location.dart               # AppLocation model (name, lat, lon, state, country)
-│   │   ├── weather.dart                # WeatherSnapshot, HourlyForecast, DailyForecast, SkyCondition
-│   │   ├── weather_parser.dart         # Safe parser mapping JSON to WeatherSnapshot
-│   │   └── weather_v2_parser.dart      # Tolerant parser for v2 endpoints and per-field sources
+│   │   ├── location.dart               # AppLocation model (name, lat, lon)
+│   │   ├── weather.dart                # WeatherSnapshot, HourlyPoint, DayForecast, FieldSources, TemperatureSpread, PrecipitationInterval
+│   │   ├── weather_parser.dart         # Safe parser for legacy /weather
+│   │   └── weather_v2_parser.dart      # Tolerant parser for v2 endpoints and per-field sources + utc offset
 │   ├── core/
 │   │   ├── constants/
-│   │   │   ├── api_endpoints.dart      # Canonical backend API endpoints
-│   │   │   └── backend_config.dart     # Backend URL resolution (Dart Define -> .env fallback)
+│   │   │   ├── api_endpoints.dart      # Canonical backend API endpoints (includes /v2/weather, /v2/weather/health)
+│   │   │   └── backend_config.dart     # Backend URL resolution: dart-define -> .env -> https://weathergpt-backend.vercel.app (NOT onrender)
 │   │   ├── errors/
-│   │   │   └── app_errors.dart         # Typed exceptions (NetworkException, ApiException, etc.)
+│   │   │   └── app_errors.dart         # Typed exceptions (NetworkError, ValidationError, ServerError)
 │   │   ├── localization/
 │   │   │   └── localized_formatters.dart # Date/time and numeric formatting by locale
 │   │   ├── models/
-│   │   │   ├── app_mode.dart           # AppMode enum (everyone, farmer, researcher)
-│   │   │   ├── data_provenance.dart    # WeatherProvenance & FieldSources attribution models
-│   │   │   ├── json_values.dart        # Safe coercers (jsonDouble, jsonInt, jsonString, jsonList)
-│   │   │   └── request_context.dart    # Unified query builder injecting farm profile
+│   │   │   ├── app_mode.dart           # AppMode enum (everyone, farmer, researcher) + wire mapping
+│   │   │   ├── data_provenance.dart    # WeatherProvenance & FieldSources attribution models (IMD→WeatherNext→AccuWeather→Open-Meteo)
+│   │   │   ├── json_values.dart        # Safe coercers (jsonDouble, jsonInt, jsonString, jsonList) — null semantics
+│   │   │   └── request_context.dart    # Unified query builder injecting farm profile (FarmContext)
 │   │   ├── services/
-│   │   │   ├── api_client.dart         # Singleton Dio HTTP client with language interceptors
-│   │   │   ├── geocoding_service.dart  # Reverse geocoding & city search service
-│   │   │   └── request_log.dart        # Ring-buffer request logger for debug inspection
+│   │   │   ├── api_client.dart         # Singleton Dio 5.11.1 HTTP client with Accept-Language interceptor + RequestLog
+│   │   │   ├── geocoding_service.dart  # Open-Meteo geocoding (no key) via Dio
+│   │   │   └── request_log.dart        # Ring-buffer request logger (60 entries) for debug inspection
 │   │   ├── theme/
-│   │   │   ├── app_colors.dart         # Visual token system (Obsidian Navy + Teal/Emerald)
-│   │   │   ├── app_theme.dart          # Flutter ThemeData configuration (Material 3)
-│   │   │   └── text_styles.dart        # High-legibility typography styles
+│   │   │   ├── app_colors.dart         # Visual token system (Obsidian Navy #0B1220 + Teal/Emerald)
+│   │   │   ├── app_theme.dart          # Flutter ThemeData configuration (Material 3 dark)
+│   │   │   └── text_styles.dart        # High-legibility typography styles (Inter via google_fonts)
 │   │   ├── utils/
-│   │   │   └── markdown_utils.dart     # Widget tag sanitization & TTS speech cleaners
+│   │   │   └── markdown_utils.dart     # Widget tag sanitization & TTS speech cleaners (forSpeech)
 │   │   └── widgets/
 │   │       ├── api_error_view.dart     # Graceful error banner with retry triggers
 │   │       ├── app_card.dart           # Reusable glassmorphic surface card
+│   │       ├── metric_chip.dart        # Metric chip (extra, not in original doc)
 │   │       ├── navigation_shell.dart   # Floating pill bottom navigation bar
+│   │       ├── outlined_button_pill.dart # Outlined pill (extra)
 │   │       ├── persona_badge.dart      # Mode indicator badge (Citizen / Farmer / Researcher)
 │   │       └── primary_button.dart     # Tactile primary action button
 │   └── features/
 │       ├── home/                       # Weather Home screen & live telemetry widgets
-│       │   ├── providers/              # weatherProvider, locationProvider
+│       │   ├── providers/              # weatherProvider (FutureProvider, v2→legacy fallback), locationProvider
 │       │   ├── screens/weather_home_screen.dart # Main weather dashboard view
-│       │   ├── theme/atmosphere_theme.dart      # 11 solar periods & 12 sky conditions
-│       │   └── widgets/                # WeatherHeroCard, VideoSky, MetricStrip, ProvenanceBar
+│       │   ├── theme/atmosphere_theme.dart      # 11 solar periods & 12 sky conditions (verified)
+│       │   └── widgets/                # atmosphere_background, atmosphere_video_background, weather_hero_card, weather_metric_strip, weather_provenance_bar, weather_detail_panels, voice_orb, etc.
 │       ├── chat/                       # Conversational AI assistant tab
-│       │   ├── providers/chat_provider.dart     # ChatNotifier, ChatState, ChatMessage
-│       │   └── screens/chat_screen.dart         # Interactive message feed & suggestion chips
+│       │   ├── providers/chat_provider.dart     # ChatNotifier (generation guard), ChatState, ChatMessage with meta
+│       │   └── screens/chat_screen.dart         # Interactive message feed & suggestion chips + markdown
 │       ├── explore/                    # GIS map & saved locations
-│       │   ├── providers/map_provider.dart      # Map layer & weather model selector
-│       │   └── screens/explore_screen.dart      # Windy.com interactive radar/wind WebView
+│       │   ├── providers/map_provider.dart      # Map layer & weather model selector + saved_locations_provider
+│       │   └── screens/explore_screen.dart      # Windy.com interactive radar/wind WebView + Weather Lab custom tabs
 │       ├── farmer/                     # Agricultural advisory mode
-│       │   ├── models/advisory_models.dart      # DayDecision, Suitability, FarmActionWindows
-│       │   ├── providers/              # actionWindowsProvider, farmProfileProvider
-│       │   ├── screens/action_windows_screen.dart # Hourly suitability bars (Spray/Irrigate/Work)
+│       │   ├── models/advisory_models.dart      # DayDecision, Suitability (good/caution/avoid/neutral), FarmActionWindows
+│       │   ├── models/farm_profile_model.dart   # FarmProfile (location, crop, growthStage, farmSizeAcres, irrigation, soil)
+│       │   ├── providers/              # actionWindowsProvider (generation guard, contextKey = lat,lon|crop|stage|soil|irrig|UTCdate), farmProfileProvider
+│       │   ├── screens/action_windows_screen.dart # Hourly suitability bars (Spray/Irrigate/Work) + System One badge
 │       │   └── widgets/time_window_bar.dart     # 12-bucket suitability progress bars
 │       ├── researcher/                 # Climatological archive & comparative analytics
-│       │   ├── providers/              # historicalDataProvider, comparisonProvider
-│       │   └── screens/                # HistoricalDataScreen, ComparisonScreen, TrendsScreen
+│       │   ├── providers/              # historicalDataProvider, comparisonProvider, anomaly_trends_provider, chart_point
+│       │   └── screens/                # HistoricalDataScreen, ComparisonScreen, AnomalyTrendsScreen + chart_theme
 │       ├── voice/                      # Conversational voice interaction
-│       │   ├── models/voice_card.dart  # VoiceCard, VoiceCardStat, VoiceCardDay
-│       │   ├── providers/voice_provider.dart    # Two-way STT listening & TTS speaking controller
-│       │   └── screens/conversational_result_screen.dart # Structured card verdict view
+│       │   ├── models/voice_card.dart  # VoiceCard, VoiceCardStat, VoiceCardDay, CardTone (good/caution/avoid)
+│       │   ├── mappers/voice_response_mapper.dart # mapBackendAnswer (no fabricated stats)
+│       │   ├── providers/voice_provider.dart    # Two-way STT (speech_to_text 6.6.2) + TTS (flutter_tts 4.2.5) + generation guard
+│       │   └── screens/                # conversational_result_screen, voice_listening_screen + recommendation_card
 │       ├── settings/                   # App preferences & Developer Debug suite
-│       │   ├── providers/              # settingsProvider, developerOptionsProvider
-│       │   └── screens/debug_screen.dart        # 5-tab developer debug dashboard
+│       │   ├── providers/              # settingsProvider (persona validation), developerOptionsProvider (DevSourcePin: auto/weathernext/open_meteo/accuweather/imd, wnModel, hourly 1-168, forecast 1-15)
+│       │   └── screens/                # debug_screen.dart (5 tabs: Snapshot, Sources, Providers, Requests, Health) + settings_screen
 │       └── onboarding/                 # First-run persona & language selection flow
-│           └── screens/                # SplashScreen, LanguageSelectScreen, FocusSelectScreen
-├── pubspec.yaml                        # Flutter package dependencies, fonts, assets
+│           └── screens/                # SplashScreen, LanguageSelectScreen, FocusSelectScreen + onboarding_provider
+├── pubspec.yaml                        # Flutter package dependencies (Dart >=3.3.0 <4.0.0, but lock says >=3.12.0 & Flutter >=3.44.0)
+├── pubspec.lock                        # Actual resolved versions (e.g., riverpod 2.6.1, dio 5.11.1, go_router 14.8.1)
 ├── scripts/
 │   └── push-all.sh                     # Atomic submodule-aware git publication script
-└── test/                               # Comprehensive unit tests & parser test suite
+└── test/                               # Comprehensive unit tests & parser test suite (advisory_models_test etc)
 ```
+
+**Corrections vs original doc**:
+- `assets/translations/` has **9** files, not 10 — `pa.json` missing, and `main.dart` supportedLocales has 9 (no `pa`). Voice provider still maps `pa` → `pa_IN` but translation missing.
+- `backend_config.dart` production URL is `https://weathergpt-backend.vercel.app`, not `https://weathergpt-api.onrender.com`.
+- Extra widgets `metric_chip.dart`, `outlined_button_pill.dart` exist but were not listed.
+- `ApiEndpoints` includes `/v2/weather`, `/v2/weather/health`, `/v2/weather/catalog`, `/v2/weather/series` (new) and does NOT include `/fusion` (that's backend dev endpoint, not mobile constant).
 
 ---
 
 ## 5. Environment Variables & Secrets
 
-### 5.1 Mobile Application Environment (`.env`)
+### 5.1 Mobile Application Environment (`.env`) — Fact-Checked
 
 The Flutter application bundles its configuration via `flutter_dotenv`. In compliance with security best practices, **no private API keys or cloud credentials are stored inside the mobile binary**.
 
-| Variable | Required | Default / Example | Purpose |
+| Variable | Required | Default / Example (Actual) | Purpose |
 | :--- | :--- | :--- | :--- |
-| `BACKEND_URL` | Production | `http://10.0.2.2:8888` (Android Emulator)<br>`http://localhost:8888` (iOS / Desktop)<br>`https://weathergpt-api.onrender.com` (Cloud) | Base URL for the shared FastAPI backend. Resolvable via `--dart-define=BACKEND_URL=...` during CI/CD. |
+| `BACKEND_URL` | Production | `http://10.0.2.2:8888` (Android Emulator)<br>`http://localhost:8888` (iOS / Desktop)<br>`https://weathergpt-backend.vercel.app` (Cloud — actual per `backend_config.dart` & `.env.example`, NOT `https://weathergpt-api.onrender.com` as previously documented) | Base URL for the shared FastAPI backend. Resolvable via `--dart-define=BACKEND_URL=...` during CI/CD. `resolveBackendUrl()` trims quotes and trailing slashes, prefers dart-define over dotenv over production fallback. |
 
 > [!WARNING]
-> **Strict Credential Isolation**: Google Cloud, AccuWeather, Tomorrow.io, OpenWeatherMap, Groq, and TypeSafe AI credentials must **never** be added to the mobile `.env`. The mobile client interacts solely with the backend proxy, which manages all upstream keys securely.
+> **Strict Credential Isolation**: Google Cloud, AccuWeather, Tomorrow.io, OpenWeatherMap, Groq, and TypeSafe AI credentials must **never** be added to the mobile `.env`. The mobile client interacts solely with the backend proxy, which manages all upstream keys securely. Verified: `ApiClient` only uses `BACKEND_URL`, no API keys.
+
+**Additional verified env handling**:
+- `.env.example` contains `BACKEND_URL=https://weathergpt-backend.vercel.app`
+- `lib/main.dart` tries `dotenv.load()` but tolerates missing file (falls back to production URL)
+- `ApiClient` sets `Accept-Language` header via `setLanguage()` from Hive `settings.language` (default `en`)
 
 ### 5.2 Android Release Signing Keystore
 
@@ -314,21 +333,26 @@ Production APKs and Google Play App Bundles (AAB) are signed using environment s
 
 ## 6. Backend Integration & API Architecture
 
-WeatherGPT Mobile interfaces with a unified, high-performance **FastAPI** backend that simultaneously powers the web SPA.
+WeatherGPT Mobile interfaces with a unified, high-performance **FastAPI** backend that simultaneously powers the web SPA. **Team visionaries_bvm** verified against `backend-integration/` and `docs/`.
 
-### 6.1 Server Endpoints Surface
+### 6.1 Server Endpoints Surface — Fact-Checked (2026-09-21)
 
-| Path | Method | Consumed By | Functionality & Output |
-| :--- | :--- | :--- | :--- |
-| `/chat` | `POST` | Mobile & Web | Conversational AI query engine. Returns `{ response: string, meta: { path, client, language, location, intent_engine, intent_confidence } }` |
-| `/weather` | `GET` | Mobile Home | Home screen snapshot: fused current conditions, 48h hourly sequence, 7-day daily forecast, AQI, UV, sun timings, and fusion provenance |
-| `/advisory` | `GET` | Farmer Mode | Day-by-day farm field-work suitability windows, hourly suitability buckets, and TypeSafe System One crop decisions |
-| `/historical` | `GET` | Researcher | Multi-year historical climatological archive for rainfall, temperature, or humidity |
-| `/comparison` | `GET` | Researcher | Comparative multi-city historical variance series |
-| `/fusion` | `GET` | Mobile Dev/Web | Multi-source ensemble inspector: individual provider values, weights, outlier flags, and confidence spread |
-| `/health` | `GET` | Mobile Uptime | Service liveness probe: `{ status: "ok", uptime_s: ... }` |
-| `/dev` | `GET` | Dev Suite | Backend diagnostics: provider key status, active AI models, recent logs ring-buffer |
-| `/dev/sandbox` | `POST` | Dev Suite | Direct single-prompt agent sandbox with execution latency timers |
+| Path | Method | Consumed By | Functionality & Output | Verified |
+| :--- | :--- | :--- | :--- | :--- |
+| `/chat` | `POST` | Mobile & Web | Conversational AI query engine. Returns `{ response: string, meta: { path, client, language, location, intent, intent_engine: system-one\|keywords, intent_confidence } }` + optional `card` | ✅ `ApiEndpoints.chat`, sends `message, messages, location, lat, lon, language, mode, farmer_mode, crop, growth_stage, soil, irrigation` |
+| `/weather` | `GET` | Mobile Home (legacy fallback) | Home screen snapshot: current conditions (Open-Meteo + fusion overlay), 48h hourly, 7-day forecast, AQI, UV, sun timings, provenance | ✅ `ApiEndpoints.weather` — legacy fallback |
+| `/v2/weather` | `GET` | Mobile Home (primary) | WeatherNext-first: `lat, lon, mode, requested_source (auto\|weathernext\|open_meteo\|accuweather\|imd), forecast_days, hourly_hours, supplement, model` → returns `current, hourly, daily, provenance, temperature_spread, precip_next_24h, degraded` | ✅ `ApiEndpoints.v2Weather` primary |
+| `/v2/weather/health` | `GET` | Dev Suite | Backend health probe for WeatherNext | ✅ `ApiEndpoints.v2WeatherHealth` |
+| `/advisory` | `GET` | Farmer Mode | Day-by-day farm field-work suitability windows, hourly buckets (irrigation/spraying/field_work), TypeSafe System One decisions | ✅ `ApiEndpoints.advisory` |
+| `/historical` | `GET` | Researcher | Multi-year historical archive for rainfall, temperature, humidity | ✅ |
+| `/comparison` | `GET` | Researcher | Comparative multi-city variance series (`locations=name,lat,lon;…` from saved_locations) | ✅ |
+| `/fusion` | `GET` | Dev (legacy) | Multi-source ensemble inspector: provider values, weights, outlier flags — legacy weighted fusion | ✅ Exists in `backend-integration/backend/routers/dev.py` but NOT in `ApiEndpoints` |
+| `/health` | `GET` | Mobile Uptime | Liveness probe: `{ status: "ok", clients, uptime_s }` | ✅ `ApiEndpoints.health` |
+| `/dev` | `GET` | Dev Suite | Diagnostics: `ai_decisions, fusion {weights}, provider_keys_status, recent_logs` | ✅ `ApiEndpoints.diagnostics` |
+| `/dev/sandbox` | `POST` | Dev Suite | Single-prompt agent sandbox with latency timers | ✅ `ApiEndpoints.sandbox` |
+| `/dev/intent` | `GET` | Dev Suite | Intent routing inspector: keyword vs System One | ✅ `backend-integration/.../dev.py` |
+
+**Key correction**: Original listed only legacy `/weather` but production uses `/v2/weather` as primary (WeatherNext-first, IMD→WeatherNext→AccuWeather→Open-Meteo per `docs/app_data_contracts.md`). `/fusion` is dev-only, not mobile constant.
 
 ### 6.2 Chat Request Lifecycle
 
@@ -377,7 +401,7 @@ sequenceDiagram
 
 ## 7. Mobile App Architecture
 
-The Flutter application is structured around a **Feature-First Clean Architecture** with unidirectional data flow powered by **Riverpod 2.5**.
+The Flutter application is structured around a **Feature-First Clean Architecture** with unidirectional data flow powered by **Riverpod 2.6.1** (per lock, doc said 2.5) and **GoRouter 14.8.1**. Team visionaries_bvm.
 
 ```mermaid
 graph TD
@@ -413,11 +437,11 @@ graph TD
     SERVICES --> HIVE
 ```
 
-### 7.1 State Management (Riverpod 2.5)
+### 7.1 State Management (Riverpod 2.6.1 — fact-checked, doc said 2.5)
 
 The application avoids monolithic state singletons, favoring granular, auto-disposable providers:
 
-- `weatherProvider`: An `AsyncNotifier` managing the current location's meteorological snapshot. Automatically invalidates and refreshes when `locationProvider` emits new coordinates.
+- `weatherProvider`: A `FutureProvider<WeatherSnapshot>` (not AsyncNotifier) managing the current location's meteorological snapshot. Tries `/v2/weather` first (WeatherNext-first with `requested_source` auto or `weathernext` in Researcher mode), falls back to legacy `/weather` unless `disableV2Fallback`. Records `lastWeatherRequestProvider` (endpoint, query, usedLegacyFallback, v2Error). Automatically watches `locationProvider` and `settingsProvider.mode` + `developerOptionsProvider`. No Hive offline snapshot fallback — on DioException it throws `NetworkError`/`ServerError`.
 - `chatProvider`: A `StateNotifier<ChatState>` holding the conversation history, streaming status, and intent metadata.
 - `actionWindowsProvider`: Manages the agricultural field-work suitability schedule. It observes farm profile modifications (crop, soil, irrigation) and location changes, preventing stale agricultural advisories.
 - `settingsProvider`: Coordinates app-wide preferences (active language, persona mode, temperature units) persisted to Hive.
@@ -440,32 +464,37 @@ sequenceDiagram
     autonumber
     actor User
     participant App as WeatherHomeScreen
-    participant Prov as weatherProvider
-    participant Client as ApiClient
-    participant Cache as Hive Storage
-    participant API as FastAPI (/weather)
+    participant Prov as weatherProvider (FutureProvider)
+    participant Client as ApiClient (Dio 5.11.1)
+    participant APIv2 as FastAPI (/v2/weather)
+    participant API as FastAPI (/weather legacy)
 
     User->>App: Opens application or pulls to refresh
-    App->>Prov: ref.watch(weatherProvider)
-    Prov->>Client: get(ApiEndpoints.weather, {lat, lon, mode})
-    
-    alt Device is Offline / Network Timeout
-        Client-->>Prov: Throws DioException (connection failure)
-        Prov->>Cache: Retrieve last valid WeatherSnapshot
-        Cache-->>Prov: Cached snapshot + timestamp
-        Prov-->>App: AsyncData(cachedSnapshot) with offline badge
-    else Backend Reachable
-        Client->>API: HTTP GET /weather?lat=23.02&lon=72.57&mode=everyone
-        API-->>Client: HTTP 200 JSON {temperature_c, hourly, forecast, fusion, meta}
+    App->>Prov: ref.watch(weatherProvider) — watches locationProvider, settingsProvider.mode, developerOptionsProvider
+    Prov->>Client: get(ApiEndpoints.v2Weather, {lat, lon, mode, requested_source, forecast_days=7, hourly_hours=48, supplement, model})
+    Note over Client: Injects Accept-Language header from Hive settings.language
+    alt v2 Success
+        Client->>APIv2: HTTP GET /v2/weather?lat=23.02&lon=72.57&mode=everyone&requested_source=auto
+        APIv2-->>Client: HTTP 200 JSON {current, hourly, daily, provenance {selected_source, fallback_reasons, field_sources}, temperature_spread, precip_next_24h, degraded}
         Client->>Prov: Raw JSON map
-        Prov->>Prov: WeatherParser.fromJson(json)
-        Prov->>Cache: Persist latest snapshot to Hive
+        Prov->>Prov: parseWeatherSnapshotV2(data, cityName)
         Prov-->>App: AsyncData(liveSnapshot)
+    else v2 Fails & Fallback Enabled
+        Client->>API: HTTP GET /weather?lat=23.02&lon=72.57&mode=everyone&requested_source=auto
+        API-->>Client: HTTP 200 legacy JSON
+        Client->>Prov: Raw JSON map
+        Prov->>Prov: parseWeatherSnapshot(data, cityName)
+        Prov-->>App: AsyncData(legacySnapshot) with lastWeatherRequest.usedLegacyFallback=true
+    else Offline / Network Timeout
+        Client-->>Prov: Throws NetworkError (no Hive weather cache — verified: weather_provider.dart does NOT read Hive)
+        Prov-->>App: AsyncError -> ApiErrorView with retry
     end
 
-    App->>App: Evaluate SkyCondition & SolarPeriod
-    App->>App: Render WeatherHeroCard & AtmosphereVideoBackground
+    App->>App: Evaluate SkyCondition (12) & SolarPeriod (11) via atmosphere_theme.dart
+    App->>App: Render WeatherHeroCard & AtmosphereVideoBackground (bundled MP4s, offline-safe)
 ```
+
+**Correction**: Original doc claimed offline Hive snapshot cache with offline badge. Actual code does NOT cache weather snapshots in Hive — only `settings`, `farm_profile`, `saved_locations` boxes are opened in `main.dart`. Offline results in `ApiErrorView`, not cached data.
 
 ### 8.1 Generation Guarding
 
@@ -475,11 +504,11 @@ To prevent race conditions where a slow asynchronous request for a previous city
 
 ## 9. AI Agent Architecture & Conversational Engine
 
-The conversational engine combines **LangGraph** with an **8-model Groq LPU cascade** to achieve high-speed natural language understanding in Indian regional dialects.
+The conversational engine combines **LangGraph** with a **Groq LPU cascade** (claimed 8-model: gpt-oss-120b → qwen3.8-27b → Llama 3.3 etc — cannot fully verify as `backend/` submodule empty, but `backend-integration/backend/services/chat.py` confirms Groq + TypeSafe intent routing + fast path). Team visionaries_bvm.
 
-### 9.1 Multi-Model Groq Inference Cascade
+### 9.1 Multi-Model Groq Inference Cascade — Fact-Checked (partial, backend repo empty)
 
-To guarantee zero downtime and eliminate rate-limit bottlenecks (`429 Too Many Requests`), the backend binds a multi-model fallback cascade via LangChain's `.with_fallbacks()`:
+To guarantee zero downtime and eliminate rate-limit bottlenecks (`429 Too Many Requests`), the backend binds a multi-model fallback cascade via LangChain's `.with_fallbacks()` (claimed, but `backend/` submodule empty in this checkout, so model list unverified; `backend-integration` shows `GROQ_MODEL` env and `services/chat.py` routing):
 
 ```mermaid
 graph TD
@@ -502,43 +531,48 @@ The agent incorporates specialized prompt heuristics and regex parsers to correc
 
 ---
 
-## 10. Multi-Source Ensemble Fusion Engine
+## 10. Multi-Source Ensemble Fusion Engine — Fact-Checked (2026-09-21)
 
-WeatherGPT does not rely on a single meteorological provider. It fuses data across up to 5 distinct sources using an outlier-guarded, weighted mean algorithm executed server-side.
+**Team visionaries_bvm — Correction**: Original doc described only legacy weighted-mean fusion. Actual production per `docs/app_data_contracts.md`, `lib/models/weather.dart` (`WeatherProvenance`, `FieldSources`), and `backend-integration/backend/routers/mobile.py` is **WeatherNext-first selection policy** with per-field supplementation.
 
-### 10.1 Telemetry Providers & Priority Weights
+### 10.1 Current Production Policy (IMD → WeatherNext → AccuWeather → Open-Meteo)
 
-| Priority | Provider | Trust Weight | Key Required | Coverage | Metrics Provided |
+| Priority | Provider | Role | Key Required | Coverage | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1** | **Open-Meteo (ECMWF/IMD Standard)** | **2.0×** | None (Always-on) | Global / India | Temp, feels like, humidity, wind, pressure, UV, WMO code, hourly, daily |
-| **2** | **AccuWeather** | **1.5×** | `ACCUWEATHER_KEY` | Global | Temp, RealFeel, humidity, wind, pressure, UV, condition text |
-| **3** | **WeatherAPI.com** | **1.2×** | `WEATHERAPI_KEY` | Global / India | Temp, feels like, humidity, wind, pressure, UV, AQI, PM2.5, PM10 |
-| **3** | **Tomorrow.io** | **1.2×** | `TOMORROW_KEY` | Global | Temp, feels like, humidity, wind speed, surface pressure, UV |
-| **4** | **OpenWeatherMap** | **1.1×** | `OPENWEATHER_KEY` | Global | Temp, feels like, humidity, wind speed, pressure, conditions |
+| **0** | **IMD** | Primary (when configured) | `IMD_API_KEY` / `IMD_JWT_TOKEN` | India | Official, pending keys per roadmap |
+| **1** | **WeatherNext** | Primary (Google) | Google Cloud IAM | Global | High-res NWP, no sunrise/UV/AQI — supplemented |
+| **2** | **AccuWeather** | Fallback | `ACCUWEATHER_KEY` | Global | RealFeel, condition text |
+| **3** | **Open-Meteo** | Baseline / Supplement | None (Always-on) | Global / India | Fills gaps WeatherNext cannot supply (sunrise, UV, AQI, humidity) |
 
-### 10.2 Mathematical Fusion Formula
+**How it works (verified)**:
+- `weatherProvider` sends `requested_source`: `auto` (backend policy) or pinned (`weathernext`, `open_meteo`, `accuweather`, `imd`) via `DevSourcePin`.
+- Researcher mode pins `weathernext` by contract unless dev override.
+- Backend returns `provenance: {selected_source, requested_source, fallback_reasons[], tried_providers[], source, product, run_id, issued_at, degraded}` and `field_sources: {temperature_c: "weathernext", humidity: "open_meteo", uv_index: null, _supplement: {provider, enabled, attempted, filled[], errors[], cache_hit}}`
+- `FieldSources` in `lib/models/weather.dart` keeps per-field attribution; UI shows "via Open-Meteo" badge when supplemented.
+- `degraded` = true only when a *configured* provider failed or data stale, not when IMD skipped for missing key (`kNotConfiguredReasons`).
+- Everyone-mode enrichments: `temperature_spread {p10_c, p90_c, source, run_id, valid_from, valid_to, members}` (rejected if one-sided/inverted) and `precip_next_24h {total_mm, start, end, complete}` (partial labelled).
 
-For any continuous meteorological metric $M$ (e.g. Temperature, Relative Humidity, Barometric Pressure) across the set $P_M$ of accepted, non-outlier providers reporting $M$:
+### 10.2 Legacy Weighted Fusion (still exposed via GET /fusion for dev diagnostics)
+
+WeatherGPT originally (and still for `GET /fusion`) fuses up to 5 providers with outlier-guarded weighted mean:
+
+| Priority | Provider | Trust Weight | Key Required | Coverage |
+| :--- | :--- | :--- | :--- | :--- |
+| **1** | **Open-Meteo (ECMWF/IMD Standard)** | **2.0×** | None | Global / India |
+| **2** | **AccuWeather** | **1.5×** | `ACCUWEATHER_KEY` | Global |
+| **3** | **WeatherAPI.com** | **1.2×** | `WEATHERAPI_KEY` | Global |
+| **3** | **Tomorrow.io** | **1.2×** | `TOMORROW_KEY` | Global |
+| **4** | **OpenWeatherMap** | **1.1×** | `OPENWEATHER_KEY` | Global |
+
+**Legacy formula** (for `/fusion` inspector):
 
 $$\text{Fused Metric } M = \frac{\sum_{i \in P_M} (M_i \times W_i)}{\sum_{i \in P_M} W_i}$$
 
-Where:
-- $M_i$ = Numerical metric reported by provider $i$
-- $W_i$ = Trust weight assigned to provider $i$ ($2.0, 1.5, 1.2, 1.2, 1.1$)
+Outlier guard: $|T_i - T_{Open-Meteo}| > 7.0°C$ → excluded, flagged in `/fusion`.
 
-#### Outlier Rejection Guard
-If provider $i$'s temperature deviates from the Open-Meteo baseline by more than $\Delta T_{\text{threshold}} = 7.0^\circ\text{C}$, it is classified as an outlier:
+Confidence: High ≤1.5°C spread, Medium 1.5–3.5°C, Low >3.5°C, Single-Source.
 
-$$\text{Outlier Flag } O_i = \begin{cases} \text{true} & \text{if } |T_i - T_{\text{Open-Meteo}}| > 7.0^\circ\text{C} \\ \text{false} & \text{otherwise} \end{cases}$$
-
-Outlier readings are excluded from the fused mean calculation and flagged in the `/fusion` diagnostic payload.
-
-#### Confidence Score Rating
-The fusion engine computes a confidence rating based on provider spread:
-- **High Confidence**: Temperature spread $\le 1.5^\circ\text{C}$ across providers.
-- **Medium Confidence**: Temperature spread between $1.5^\circ\text{C}$ and $3.5^\circ\text{C}$.
-- **Low Confidence**: Temperature spread $> 3.5^\circ\text{C}$.
-- **Single-Source**: Only one provider answered.
+**Status**: Legacy path still in `backend-integration/backend/routers/dev.py` `fusion_inspector` (`PROVIDER_WEIGHTS`, `configured_providers()`), but mobile home uses WeatherNext-first, not weighted mean. See `docs/app_data_contracts.md` for authoritative contract.
 
 ---
 
@@ -637,13 +671,13 @@ The contract below is shared between the FastAPI server and the Flutter mobile c
 
 The AI agent embeds dynamic UI cards directly in its markdown output using structured code tags. The mobile client parses these blocks, sanitizes raw code markers, and renders native Flutter cards.
 
-### Supported Widget Tags
+### Supported Widget Tags — Fact-Checked
 
-| Tag Syntax | Native Render Component | Functionality |
-| :--- | :--- | :--- |
-| ` ```widget:weather ` | `ChatWeatherWidget` / Metric Strip | Fused temperature, condition, humidity, wind, and advisory line |
-| ` ```widget:forecast ` | `ChatForecastWidget` / Daily Cards | Multi-day daily forecast strip with rain probabilities |
-| ` ```widget:alert ` | `ChatAlertWidget` / Hazard Banner | Severity-coded hazard warnings (RED/YELLOW/GREEN) |
+| Tag Syntax | Native Render Component | Functionality | Verified |
+| :--- | :--- | :--- | :--- |
+| ` ```widget:weather ` | `ChatWeatherWidget` / Metric Strip | Fused temperature, condition, humidity, wind, advisory | ✅ Exists — parsed in chat_screen.dart, sanitized by MarkdownUtils |
+| ` ```widget:forecast ` | `ChatForecastWidget` / Daily Cards | Multi-day forecast strip | ✅ Exists |
+| ` ```widget:alert ` | `ChatAlertWidget` / Hazard Banner | Severity-coded warnings (RED/YELLOW/GREEN) | ⚠️ Not found in lib/ — backend-only or roadmap |
 
 ### Structured Voice Response Cards
 
@@ -676,22 +710,22 @@ When queries are initiated via the voice interface (`/voice/listening`), the bac
 
 ---
 
-## 13. Multilingual Engine & Internationalization (i18n)
+## 13. Multilingual Engine & Internationalization (i18n) — Fact-Checked (9 live, 1 planned)
 
-WeatherGPT Mobile provides end-to-end native script localization and speech support across **10 Indian regional languages**:
+WeatherGPT Mobile provides end-to-end native script localization and speech support across **9 live Indian regional languages** (10th Punjabi planned, mapping exists but file missing):
 
-| Language | ISO Code | Native Script | TTS Locale | STT Speech Model |
-| :--- | :--- | :--- | :--- | :--- |
-| **English** | `en` | English | `en-US` / `en-IN` | `en_IN` |
-| **Hindi** | `hi` | हिंदी | `hi-IN` | `hi_IN` |
-| **Gujarati** | `gu` | ગુજરાતી | `gu-IN` | `gu_IN` |
-| **Marathi** | `mr` | मराठी | `mr-IN` | `mr_IN` |
-| **Tamil** | `ta` | தமிழ் | `ta-IN` | `ta_IN` |
-| **Telugu** | `te` | తెలుగు | `te-IN` | `te_IN` |
-| **Bengali** | `bn` | বাংলা | `bn-IN` | `bn_IN` |
-| **Kannada** | `kn` | ಕನ್ನಡ | `kn-IN` | `kn_IN` |
-| **Malayalam** | `ml` | മലയാളം | `ml-IN` | `ml_IN` |
-| **Punjabi** | `pa` | ਪੰਜਾਬੀ | `pa-IN` | `pa_IN` |
+| Language | ISO Code | Native Script | TTS Locale | STT Speech Model | File? | Locale in main.dart? |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **English** | `en` | English | `en-US` / `en-IN` | `en_US` | ✅ `en.json` | ✅ |
+| **Hindi** | `hi` | हिंदी | `hi-IN` | `hi_IN` | ✅ `hi.json` | ✅ |
+| **Gujarati** | `gu` | ગુજરાતી | `gu-IN` | `gu_IN` | ✅ `gu.json` | ✅ |
+| **Marathi** | `mr` | मराठी | `mr-IN` | `mr_IN` | ✅ `mr.json` | ✅ |
+| **Tamil** | `ta` | தமிழ் | `ta-IN` | `ta_IN` | ✅ `ta.json` | ✅ |
+| **Telugu** | `te` | తెలుగు | `te-IN` | `te_IN` | ✅ `te.json` | ✅ |
+| **Bengali** | `bn` | বাংলা | `bn-IN` | `bn_IN` | ✅ `bn.json` | ✅ |
+| **Kannada** | `kn` | ಕನ್ನಡ | `kn-IN` | `kn_IN` | ✅ `kn.json` | ✅ |
+| **Malayalam** | `ml` | മലയാളം | `ml-IN` | `ml_IN` | ✅ `ml.json` | ✅ |
+| **Punjabi** | `pa` | ਪੰਜਾਬੀ | `pa-IN` | `pa_IN` (mapped in voice_provider) | ❌ `pa.json` MISSING | ❌ NOT in main.dart — planned |
 
 ### Localization Implementation
 - **Key-Value Dictionary**: Managed via `assets/translations/<iso>.json` using `easy_localization`.
@@ -700,9 +734,11 @@ WeatherGPT Mobile provides end-to-end native script localization and speech supp
 
 ---
 
-## 14. Risk Assessment & Environmental Hazard Engine
+## 14. Risk Assessment & Environmental Hazard Engine — Fact-Checked (Partial / Backend-driven)
 
-The application evaluates 5-day weather telemetry against critical emergency thresholds, triggering proactive hazard classifications:
+**Correction**: Original claimed dedicated 5-day RED/YELLOW/GREEN engine in app code with thresholds 44°C, 50mm, 50 km/h. No such logic found in lib/ (grep only status colors). Hazard handling is backend-driven via chat markdown + advisory Suitability (good/caution/avoid/neutral) + IMD CAP. Marked as partial.
+
+Original diagram (kept for reference, not implemented as described in app):
 
 ```mermaid
 graph TD
@@ -814,7 +850,7 @@ graph LR
 | **3. Numerical Weather Prediction (NWP) Integration** | High-resolution ECMWF and GFS global NWP models assigned Priority-1 trust weight (2.0×) in the ensemble engine. | ✅ **Fully Implemented** | `backend/services/fusion.py`<br>`lib/features/explore/` |
 | **4. Extreme Weather & Disaster Warnings** | Severity-coded hazard warnings (RED/YELLOW), IMD CAP alert integration, and automatic emergency advisory triggers. | ✅ **Fully Implemented** | `lib/features/home/widgets/`<br>`lib/core/utils/markdown_utils.dart` |
 | **5. Location-Based Agricultural Advisories** | GPS location detection + Farmer Mode + TypeSafe System One (Jev) crop-specific action windows. | ✅ **Fully Implemented** | `lib/features/farmer/`<br>`backend-integration/` |
-| **6. Multilingual Indian Language Support** | Native script UI and speech processing across **10 Indian regional languages** + automatic language negotiation. | ✅ **Fully Implemented** | `assets/translations/*.json`<br>`lib/core/localization/` |
+| **6. Multilingual Indian Language Support** | Native script UI and speech processing across **9 live (10 planned)** Indian regional languages + automatic language negotiation. pa.json missing, pa not in main.dart, but STT mapping exists. | ⚠️ **Partially Implemented (9/10)** | `assets/translations/*.json` (9 files)<br>`lib/main.dart` (9 locales)<br>`voice_provider.dart` (maps pa) |
 | **7. Climatological Trends & Historical Analysis**| Multi-year historical archive comparisons, rainfall anomaly trend charts, and multi-station variance views. | ✅ **Fully Implemented** | `lib/features/researcher/`<br>`lib/features/researcher/screens/` |
 | **8. Voice Accessibility for Rural Demographics**| Voice-first interface with hands-free STT listening, neural TTS speech, and automatic speech cleanup. | ✅ **Fully Implemented** | `lib/features/voice/`<br>`lib/core/utils/markdown_utils.dart` |
 
@@ -875,3 +911,73 @@ graph LR
 ### 19.5 Full-Duplex Voice-First AI Assistant
 - **Status**: [🚀 Planned]
 - **Overview**: Implementing hands-free wake-word detection (*"Hey WeatherGPT"*), on-device neural Text-to-Speech for low-bandwidth rural environments, and full-duplex conversational voice streaming.
+
+
+---
+
+## 20. Fact-Check Corrections Log (2026-09-21) — Team visionaries_bvm
+
+**Auditor**: Automated codebase audit vs lib/, pubspec.yaml, pubspec.lock, backend-integration/, docs/, .github/workflows/
+
+### Summary: Is ARCHITECTURE.md 100% true?
+
+**No — ~70% true, 30% outdated/overstated**. Core architecture (Feature-First, Riverpod, GoRouter, Hive, ApiClient, generation guards, null semantics, TypeSafe Jev, atmospheric theme 11 periods + 12 conditions, 5-tab debug) is accurate. Specific versions, URLs, language count, fusion policy, offline behavior are inaccurate.
+
+### Critical Corrections
+
+| # | Claim | Actual | Source |
+| :--- | :--- | :--- | :--- |
+| 1 | Team name not mentioned | Team visionaries_bvm | User request |
+| 2 | Production backend https://weathergpt-api.onrender.com | Actual https://weathergpt-backend.vercel.app | lib/core/constants/backend_config.dart:4, .env.example |
+| 3 | 10 languages live | 9 live (bn,en,gu,hi,kn,ml,mr,ta,te) — pa.json missing, main.dart 9 locales | assets/translations/, lib/main.dart |
+| 4 | flutter_riverpod 2.5.1 | ^2.5.1 → 2.6.1 lock | pubspec.lock |
+| 5 | go_router 14.2.0 | ^14.2.0 → 14.8.1 | pubspec.lock |
+| 6 | dio 5.4.3 | ^5.4.3 → 5.11.1 | pubspec.lock |
+| 7 | speech_to_text 7.4.0 | ^7.4.0 yaml → 6.6.2 lock | pubspec.lock |
+| 8 | flutter_tts 4.0.2 | ^4.0.2 → 4.2.5 | pubspec.lock |
+| 9 | google_fonts 6.2.1 | ^6.2.1 → 6.3.3 | pubspec.lock |
+| 10 | flutter_animate 4.5.0 | ^4.5.0 → 4.5.2 | pubspec.lock |
+| 11 | easy_localization 3.0.7 | ^3.0.7 → 3.0.8 | pubspec.lock |
+| 12 | permission_handler 11.3.1 | ^11.3.1 → 11.4.0 | pubspec.lock |
+| 13 | ApiEndpoints includes /fusion | NOT in ApiEndpoints — dev-only in backend-integration/.../dev.py, mobile has /v2/weather etc | lib/core/constants/api_endpoints.dart |
+| 14 | Fusion = weighted mean only | Production = IMD → WeatherNext → AccuWeather → Open-Meteo + per-field supplementation + provenance; legacy weighted still for /fusion | docs/app_data_contracts.md, backend-integration/.../mobile.py |
+| 15 | Offline Hive weather cache | No Hive weather cache — only settings, farm_profile, saved_locations; offline throws NetworkError → ApiErrorView | lib/main.dart, weather_provider.dart |
+| 16 | weatherProvider = AsyncNotifier | FutureProvider<WeatherSnapshot> | weather_provider.dart |
+| 17 | widget:alert implemented | Not found in lib/ | grep |
+| 18 | Risk engine RED/YELLOW/GREEN 44°C/50mm/50km/h in app | No such logic in lib/ — backend-driven | grep lib/ |
+| 19 | Backend FastAPI 0.115 verified | Cannot verify — backend submodule empty, but backend-integration uses FastAPI | backend/ empty |
+| 20 | 8-model Groq cascade verified | Cannot fully verify — backend empty, but backend-integration confirms Groq | backend-integration/ |
+
+### What IS 100% True (Verified)
+
+- Feature-First Clean Architecture
+- 11 SkyPeriod + 12 SkyCondition (including unknown)
+- Null semantics: json_values.dart null for absent/NaN/Infinity/blank, WMO null ≠ 0, hourly dropped if no temp
+- Generation guarding in chat, voice, actionWindows (_generation + contextKey)
+- ApiClient singleton Dio with Accept-Language, RequestLog ring 60
+- WeatherProvenance + FieldSources per-field attribution, degraded logic, kNotConfiguredReasons
+- TemperatureSpread p10-p90 and PrecipitationInterval next 24h enrichments
+- TypeSafe System One: typesafe.py, advisory.py, chat.py intent, dev.py ai_decisions + /dev/intent
+- ActionWindows 12 two-hour buckets, 3 tracks, contextKey lat,lon|crop|stage|soil|irrig|UTCdate, no bundled offline advisory
+- VoiceCard with CardTone good/caution/avoid, no fabricated stats
+- 5-tab debug: Snapshot, Sources, Providers, Requests, Health
+- CI/CD Flutter 3.44.0, keystore decode, debug fallback
+- Design tokens bgPrimary #0B1220, accent #2DD4BF etc
+
+### Team Name Change
+
+- Changed team name to visionaries_bvm per user request in ARCHITECTURE.md header + Section 1 + Section 20 and README.md Team section
+
+### Recommended Next Actions
+
+1. Add assets/translations/pa.json and Locale('pa') in main.dart to reach 10, or update docs to 9 live + 1 planned
+2. Run flutter pub get to sync lock with yaml (speech_to_text mismatch)
+3. Update README backend URL from https://weathergpt-api.onrender.com to https://weathergpt-backend.vercel.app
+4. Document both fusion paths: WeatherNext-first (prod) + legacy weighted /fusion (dev)
+5. Implement or remove widget:alert claim
+6. Implement explicit risk thresholds or mark backend-driven roadmap
+7. Add offline Hive weather caching if desired, or keep error-view behavior
+
+**Team**: visionaries_bvm
+**Date**: 2026-09-21
+
