@@ -70,8 +70,9 @@ Every commit and pull request automatically triggers our GitHub Actions CD pipel
    # For Physical Android Device on same Wi-Fi:
    BACKEND_URL=http://<YOUR_LOCAL_IP>:8888
 
-   # For Live Cloud Backend:
-   BACKEND_URL=https://weathergpt-api.onrender.com
+   # For Live Cloud Backend (actual per backend_config.dart):
+   BACKEND_URL=https://weathergpt-backend.vercel.app
+   # Legacy docs said https://weathergpt-api.onrender.com — outdated
    ```
    *(Note: API keys for weather providers, Groq LLMs, and TypeSafe Jev are stored securely on the backend server, never inside the mobile app binary).*
 
@@ -95,12 +96,12 @@ Every commit and pull request automatically triggers our GitHub Actions CD pipel
 
 ## 🌟 What is WeatherGPT Mobile?
 
-WeatherGPT Mobile transforms complex meteorological telemetry into actionable, hyper-local intelligence rendered in **10 Indian regional languages** with two-way voice capabilities (Speech-to-Text and neural Text-to-Speech).
+WeatherGPT Mobile transforms complex meteorological telemetry into actionable, hyper-local intelligence rendered in **9 live Indian regional languages (10th Punjabi planned)** — fact-checked 2026-09-21: 9 files in assets/translations/ (bn,en,gu,hi,kn,ml,mr,ta,te), pa.json missing with two-way voice capabilities (Speech-to-Text and neural Text-to-Speech).
 
 Unlike standard weather apps that display rigid, confusing numbers, WeatherGPT empowers citizens, farmers, and disaster managers with:
 - **Natural Language Conversational Assistant**: Ask complex weather questions in your regional mother tongue (*"Will it rain on my cotton crop in Rajkot tomorrow?"*).
 - **TypeSafe System One (Jev) Agricultural AI**: Calibrated probabilistic farm action windows for pesticide spraying, irrigation scheduling, and harvesting.
-- **Authoritative Multi-Source Ensemble Engine**: Parallel data ingestion across 5 meteorological providers with weighted, outlier-guarded fusion (**Open-Meteo ECMWF/IMD 2.0× > AccuWeather 1.5× > WeatherAPI 1.2× > Tomorrow.io 1.2× > OpenWeatherMap 1.1×**).
+- **Authoritative Multi-Source Ensemble Engine**: Current production uses **IMD → WeatherNext → AccuWeather → Open-Meteo** selection policy with per-field supplementation and provenance tracking (see docs/app_data_contracts.md). Legacy weighted fusion (Open-Meteo 2.0× > AccuWeather 1.5× > WeatherAPI 1.2× > Tomorrow.io 1.2× > OpenWeatherMap 1.1×) still exposed via GET /fusion for dev diagnostics — fact-checked 2026-09-21.
 - **Dynamic Live Atmospheric Sky**: 11 solar periods and 12 weather conditions driving smooth gradient transitions and looping video skies.
 - **Interactive Windy GIS Radar & Maps**: Full-screen radar, satellite, wind stream, and cloud cover layers embedded directly in the app.
 - **Strict Null Semantics (Zero Guesswork)**: Missing data is rendered honestly as `—` rather than fabricated `0 °C` or `0 mm` values.
@@ -187,7 +188,7 @@ graph TB
 
 ---
 
-## 🌐 10 Regional Indian Languages & Voice Engine
+## 🌐 9 Live (+1 Planned) Regional Indian Languages & Voice Engine — Fact-Checked
 
 WeatherGPT Mobile breaks language barriers with native script rendering and voice input/output:
 
@@ -202,7 +203,7 @@ WeatherGPT Mobile breaks language barriers with native script rendering and voic
 | **Bengali** | বাংলা | `bn-IN` | `bn_IN` |
 | **Kannada** | ಕನ್ನಡ | `kn-IN` | `kn_IN` |
 | **Malayalam** | മലയാളം | `ml-IN` | `ml_IN` |
-| **Punjabi** | ਪੰਜਾਬੀ | `pa-IN` | `pa_IN` |
+| **Punjabi** | ਪੰਜਾਬੀ | `pa-IN` | `pa_IN` | ❌ MISSING pa.json — planned |
 
 ---
 
@@ -246,7 +247,9 @@ This repository links the backend as a git submodule at `backend/`. Always publi
 
 ---
 
-## 👥 Hackathon Team (SIH 2026)
+## 👥 Hackathon Team (SIH 2026) — Team visionaries_bvm
+
+**Team Name**: **visionaries_bvm** (updated per fact-check request 2026-09-21)
 
 - **Om Senjalia** — Mobile & Backend Architecture, Ensemble Fusion Engine, LangGraph Agent
 - **Om Vaghela** — Frontend & UI Reference Design
@@ -254,6 +257,8 @@ This repository links the backend as a git submodule at `backend/`. Always publi
 - **Nidhi Patel** — Meteorological Data Curation & Multilingual Lexicons
 - **Vishrut Gandhi** — Presentations & SIH Compliance
 - **Prachi** — Domain Research & Agricultural Use Cases
+
+> **Fact-Check Note (2026-09-21)**: Original ARCHITECTURE.md claimed 10 live languages, production URL https://weathergpt-api.onrender.com, and pure weighted fusion. Verified actual: 9 live translations (bn,en,gu,hi,kn,ml,mr,ta,te — pa.json missing, pa mapping exists in voice_provider), production URL https://weathergpt-backend.vercel.app (per lib/core/constants/backend_config.dart), and current production uses IMD → WeatherNext → AccuWeather → Open-Meteo selection + per-field supplementation (legacy weighted fusion still via GET /fusion dev endpoint). See ARCHITECTURE.md Section 20 for full corrections log.
 
 ---
 
