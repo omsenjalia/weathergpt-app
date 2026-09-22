@@ -42,16 +42,31 @@ class SettingsScreen extends ConsumerWidget {
     final dev = ref.watch(developerOptionsProvider);
     final devN = ref.read(developerOptionsProvider.notifier);
     final bottom = MediaQuery.paddingOf(context).bottom + 80;
+    final palette = ambientPalette();
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, bottom),
-          children: [
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          AtmosphereBackground(
+            top: palette.top,
+            mid: palette.mid,
+            bottom: palette.bottom,
+            glow: palette.glow,
+            secondaryGlow: palette.accent,
+            scrim: false,
+          ),
+          SafeArea(
+            bottom: false,
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, bottom),
+              children: [
             const Text('Settings',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.6)),
             const SizedBox(height: 6),
             const Text('Language, voice, and experience',
                 style: TextStyle(color: AppColors.textSecondary)),
@@ -401,8 +416,48 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
 
-          ],
-        ),
+            const SizedBox(height: 26),
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.gradientAccent,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.wb_cloudy_rounded,
+                        size: 24, color: Colors.black),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'common.weather_gpt'.tr(),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'settings.footer'.tr(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textTertiary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -422,9 +477,9 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _card({required Widget child}) => Container(
         decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.borderSubtle),
+          color: Colors.white.withValues(alpha: 0.055),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.glassBorder),
         ),
         clipBehavior: Clip.antiAlias,
         child: child,

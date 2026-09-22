@@ -49,12 +49,23 @@ class LanguageSelectScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(onboardingProvider).selectedLanguage;
+    final palette = ambientPalette();
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-          child: Column(children: [
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          AtmosphereBackground(
+            top: palette.top,
+            mid: palette.mid,
+            bottom: palette.bottom,
+            glow: palette.glow,
+            secondaryGlow: palette.accent,
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              child: Column(children: [
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
@@ -106,8 +117,11 @@ class LanguageSelectScreen extends ConsumerWidget {
                       ref.read(onboardingProvider.notifier).selectLanguage(language.$1);
                       await context.setLocale(Locale(language.$1));
                     },
-                    child: AppCard(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: GlassCard(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      radius: 18,
+                      strong: isSelected,
                       child: SizedBox(
                           height: 54,
                           child: Row(children: [
@@ -145,8 +159,10 @@ class LanguageSelectScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             PrimaryButton(
                 label: 'onboarding.continue'.tr(), onPressed: () => _continue(context, ref)),
-          ]),
-        ),
+              ]),
+            ),
+          ),
+        ],
       ),
     );
   }

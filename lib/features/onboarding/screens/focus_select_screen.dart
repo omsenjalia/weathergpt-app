@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/atmosphere_background.dart';
+import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../home/theme/atmosphere_theme.dart';
 import '../providers/onboarding_provider.dart';
 
 class FocusSelectScreen extends ConsumerWidget {
@@ -35,81 +37,132 @@ class FocusSelectScreen extends ConsumerWidget {
   Color _accent(String persona) => switch (persona) {
         'farmer' => AppColors.farmerGreen,
         'researcher' => AppColors.researcherBlue,
-        _ => AppColors.textPrimary,
+        _ => AppColors.accent,
       };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(onboardingProvider).selectedPersona;
+    final palette = ambientPalette();
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-        body: SafeArea(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          AtmosphereBackground(
+            top: palette.top,
+            mid: palette.mid,
+            bottom: palette.bottom,
+            glow: palette.glow,
+            secondaryGlow: palette.accent,
+          ),
+          SafeArea(
             child: Padding(
-      padding: const EdgeInsets.fromLTRB(20, 56, 20, 20),
-      child: Column(children: [
-        Text('onboarding.focus_headline'.tr(),
-            style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 7),
-        Text('onboarding.focus_hint'.tr(),
-            style: const TextStyle(color: AppColors.textSecondary)),
-        const SizedBox(height: 30),
-        ..._options.map((option) {
-          final active = option.$1 == selected;
-          return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () => ref
-                    .read(onboardingProvider.notifier)
-                    .selectPersona(option.$1),
-                child: AppCard(
-                  borderColor:
-                      active ? _accent(option.$1) : AppColors.borderSubtle,
-                  borderWidth: active ? 2 : 1,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: SizedBox(
-                      height: 82,
-                      child: Row(children: [
-                        Container(
-                            width: 46,
-                            height: 46,
-                            decoration: BoxDecoration(
+              padding: const EdgeInsets.fromLTRB(20, 56, 20, 20),
+              child: Column(children: [
+                Text('onboarding.focus_headline'.tr(),
+                    style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 7),
+                Text('onboarding.focus_hint'.tr(),
+                    style: const TextStyle(color: AppColors.textSecondary)),
+                const SizedBox(height: 30),
+                ..._options.map((option) {
+                  final active = option.$1 == selected;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => ref
+                          .read(onboardingProvider.notifier)
+                          .selectPersona(option.$1),
+                      child: GlassCard(
+                        borderColor: active
+                            ? _accent(option.$1)
+                            : AppColors.glassBorder,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 14),
+                        radius: 20,
+                        strong: active,
+                        child: SizedBox(
+                          height: 82,
+                          child: Row(children: [
+                            Container(
+                              width: 46,
+                              height: 46,
+                              decoration: BoxDecoration(
                                 shape: BoxShape.circle,
+                                color: active
+                                    ? _accent(option.$1).withValues(alpha: 0.16)
+                                    : Colors.white.withValues(alpha: 0.05),
                                 border: Border.all(
-                                    color: active
-                                        ? _accent(option.$1)
-                                        : AppColors.textSecondary)),
-                            child: Icon(option.$2,
-                                color: option.$1 == 'farmer'
-                                    ? AppColors.farmerGreen
-                                    : AppColors.textPrimary)),
-                        const SizedBox(width: 14),
-                        Expanded(
-                            child: Column(
+                                  color: active
+                                      ? _accent(option.$1)
+                                      : AppColors.borderStrong,
+                                ),
+                              ),
+                              child: Icon(option.$2,
+                                  color: active
+                                      ? _accent(option.$1)
+                                      : AppColors.textSecondary),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                              Text(option.$3.tr(),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 4),
-                              Text(option.$4.tr(),
-                                  style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.textSecondary)),
-                            ])),
-                      ])),
-                ),
-              ));
-        }),
-        const Spacer(),
-        PrimaryButton(
-            label: 'onboarding.continue'.tr(),
-            onPressed: () async {
-              await ref.read(onboardingProvider.notifier).completeOnboarding();
-              if (context.mounted) context.go('/home');
-            }),
-      ]),
-    )));
+                                  Text(option.$3.tr(),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 4),
+                                  Text(option.$4.tr(),
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textSecondary)),
+                                ],
+                              ),
+                            ),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: active
+                                    ? _accent(option.$1)
+                                    : Colors.transparent,
+                                border: Border.all(
+                                  color: active
+                                      ? _accent(option.$1)
+                                      : AppColors.borderStrong,
+                                  width: 1.6,
+                                ),
+                              ),
+                              child: active
+                                  ? const Icon(Icons.check,
+                                      size: 14, color: Colors.white)
+                                  : null,
+                            ),
+                          ]),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+                const Spacer(),
+                PrimaryButton(
+                    label: 'onboarding.continue'.tr(),
+                    onPressed: () async {
+                      await ref
+                          .read(onboardingProvider.notifier)
+                          .completeOnboarding();
+                      if (context.mounted) context.go('/home');
+                    }),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

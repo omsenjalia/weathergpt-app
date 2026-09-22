@@ -1,7 +1,9 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/api_error_view.dart';
@@ -61,9 +63,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: weatherAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.accent),
-        ),
+        loading: () => const _HomeSkeleton(),
         error: (e, _) => ApiErrorView(
           error: e,
           onRetry: () => ref.invalidate(weatherProvider),
@@ -121,7 +121,17 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
               ),
               SafeArea(
                 bottom: false,
-                child: CustomScrollView(
+                child: RefreshIndicator(
+                  color: palette.accent,
+                  backgroundColor: AppColors.bgElevated,
+                  onRefresh: () async {
+                    HapticFeedback.lightImpact();
+                    ref.invalidate(weatherProvider);
+                  },
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
                   slivers: [
                     SliverToBoxAdapter(
                       child: Padding(
@@ -240,6 +250,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                     ),
                     SliverToBoxAdapter(child: SizedBox(height: bottomInset + 24)),
                   ],
+                ),
                 ),
               ),
               // Mic FAB — above floating nav bar (classic position)
@@ -398,6 +409,79 @@ class _LocationSheet extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Layout-stable shimmer skeleton shown while the first snapshot loads.
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        child: Shimmer.fromColors(
+          baseColor: const Color(0xFF1A2740),
+          highlightColor: const Color(0xFF243149),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 132,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  height: 226,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    for (var i = 0; i < 3; i++) ...[
+                      if (i > 0) const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          height: 104,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
