@@ -132,11 +132,12 @@ class WeatherHeroCard extends StatelessWidget {
     );
   }
 
-  Widget _pill(
-          {required String label,
-          required AtmospherePalette p,
-          IconData? icon,
-          bool strong = false}) =>
+  Widget _pill({
+    required String label,
+    required AtmospherePalette palette,
+    IconData? icon,
+    bool strong = false,
+  }) =>
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
         decoration: BoxDecoration(
@@ -152,14 +153,16 @@ class WeatherHeroCard extends StatelessWidget {
             if (icon != null) ...[
               Icon(icon,
                   size: 12,
-                  color: strong ? p.text : p.textMuted.withValues(alpha: 0.9)),
+                  color: strong
+                      ? palette.text
+                      : palette.textMuted.withValues(alpha: 0.9)),
               const SizedBox(width: 4),
             ],
             Text(label,
                 style: AppTextStyles.numeric(TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: strong ? p.text : p.textMuted))),
+                    color: strong ? palette.text : palette.textMuted))),
           ],
         ),
       );

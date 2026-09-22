@@ -247,7 +247,7 @@ class _Header extends ConsumerWidget {
           IconButton(
             tooltip: 'chat.new_conversation'.tr(),
             onPressed: () => ref.read(chatProvider.notifier).clear(),
-            icon: const Icon(Icons.add_comment_outline_rounded),
+            icon: const Icon(Icons.add_comment_outlined),
           ),
           IconButton(
             tooltip: 'chat.voice'.tr(),
@@ -378,23 +378,23 @@ class _MessageBubble extends StatelessWidget {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.sizeOf(context).width * 0.8,
             ),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [Color(0xFF2DD4BF), Color(0xFF38BDF8)],
               ),
               borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: const Radius.circular(20),
-                bottomRight: const Radius.circular(6),
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(6),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.accent.withValues(alpha: 0.22),
+                  color: Color(0x382DD4BF),
                   blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  offset: Offset(0, 4),
                 ),
               ],
             ),
@@ -427,7 +427,7 @@ class _MessageBubble extends StatelessWidget {
                           size: 12, color: Colors.black),
                     ),
                     const SizedBox(width: 7),
-                    Text(
+                    const Text(
                       'WeatherGPT',
                       style: TextStyle(
                         fontSize: 11.5,

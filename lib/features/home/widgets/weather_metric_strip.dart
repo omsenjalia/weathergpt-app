@@ -18,7 +18,7 @@ class WeatherMetricStrip extends StatelessWidget {
     final items = [
       (
         Icons.water_drop_outlined,
-        w.rainProbability == null ? null : w.rainProbability!.round(),
+        w.rainProbability?.round(),
         w.rainProbability == null ? '—' : '${w.rainProbability!.round()}%',
         'home.rain_chance'.tr(),
         const Color(0xFF38BDF8),

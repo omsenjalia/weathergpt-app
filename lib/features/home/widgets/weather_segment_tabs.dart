@@ -36,7 +36,7 @@ class WeatherSegmentTabs extends StatelessWidget {
             AnimatedAlign(
               duration: const Duration(milliseconds: 260),
               curve: Curves.easeOutCubic,
-              alignment: Alignment(-1 + 2 * index, 0),
+              alignment: Alignment(-1.0 + 2.0 * index, 0),
               child: FractionallySizedBox(
                 widthFactor: 1 / labels.length,
                 child: Padding(

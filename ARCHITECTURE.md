@@ -143,7 +143,7 @@ graph TB
 | Media | video_player | ^2.9.2 | Looping sky videos |
 | Fonts | google_fonts | ^6.2.1 → 6.3.3 | Inter, Poppins |
 | Animation | flutter_animate | ^4.5.0 → 4.5.2 | Micro-interactions |
-| Markdown | flutter_markdown | ^0.7.4+1 | Chat rendering |
+| Markdown | gpt_markdown | ^1.3.0 | AI-grade rendering: GFM tables, code blocks with copy, LaTeX, links (replaces the discontinued flutter_markdown) |
 | Permissions | permission_handler / geolocator | ^11.3.1 → 11.4.0 / ^12.0.0 | GPS, mic |
 
 ### 3.2 Backend
@@ -226,11 +226,15 @@ weathergpt-app/
 │   │   └── widgets/
 │   │       ├── api_error_view.dart
 │   │       ├── app_card.dart
+│   │       ├── atmosphere_background.dart # Drifting-glow gradient canvas
+│   │       ├── atmosphere_scaffold.dart  # Immersive scaffold wrapper
+│   │       ├── glass_card.dart           # Frosted-glass surface primitive
 │   │       ├── metric_chip.dart
-│   │       ├── navigation_shell.dart # Floating pill nav
+│   │       ├── navigation_shell.dart # Floating glass pill nav
 │   │       ├── outlined_button_pill.dart
 │   │       ├── persona_badge.dart
-│   │       └── primary_button.dart
+│   │       ├── primary_button.dart
+│   │       └── rich_markdown.dart   # Shared GptMarkdown renderer (tables, code, LaTeX)
 │   └── features/
 │       ├── home/
 │       │   ├── providers/ weatherProvider (FutureProvider, v2→legacy), locationProvider
@@ -559,7 +563,7 @@ AI embeds native cards in markdown via code fences. Mobile sanitizes and renders
 | ```widget:weather | ChatWeatherWidget | Temp, condition, humidity, wind, advisory |
 | ```widget:forecast | ChatForecastWidget | Multi-day strip |
 
-Sanitization: `lib/core/utils/markdown_utils.dart` strips widget blocks for TTS via `forSpeech()`.
+Sanitization: `lib/core/utils/markdown_utils.dart` strips widget blocks for TTS via `forSpeech()` (tables are flattened into spoken prose, LaTeX delimiters removed). Display rendering goes through the shared `RichMarkdown` widget (`lib/core/widgets/rich_markdown.dart`), which wraps `gpt_markdown`'s `GptMarkdown`: GFM tables (bordered, header-tinted, zebra-striped, horizontally scrollable), fenced code blocks with a copy button, inline and display LaTeX, styled blockquotes/lists/links, and `widget:`/`json` fence stripping so native-card instructions never leak into the conversation. Chat, the voice result screen and all AI surfaces share this one renderer.
 
 ### VoiceCard (Structured)
 

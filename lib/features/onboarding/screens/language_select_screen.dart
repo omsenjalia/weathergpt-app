@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/atmosphere_background.dart';
+import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../home/theme/atmosphere_theme.dart';
 import '../providers/onboarding_provider.dart';
 
 class LanguageSelectScreen extends ConsumerWidget {

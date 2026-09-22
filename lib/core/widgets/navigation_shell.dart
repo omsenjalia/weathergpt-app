@@ -83,7 +83,7 @@ class NavigationShell extends ConsumerWidget {
                                     duration:
                                         const Duration(milliseconds: 220),
                                     curve: Curves.easeOut,
-                                    padding: const EdgeInsets.symmetric(
+                                    padding: EdgeInsets.symmetric(
                                       horizontal: active ? 18 : 0,
                                       vertical: active ? 4 : 5,
                                     ),

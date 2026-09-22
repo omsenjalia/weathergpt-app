@@ -130,18 +130,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   /// Re-sends the last user message after a failure (banner "Retry" action).
   void retryLast() {
-    final lastUser = state.messages.lastWhere(
-      (m) => m.role == 'user',
-      orElse: _NoLastUser.new,
-    );
-    if (lastUser is! ChatMessage || lastUser.content.trim().isEmpty) return;
+    final hasUserTurn = state.messages.any((m) => m.role == 'user');
+    if (!hasUserTurn) return;
+    final lastUser =
+        state.messages.lastWhere((m) => m.role == 'user');
+    if (lastUser.content.trim().isEmpty) return;
     send(lastUser.content);
   }
-}
-
-/// Sentinel for [ChatNotifier.retryLast] when the history has no user turn.
-class _NoLastUser extends ChatMessage {
-  _NoLastUser() : super(role: 'system', content: '', at: DateTime(0));
 }
 
 

@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
-import '../../../core/widgets/glass_card.dart';
 import '../../home/providers/weather_provider.dart';
 import '../../home/theme/atmosphere_theme.dart';
 import '../providers/voice_provider.dart';

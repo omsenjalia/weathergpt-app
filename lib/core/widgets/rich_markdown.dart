@@ -49,13 +49,12 @@ class RichMarkdown extends StatelessWidget {
   final bool selectable;
 
   /// Removes native widget fences and json payloads the UI renders itself.
-  @visibleForTesting
   static String sanitize(String input) {
     var text = input
         .replaceAll(RegExp(r'```widget:[\s\S]*?```'), '')
         .replaceAll(RegExp(r'```json[\s\S]*?```'), '');
     // A stray fence the model forgot to close must not swallow the answer.
-    if ('```'.allMatches(text).isOdd) text = '$text\n```';
+    if ('```'.allMatches(text).length.isOdd) text = '$text\n```';
     return text.trim();
   }
 
