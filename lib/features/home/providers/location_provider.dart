@@ -56,12 +56,7 @@ class LocationNotifier extends StateNotifier<AppLocation> {
     }
     final Position pos;
     try {
-      pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.low,
-          timeLimit: Duration(seconds: 12),
-        ),
-      );
+      pos = await Geolocator.getCurrentPosition();
     } catch (_) {
       return null;
     }

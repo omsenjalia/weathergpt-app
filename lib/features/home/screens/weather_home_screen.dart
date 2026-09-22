@@ -65,6 +65,8 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Minute cadence: recompute the sky period while the user sits on Home.
+    ref.watch(clockTickerProvider);
     final location = ref.watch(locationProvider);
     final weatherAsync = ref.watch(weatherProvider);
     // The two compact enrichments are an Everyone-mode contract; Farmer and
