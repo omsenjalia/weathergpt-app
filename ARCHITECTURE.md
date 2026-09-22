@@ -478,7 +478,7 @@ graph TD
 **Flow**:
 - App sends `requested_source`: `auto` (backend policy) or pinned (`weathernext`, `open_meteo`, `accuweather`, `imd`) via `DevSourcePin`. Researcher mode pins `weathernext` unless dev override.
 - Backend returns `provenance: {selected_source, requested_source, fallback_reasons[], tried_providers[], source, product, run_id, issued_at, degraded}` and `field_sources: {temperature_c: "weathernext", humidity: "open_meteo", uv_index: null, _supplement: {provider, enabled, attempted, filled[], errors[], cache_hit}}`
-- `FieldSources` in `lib/models/weather.dart` keeps per-field attribution; the "via Open-Meteo" badges, the home status-line source name and the source/run rows in the detail sheets render **only in developer mode** — regular users see freshness ("Updated 14:30") and stale/limited-data warnings without provider names
+- `FieldSources` in `lib/models/weather.dart` keeps per-field attribution; the "via Open-Meteo" badges, the home status line and the source/run rows in the detail sheets render **only in developer mode** — regular users see no provenance or freshness UI on the home screen at all
 - `degraded` = true only when configured provider failed or stale, not when IMD skipped for missing key
 - Enrichments (Everyone mode): `temperature_spread {p10_c, p90_c, source, run_id, valid_from, valid_to, members}` (rejected if inverted/one-sided) and `precip_next_24h {total_mm, start, end, complete}` (partial labelled)
 

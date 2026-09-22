@@ -219,7 +219,7 @@ WeatherGPT Mobile breaks language barriers with native script rendering and voic
 
 ## 🛠️ On-Device Developer & Diagnostics Suite
 
-Data-source attribution (IMD / WeatherNext / AccuWeather / Open-Meteo) is developer-only: regular users see just freshness and warnings, while developers get full per-field provenance. Built-in developer tools give judges complete transparency into internal system operations:
+Data-source attribution (IMD / WeatherNext / AccuWeather / Open-Meteo) is developer-only: the home screen shows no source or freshness UI to regular users at all, while developers get the full per-field provenance. Built-in developer tools give judges complete transparency into internal system operations:
 
 1. Open **Settings** (bottom right tab).
 2. Scroll to **Developer** and toggle **Enable developer options**.
