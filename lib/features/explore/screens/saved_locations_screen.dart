@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../models/location.dart';
 import '../../home/providers/weather_provider.dart';
+import '../../home/widgets/location_search_section.dart';
 import '../providers/saved_locations_provider.dart';
 
 // Design is inferred from the saved-locations requirement; no dedicated mockup exists.
@@ -88,7 +89,6 @@ class _AddLocationSheet extends ConsumerStatefulWidget {
 }
 
 class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
-  final _controller = TextEditingController();
   static const _cities = [
     SavedLocation(name: 'Ahmedabad, Gujarat', lat: 23.0225, lon: 72.5714),
     SavedLocation(name: 'Rajkot, Gujarat', lat: 22.3039, lon: 70.8022),
@@ -98,17 +98,7 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
   ];
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final query = _controller.text.toLowerCase();
-    final results = _cities
-        .where((city) => city.name.toLowerCase().contains(query))
-        .toList();
     return SafeArea(
       top: false,
       child: Padding(
@@ -117,30 +107,41 @@ class _AddLocationSheetState extends ConsumerState<_AddLocationSheet> {
           const Text('Add a location',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: 'Search Gujarat cities',
-              prefixIcon: const Icon(Icons.search),
-              filled: true,
-              fillColor: AppColors.surfaceCardAlt,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppColors.borderSubtle)),
+          // Gujarat presets stay as the offline-friendly default; typing
+          // searches worldwide, with save toggles on every result.
+          SizedBox(
+            height: 360,
+            child: LocationSearchSection(
+              autofocus: true,
+              onSelected: (loc) async {
+                await ref.read(savedLocationsProvider.notifier).add(
+                    SavedLocation(
+                        name: loc.name, lat: loc.lat, lon: loc.lon));
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              idleChild: ListView(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                children: [
+                  for (final location in _cities)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading:
+                          const Icon(Icons.location_on_outlined),
+                      title: Text(location.name),
+                      onTap: () async {
+                        await ref
+                            .read(savedLocationsProvider.notifier)
+                            .add(location);
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 10),
-          ...results.map((location) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.location_on_outlined),
-                title: Text(location.name),
-                onTap: () async {
-                  await ref.read(savedLocationsProvider.notifier).add(location);
-                  if (context.mounted) Navigator.of(context).pop();
-                },
-              )),
         ]),
       ),
     );

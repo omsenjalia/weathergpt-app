@@ -241,7 +241,7 @@ weathergpt-app/
 │       │   ├── providers/ weatherProvider (FutureProvider, v2→legacy), locationProvider (one-time GPS permission prompt + reverse geocode + visible prompt bar with app-settings deep link), clockTickerProvider + atmospherePaletteProvider (live app-wide sky)
 │       │   ├── screens/weather_home_screen.dart
 │       │   ├── theme/atmosphere_theme.dart # 11 periods + 12 conditions
-│       │   └── widgets/ atmosphere_background, atmosphere_video_background, weather_hero_card, weather_metric_strip, weather_provenance_bar, weather_detail_panels, voice_orb, weather_segment_tabs
+│       │   └── widgets/ atmosphere_background, atmosphere_video_background, weather_hero_card, weather_metric_strip, weather_provenance_bar, weather_detail_panels, voice_orb, weather_segment_tabs, location_search_section (shared debounced place search + save toggles)
 │       ├── chat/
 │       │   ├── providers/chat_provider.dart # ChatNotifier + generation guard
 │       │   └── screens/chat_screen.dart
@@ -259,11 +259,11 @@ weathergpt-app/
 │       ├── voice/
 │       │   ├── models/voice_card.dart # VoiceCard, CardTone good/caution/avoid
 │       │   ├── mappers/voice_response_mapper.dart
-│       │   ├── providers/voice_provider.dart # STT + TTS + generation guard
+│       │   ├── providers/voice_provider.dart (STT + TTS + generation guard), tts_voice_provider.dart (voice-studio engine: enumerate, preview, per-language pick)
 │       │   └── screens/conversational_result_screen.dart, voice_listening_screen.dart
 │       ├── settings/
 │       │   ├── providers/settingsProvider, developerOptionsProvider (DevSourcePin, wnModel, hourly 1-168, forecast 1-15)
-│       │   └── screens/debug_screen.dart (5 tabs), settings_screen.dart (farmer persona gains a Farm profile section)
+│       │   └── models/tts_voice_option.dart (pure voice parse/filter/friendly-name helpers), screens/debug_screen.dart (5 tabs), settings_screen.dart (farmer persona gains a Farm profile section), voice_picker_screen.dart (per-language voice studio)
 │       └── onboarding/
 │           ├── providers/onboarding_provider.dart (persona/language state, Hive completion write, settings re-sync), farm_voice_provider.dart (voice onboarding STT/TTS + scripted step machine)
 │           └── screens/SplashScreen, LanguageSelectScreen, FocusSelectScreen, FarmChoiceScreen (Talk/Type choice) + FarmDetailsScreen (form) + FarmVoiceScreen (voice Q&A + tap-to-correct review) — extra farmer step: location, crop, stage, size, irrigation, soil
@@ -388,12 +388,14 @@ graph TD
 - **weatherProvider**: `FutureProvider<WeatherSnapshot>` — watches `locationProvider`, `settingsProvider.mode`, `developerOptionsProvider`. Tries `/v2/weather` primary, falls back to `/weather` legacy unless `disableV2Fallback`. Records `lastWeatherRequestProvider` (endpoint, query, usedLegacyFallback, v2Error). No Hive weather cache — on error throws `NetworkError`/`ServerError` → `ApiErrorView`.
 - **chatProvider**: `StateNotifier<ChatState>` — history, streaming, intent meta, generation guard
 - **actionWindowsProvider**: Farm suitability — watches farm profile (crop, soil, irrigation), location, contextKey = `lat,lon|crop|stage|soil|irrig|UTCdate`, generation guard
-- **settingsProvider**: Language, persona, units — persisted to Hive, validates persona
+- **settingsProvider**: Language, persona, units, per-language TTS voice picks (`ttsVoices` map) — persisted to Hive, validates persona
 - **developerOptionsProvider**: DevSourcePin (auto/weathernext/open_meteo/accuweather/imd), wnModel, hourly 1-168, forecast 1-15, supplement toggle, provenance display toggles (`showProvenanceOnHome`, `showFieldSourceBadges` — provider names render only when dev mode is on)
 - **farmProfileProvider / farmProfileCompletedProvider**: FarmProfile draft + save (Hive `farm_profile`), plus an explicit-saved flag (pre-flag saves count as completed)
 - **onboardingProvider**: language/persona selection; `completeOnboarding()` writes language + TTS locale + persona + completion flag to Hive, then `syncSettingsAfterOnboarding()` invalidates `settingsProvider` so the first home fetch already uses the chosen mode
-- **voiceProvider**: STT + TTS + generation guard
+- **voiceProvider**: STT + TTS + generation guard; `speak()` applies the saved device voice for the current language (system default when unset, stale, or overruled by a dev locale override)
 - **mapProvider / saved_locations_provider**: GIS layers, saved locations
+- **ttsVoicePickerProvider**: auto-disposed voice-studio engine — enumerates `getVoices`, previews with the user's speech rate, persists one choice per app language (`TtsVoiceSelection.source` reserves `'server'` for the future server-models follow-up)
+- **LocationSearchSection**: shared debounced `GeocodingService.searchMany` suggestions with save toggles; used by the Home location sheet, the Explore picker and the Saved add-sheet (whose Gujarat presets stay as the offline-friendly idle list)
 - **historicalDataProvider / comparisonProvider / anomaly_trends_provider**: Researcher data
 
 ### Null Semantics

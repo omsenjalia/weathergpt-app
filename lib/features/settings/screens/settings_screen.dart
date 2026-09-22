@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
+import '../models/tts_voice_option.dart';
 import '../providers/settings_provider.dart';
 import '../providers/developer_options_provider.dart';
 import '../../farmer/providers/farm_profile_provider.dart';
@@ -169,6 +170,15 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.record_voice_over_outlined,
+                        color: AppColors.accent),
+                    title: Text('settings.voice_title'.tr()),
+                    subtitle: Text(_voiceLabel(settings)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/settings/voice'),
+                  ),
+                  const Divider(height: 1),
                   ListTile(
                     title: const Text('Speech speed'),
                     subtitle: Text(
@@ -469,6 +479,16 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Subtitle for the Voice row: the saved voice's friendly name, or
+  /// System default when nothing (valid) is stored for this language.
+  String _voiceLabel(SettingsState settings) {
+    final sel = settings.ttsVoices[settings.language];
+    if (sel == null || !sel.isValid || !sel.isDevice) {
+      return 'settings.voice_default'.tr();
+    }
+    return TtsVoiceOption(name: sel.name, locale: sel.locale).friendlyName;
   }
 
   Widget _section(String t) => Padding(

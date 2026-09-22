@@ -272,5 +272,18 @@
   "farm.voice_repeat": "ફરી સાંભળો",
   "farm.voice_mic_needed": "અવાજમાં જવાબ આપવા માટે માઇકની પરવાનગી જોઈએ. તમે નીચેથી જવાબ પસંદ કરી શકો છો.",
   "farm.voice_stt_unavailable": "આ ડિવાઇસ પર અવાજથી લખાણ ઉપલબ્ધ નથી. તમે નીચેથી જવાબ પસંદ કરી શકો છો.",
-  "farm.voice_start_over": "ફરી શરૂ કરો"
+  "farm.voice_start_over": "ફરી શરૂ કરો",
+  "settings.voice_title": "અવાજ",
+  "settings.voice_default": "સિસ્ટમ ડિફૉલ્ટ",
+  "voice_picker.title": "અવાજ પસંદ કરો",
+  "voice_picker.hint": "અવાજો સાંભળો, પછી પસંદ કરવા ટેપ કરો. તમારી પસંદ આ ભાષા માટે યાદ રાખવામાં આવશે.",
+  "voice_picker.sample": "નમસ્તે! આ તમારો હવામાન અવાજ છે. કાલે તડકો રહેશે અને તાપમાન ત્રીસ ડિગ્રી રહેશે.",
+  "voice_picker.preview": "સાંભળો",
+  "voice_picker.stop": "રોકો",
+  "voice_picker.empty": "આ ડિવાઇસ પર આ ભાષાનો કોઈ અવાજ મળ્યો નથી.",
+  "voice_picker.failed": "અવાજો લોડ થઈ શક્યા નથી. કૃપા કરીને ફરી પ્રયાસ કરો.",
+  "location.search_hint": "શહેર કે ગામ શોધો…",
+  "location.no_results": "કોઈ જગ્યા મળી નથી. જોડણી કે તમારું કનેક્શન તપાસો.",
+  "location.save": "સાચવો",
+  "location.saved": "સાચવેલું"
 }

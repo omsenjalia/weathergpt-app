@@ -215,6 +215,8 @@ WeatherGPT Mobile breaks language barriers with native script rendering and voic
 | **Malayalam** | മലയാളം | `ml-IN` | `ml_IN` |
 | **Punjabi** | ਪੰਜਾਬੀ | `pa-IN` | `pa_IN` | ❌ MISSING pa.json — planned |
 
+> **Settings → Voice** opens a voice studio: preview every device voice for the current language and tap to select. The choice is remembered per language and applied to spoken answers.
+
 ---
 
 ## 🛠️ On-Device Developer & Diagnostics Suite

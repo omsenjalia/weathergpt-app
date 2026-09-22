@@ -272,5 +272,18 @@
   "farm.voice_repeat": "फिर से सुनें",
   "farm.voice_mic_needed": "आवाज़ में जवाब देने के लिए माइक की अनुमति चाहिए। आप नीचे से जवाब चुन सकते हैं।",
   "farm.voice_stt_unavailable": "इस डिवाइस पर आवाज़ से लिखना उपलब्ध नहीं है। आप नीचे से जवाब चुन सकते हैं।",
-  "farm.voice_start_over": "फिर से शुरू करें"
+  "farm.voice_start_over": "फिर से शुरू करें",
+  "settings.voice_title": "आवाज़",
+  "settings.voice_default": "सिस्टम डिफ़ॉल्ट",
+  "voice_picker.title": "आवाज़ चुनें",
+  "voice_picker.hint": "आवाज़ें सुनें, फिर चुनने के लिए टैप करें। आपकी पसंद इस भाषा के लिए याद रखी जाएगी।",
+  "voice_picker.sample": "नमस्ते! यह आपकी मौसम आवाज़ है। कल धूप खिलेगी और तापमान तीस डिग्री रहेगा।",
+  "voice_picker.preview": "सुनें",
+  "voice_picker.stop": "रोकें",
+  "voice_picker.empty": "इस डिवाइस पर इस भाषा की कोई आवाज़ नहीं मिली।",
+  "voice_picker.failed": "आवाज़ें लोड नहीं हो सकीं। कृपया फिर से कोशिश करें।",
+  "location.search_hint": "शहर या गाँव खोजें…",
+  "location.no_results": "कोई जगह नहीं मिली। वर्तनी या अपना कनेक्शन जाँचें।",
+  "location.save": "सहेजें",
+  "location.saved": "सहेजा गया"
 }

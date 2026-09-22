@@ -4,10 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import '../../../core/services/geocoding_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/location.dart';
 import '../../home/providers/location_provider.dart';
+import '../../home/widgets/location_search_section.dart';
 import '../../settings/providers/settings_provider.dart';
 import '../providers/map_provider.dart';
 
@@ -349,7 +349,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 
   Future<void> _showLocationPicker() async {
-    final controller = TextEditingController();
     final selected = await showModalBottomSheet<AppLocation>(
       context: context,
       isScrollControlled: true,
@@ -379,46 +378,25 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: 'e.g. Ahmedabad, Mumbai, Delhi',
-                  filled: true,
-                  fillColor: AppColors.bgPrimary,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.borderSubtle),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.search),
-                    onPressed: () async {
-                      final loc = await GeocodingService.search(controller.text);
-                      if (loc != null && ctx.mounted) {
-                        Navigator.pop(ctx, loc);
-                      }
-                    },
-                  ),
-                ),
-                onSubmitted: (q) async {
-                  final loc = await GeocodingService.search(q);
-                  if (loc != null && ctx.mounted) Navigator.pop(ctx, loc);
-                },
-              ),
-              const SizedBox(height: 12),
               SizedBox(
-                height: 200,
-                child: ListView(
-                  children: [
-                    for (final loc in kPresetLocations)
-                      ListTile(
-                        dense: true,
-                        leading: const Icon(Icons.place_outlined, size: 20),
-                        title: Text(loc.name),
-                        onTap: () => Navigator.pop(ctx, loc),
-                      ),
-                  ],
+                height: 340,
+                child: LocationSearchSection(
+                  autofocus: true,
+                  onSelected: (loc) => Navigator.pop(ctx, loc),
+                  idleChild: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      for (final loc in kPresetLocations)
+                        ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          leading:
+                              const Icon(Icons.place_outlined, size: 20),
+                          title: Text(loc.name),
+                          onTap: () => Navigator.pop(ctx, loc),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -426,7 +404,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         );
       },
     );
-    controller.dispose();
     if (selected != null) await _applyLocation(selected);
   }
 

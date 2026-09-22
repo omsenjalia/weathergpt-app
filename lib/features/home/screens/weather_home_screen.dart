@@ -18,6 +18,7 @@ import '../providers/location_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/atmosphere_theme.dart';
 import '../widgets/atmosphere_video_background.dart';
+import '../widgets/location_search_section.dart';
 import '../widgets/voice_orb.dart';
 import '../widgets/weather_detail_panels.dart';
 import '../widgets/weather_hero_card.dart';
@@ -475,12 +476,18 @@ class _LocationSheet extends ConsumerWidget {
             ),
             const Divider(height: 1, color: AppColors.borderSubtle),
             Expanded(
-              child: ListView.builder(
-                itemCount: unique.length,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: LocationSearchSection(
+                  onSelected: (loc) => Navigator.pop(context, loc),
+                  idleChild: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: unique.length,
                 itemBuilder: (_, i) {
                   final loc = unique[i];
                   final sel = loc.name == current.name;
                   return ListTile(
+                    contentPadding: EdgeInsets.zero,
                     leading: Icon(
                       Icons.place_outlined,
                       color: sel ? AppColors.accent : AppColors.textSecondary,
@@ -493,6 +500,8 @@ class _LocationSheet extends ConsumerWidget {
                     onTap: () => Navigator.pop(context, loc),
                   );
                 },
+                  ),
+                ),
               ),
             ),
           ],

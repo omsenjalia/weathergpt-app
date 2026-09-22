@@ -28,6 +28,7 @@ import '../features/researcher/screens/researcher_hub_screen.dart';
 import '../features/researcher/providers/anomaly_trends_provider.dart';
 import '../features/settings/screens/debug_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
+import '../features/settings/screens/voice_picker_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -108,6 +109,10 @@ final GoRouter appRouter = GoRouter(
       path: '/debug',
       parentNavigatorKey: rootNavigatorKey,
       builder: (_, __) => const DebugScreen(),
+    ),
+    GoRoute(
+      path: '/settings/voice',
+      builder: (_, __) => const VoicePickerScreen(),
     ),
     GoRoute(
       path: '/farmer/farm-profile',

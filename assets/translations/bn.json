@@ -272,5 +272,18 @@
   "farm.voice_repeat": "Repeat",
   "farm.voice_mic_needed": "Microphone access is needed to answer by voice. You can still tap an answer below.",
   "farm.voice_stt_unavailable": "Voice typing isn't available on this device. You can still tap an answer below.",
-  "farm.voice_start_over": "Start over"
+  "farm.voice_start_over": "Start over",
+  "settings.voice_title": "Voice",
+  "settings.voice_default": "System default",
+  "voice_picker.title": "Choose a voice",
+  "voice_picker.hint": "Preview voices, then tap to select. Your choice is remembered for this language.",
+  "voice_picker.sample": "Hello! This is your weather voice. Tomorrow will be sunny with a high of thirty degrees.",
+  "voice_picker.preview": "Preview",
+  "voice_picker.stop": "Stop",
+  "voice_picker.empty": "No voices found for this language on this device.",
+  "voice_picker.failed": "Could not load voices. Please try again.",
+  "location.search_hint": "Search city or village…",
+  "location.no_results": "No places found. Check the spelling or your connection.",
+  "location.save": "Save",
+  "location.saved": "Saved"
 }
