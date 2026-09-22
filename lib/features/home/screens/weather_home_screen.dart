@@ -57,7 +57,9 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
     final loc = await notifier.selectFromGps();
     if (loc != null || !mounted) return;
     // Something blocked the ask: explain instead of failing silently.
-    if (await notifier.isPermanentlyDenied) {
+    final permanentlyDenied = await notifier.isPermanentlyDenied;
+    if (!mounted) return;
+    if (permanentlyDenied) {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(

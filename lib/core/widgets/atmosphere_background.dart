@@ -18,6 +18,7 @@ class AtmosphereBackground extends StatefulWidget {
     this.scrim = true,
     this.animate = true,
     this.secondaryGlowOverride,
+    this.glowOverride,
   });
 
   /// The live sky. Watch [atmospherePaletteProvider] upstream so palette
@@ -157,7 +158,7 @@ class _AtmosphereBackgroundState extends State<AtmosphereBackground>
                 Positioned(
                   left: -size.width * 0.35 + t * 30,
                   top: -size.height * 0.12 - t * 20,
-                  child: _softCircle(size * 0.9, primaryGlow, 0.20),
+                  child: _softCircle(size * 0.9, widget.glowOverride ?? p.glow, 0.20),
                 ),
                 Positioned(
                   right: -size.width * 0.30 - t * 26,

@@ -48,7 +48,7 @@ class LocationNotifier extends StateNotifier<AppLocation> {
     if (!await Geolocator.isLocationServiceEnabled()) return false;
     final permission = await Geolocator.checkPermission();
     return permission == LocationPermission.denied ||
-        permission == LocationPermission.unable;
+        permission == LocationPermission.unableToDetermine;
   }
 
   /// True when permission was permanently refused and only the system
