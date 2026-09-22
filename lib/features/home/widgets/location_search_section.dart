@@ -128,8 +128,7 @@ class _LocationSearchSectionState
                 : _controller.text.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: MaterialLocalizations.of(context)
-                            .clearButtonLabel,
+                        tooltip: 'Clear',
                         icon: const Icon(Icons.clear_rounded),
                         onPressed: () {
                           _controller.clear();

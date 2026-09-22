@@ -47,7 +47,7 @@ class GeocodingService {
       if (lat is! num || lon is! num) continue;
       final name = entry['name'] as String? ?? query;
       final admin = entry['admin1'] as String?;
-      final country = first['country'] as String?;
+      final country = entry['country'] as String?;
       final label = [
         name,
         if (admin != null && admin.isNotEmpty) admin,
