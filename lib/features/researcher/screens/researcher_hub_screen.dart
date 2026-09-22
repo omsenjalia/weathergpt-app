@@ -8,10 +8,9 @@ import '../../../core/widgets/atmosphere_background.dart';
 import '../../../core/widgets/hub_card.dart';
 import '../../home/theme/atmosphere_theme.dart';
 
-/// Farmer hub — the dedicated "Farm" tab. Every farmer tool lives one tap
-/// from here instead of inside Settings.
-class FarmerHubScreen extends ConsumerWidget {
-  const FarmerHubScreen({super.key});
+/// Researcher hub — the dedicated "Lab" tab with the three analysis tools.
+class ResearcherHubScreen extends ConsumerWidget {
+  const ResearcherHubScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,7 +24,7 @@ class FarmerHubScreen extends ConsumerWidget {
             top: palette.top,
             mid: palette.mid,
             bottom: palette.bottom,
-            glow: AppColors.farmerGreen,
+            glow: AppColors.researcherBlue,
             secondaryGlow: palette.accent,
           ),
           SafeArea(
@@ -39,7 +38,7 @@ class FarmerHubScreen extends ConsumerWidget {
               ),
               children: [
                 Text(
-                  'persona.farmer'.tr(),
+                  'persona.researcher'.tr(),
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
@@ -48,7 +47,7 @@ class FarmerHubScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'persona.farmer_description'.tr(),
+                  'persona.researcher_description'.tr(),
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     height: 1.4,
@@ -56,17 +55,24 @@ class FarmerHubScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 HubCard(
-                  icon: Icons.schedule_rounded,
-                  accent: AppColors.farmerGreen,
-                  title: 'home.action_windows'.tr(),
-                  onTap: () => context.push('/farmer/action-windows'),
+                  icon: Icons.history_rounded,
+                  accent: AppColors.researcherBlue,
+                  title: 'researcher.historical_weather'.tr(),
+                  onTap: () => context.push('/researcher/historical'),
                 ),
                 const SizedBox(height: 12),
                 HubCard(
-                  icon: Icons.agriculture_outlined,
-                  accent: AppColors.farmerGreen,
-                  title: 'farmer.farm_profile'.tr(),
-                  onTap: () => context.push('/farmer/farm-profile'),
+                  icon: Icons.compare_arrows_rounded,
+                  accent: AppColors.researcherBlue,
+                  title: 'researcher.compare_locations'.tr(),
+                  onTap: () => context.push('/researcher/comparison'),
+                ),
+                const SizedBox(height: 12),
+                HubCard(
+                  icon: Icons.trending_up_rounded,
+                  accent: AppColors.researcherBlue,
+                  title: 'researcher.anomaly_trends'.tr(),
+                  onTap: () => context.push('/researcher/trends'),
                 ),
               ],
             ),
