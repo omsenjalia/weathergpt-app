@@ -210,5 +210,19 @@
   "home.explain_pressure": "औसत समुद्र तल पर घटाया गया वायु दबाव।",
   "home.explain_cloud": "बादलों से ढके आकाश का हिस्सा।",
   "home.unavailable_explicit": "स्रोत ने इस मान को स्पष्ट रूप से अनुपलब्ध बताया।",
-  "home.unavailable_generic": "{primary} यह फ़ील्ड प्रकाशित नहीं करता और कोई द्वितीयक स्रोत इसे भर नहीं सका।"
+  "home.unavailable_generic": "{primary} यह फ़ील्ड प्रकाशित नहीं करता और कोई द्वितीयक स्रोत इसे भर नहीं सका।",
+  "chat.ready": "तैयार",
+  "chat.thinking": "सोच रहा है…",
+  "chat.copied": "क्लिपबोर्ड पर कॉपी हो गया",
+  "chat.retry": "पुनः प्रयास",
+  "chat.welcome_title": "मौसम के बारे में कुऻ भी पूछें",
+  "chat.welcome_subtitle": "पूर्वानुमान, तालिकाएँ और सलाह — आपकी भाषा में उत्तर।",
+  "chat.new_conversation": "नई बातचीत",
+  "chat.voice": "आवाज़ से पूछें",
+  "voice.result_title": "आपका उत्तर",
+  "voice.ask_again": "फिर पूछें",
+  "voice.error": "कुछ गलत हो गया",
+  "voice.hint": "मौसम, बारिश या खेती के बारे में पूछें",
+  "voice.done_speaking": "बोलना पूरा हुआ",
+  "voice.try_again": "पुनः प्रयास करें"
 }

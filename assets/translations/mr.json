@@ -210,5 +210,19 @@
   "home.explain_pressure": "सरासरी समुद्र सपाटीवर आणलेला हवेचा दाब.",
   "home.explain_cloud": "ढगांनी झाकलेल्या आकाशाचा भाग.",
   "home.unavailable_explicit": "स्रोताने हे मूल्य स्पष्टपणे अनुपलब्ध असल्याचे कळवले.",
-  "home.unavailable_generic": "{primary} हे फील्ड प्रकाशित करत नाही आणि कोणताही दुय्यम स्रोत ते भरू शकला नाही."
+  "home.unavailable_generic": "{primary} हे फील्ड प्रकाशित करत नाही आणि कोणताही दुय्यम स्रोत ते भरू शकला नाही.",
+  "chat.ready": "तयार",
+  "chat.thinking": "विचार करत आहे…",
+  "chat.copied": "क्लिपबोर्डवर कॉपी झाले",
+  "chat.retry": "पुन्हा प्रयत्न करा",
+  "chat.welcome_title": "हवामानाबद्दल काहीही विचारा",
+  "chat.welcome_subtitle": "अंदाज, तक्ते आणि सल्ला — तुमच्या भाषेत उत्तर.",
+  "chat.new_conversation": "नवीन संभाषण",
+  "chat.voice": "आवाजाने विचारा",
+  "voice.result_title": "तुमचे उत्तर",
+  "voice.ask_again": "पुन्हा विचारा",
+  "voice.error": "काहीतरी चूक झाली",
+  "voice.hint": "हवामान, पाऊस किंवा शेतीबद्दल विचारा",
+  "voice.done_speaking": "बोलणे पूर्ण",
+  "voice.try_again": "पुन्हा प्रयत्न करा"
 }

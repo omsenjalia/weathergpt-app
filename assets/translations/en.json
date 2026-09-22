@@ -210,5 +210,19 @@
   "home.explain_pressure": "Air pressure reduced to mean sea level.",
   "home.explain_cloud": "Share of the sky covered by cloud.",
   "home.unavailable_explicit": "The source explicitly reported this value as missing.",
-  "home.unavailable_generic": "{primary} does not publish this field and no secondary provider could fill it."
+  "home.unavailable_generic": "{primary} does not publish this field and no secondary provider could fill it.",
+  "chat.ready": "Ready",
+  "chat.thinking": "Thinking…",
+  "chat.copied": "Copied to clipboard",
+  "chat.retry": "Retry",
+  "chat.welcome_title": "Ask me anything about the sky",
+  "chat.welcome_subtitle": "Forecasts, tables and advice — answered in your language.",
+  "chat.new_conversation": "New conversation",
+  "chat.voice": "Ask with your voice",
+  "voice.result_title": "Your answer",
+  "voice.ask_again": "Ask again",
+  "voice.error": "Something went wrong",
+  "voice.hint": "Ask about weather, rain or farming",
+  "voice.done_speaking": "Done speaking",
+  "voice.try_again": "Try again"
 }
