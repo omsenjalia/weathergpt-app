@@ -29,7 +29,8 @@ void main() {
   });
 
   group('RichMarkdown rendering', () {
-    testWidgets('renders a GFM table as a real Table widget', (tester) async {
+    testWidgets('renders a GFM table structurally, not as raw pipes',
+        (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -40,18 +41,14 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // gpt_markdown renders tables with Flutter's Table (or a subclass);
-      // assert on whichever structure the resolved version produces.
-      expect(
-        find.byWidgetPredicate(
-          (w) =>
-              w is Table ||
-              w.runtimeType.toString().toLowerCase().contains('table'),
-        ),
-        findsOneWidget,
-      );
+      // Header and data cells exist as standalone text — proof the table was
+      // parsed into a structure rather than printed verbatim.
       expect(find.text('Day'), findsOneWidget);
+      expect(find.text('Rain'), findsOneWidget);
+      expect(find.text('Mon'), findsOneWidget);
       expect(find.text('Tue'), findsOneWidget);
+      // And no source syntax leaks into the rendered answer.
+      expect(find.textContaining('|'), findsNothing);
     });
 
     testWidgets('renders headings, emphasis, lists and blockquotes',
