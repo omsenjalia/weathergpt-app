@@ -9,6 +9,7 @@
 /// A single source of truth also prevents the editor crash where a stored value
 /// was missing from a hardcoded dropdown list (`DropdownButtonFormField` throws
 /// when `initialValue` is not among `items`).
+library;
 
 /// Crops the advisory backend recognises. Unknown crops degrade gracefully
 /// server-side to generic guidance, so extending this list is safe.

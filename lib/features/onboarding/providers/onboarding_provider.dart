@@ -73,7 +73,7 @@ final onboardingProvider =
 /// restart, so the first home screen would fetch the wrong mode. Invalidating
 /// reloads settings from Hive immediately, and the API language header is
 /// synced so the first backend call already speaks the chosen language.
-void syncSettingsAfterOnboarding(Ref ref) {
+void syncSettingsAfterOnboarding(WidgetRef ref) {
   ApiClient.instance.setLanguage(ref.read(onboardingProvider).selectedLanguage);
   ref.invalidate(settingsProvider);
 }
