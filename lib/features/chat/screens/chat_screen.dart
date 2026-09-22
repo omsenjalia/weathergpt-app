@@ -511,7 +511,14 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(vsync: this)..repeat();
+    // `repeat()` needs a duration: without one the null-period check lives
+    // inside an `assert`, so release builds crash in initState
+    // (`period!` on null) and Flutter replaces this whole widget with the
+    // gray release-mode error slab — the "gray box when chatting" bug.
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
   }
 
   @override

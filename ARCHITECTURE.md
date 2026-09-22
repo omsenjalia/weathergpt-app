@@ -196,7 +196,7 @@ weathergpt-app/
 │   ├── app_data_contracts.md     # Mobile data contracts, null semantics
 │   └── web_app_api_contract.md   # Backend endpoint audit
 ├── lib/
-│   ├── main.dart                 # Hive init (settings, farm_profile, saved_locations), EasyLocalization 9 locales, Riverpod
+│   ├── main.dart                 # Hive init (settings, farm_profile, saved_locations), EasyLocalization 9 locales, Riverpod; release ErrorWidget.builder → compact dark pill (never Flutter's gray 400×400 error slab)
 │   ├── router/app_router.dart    # GoRouter ShellRoute, 7 routes
 │   ├── models/
 │   │   ├── location.dart         # AppLocation
