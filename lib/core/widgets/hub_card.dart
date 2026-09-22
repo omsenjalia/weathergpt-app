@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'glass_card.dart';
 
 /// A tappable destination card for the persona hub screens (Farm tab,
 /// Lab tab): icon tile, title, chevron, on the shared dark glass.
