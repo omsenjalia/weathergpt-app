@@ -9,8 +9,17 @@ class GeocodingService {
   /// Returns the best-matching [AppLocation] for [query], or null when the
   /// query is too short, has no match, or the request fails.
   static Future<AppLocation?> search(String query) async {
+    final matches = await searchMany(query, count: 1);
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  /// Returns up to [count] matching places for [query] (empty when the
+  /// query is too short, has no match, or the request fails). Backs the
+  /// location search suggestions.
+  static Future<List<AppLocation>> searchMany(String query,
+      {int count = 5}) async {
     final q = query.trim();
-    if (q.length < 2) return null;
+    if (q.length < 2) return const [];
     try {
       final dio = Dio(BaseOptions(
         connectTimeout: const Duration(seconds: 10),
@@ -18,28 +27,36 @@ class GeocodingService {
       ));
       final res = await dio.get<Map<String, dynamic>>(
         'https://geocoding-api.open-meteo.com/v1/search',
-        queryParameters: {'name': q, 'count': 5, 'language': 'en'},
+        queryParameters: {'name': q, 'count': count.clamp(1, 10), 'language': 'en'},
       );
-      final results = res.data?['results'];
-      if (results is! List || results.isEmpty) return null;
-      final first = results.first;
-      if (first is! Map) return null;
-      final name = first['name'] as String? ?? q;
-      final admin = first['admin1'] as String?;
-      final country = first['country'] as String?;
+      return parseResults(res.data?['results'], q);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Pure parser for the geocoding `results` array, shared by [searchMany]
+  /// and unit tests. Malformed entries are skipped, never throw.
+  static List<AppLocation> parseResults(Object? results, String query) {
+    if (results is! List) return const [];
+    final places = <AppLocation>[];
+    for (final entry in results) {
+      if (entry is! Map) continue;
+      final lat = entry['latitude'];
+      final lon = entry['longitude'];
+      if (lat is! num || lon is! num) continue;
+      final name = entry['name'] as String? ?? query;
+      final admin = entry['admin1'] as String?;
+      final country = entry['country'] as String?;
       final label = [
         name,
         if (admin != null && admin.isNotEmpty) admin,
         if (country != null && country.isNotEmpty && country != admin) country,
       ].join(', ');
-      return AppLocation(
-        name: label,
-        lat: (first['latitude'] as num).toDouble(),
-        lon: (first['longitude'] as num).toDouble(),
-      );
-    } catch (_) {
-      return null;
+      places.add(AppLocation(
+          name: label, lat: lat.toDouble(), lon: lon.toDouble()));
     }
+    return places;
   }
 
   /// Best-effort human name for coordinates via BigDataCloud's keyless

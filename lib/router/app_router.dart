@@ -9,6 +9,9 @@ import '../features/home/screens/weather_home_screen.dart';
 import '../features/chat/screens/chat_screen.dart';
 import '../features/explore/screens/explore_screen.dart';
 import '../features/explore/screens/saved_locations_screen.dart';
+import '../features/onboarding/screens/farm_choice_screen.dart';
+import '../features/onboarding/screens/farm_details_screen.dart';
+import '../features/onboarding/screens/farm_voice_screen.dart';
 import '../features/onboarding/screens/focus_select_screen.dart';
 import '../features/onboarding/screens/language_select_screen.dart';
 import '../features/onboarding/screens/splash_screen.dart';
@@ -25,19 +28,33 @@ import '../features/researcher/screens/researcher_hub_screen.dart';
 import '../features/researcher/providers/anomaly_trends_provider.dart';
 import '../features/settings/screens/debug_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
+import '../features/settings/screens/voice_picker_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+/// Reads a farm draft handoff from a route extra. Returns null when absent
+/// (fresh entry from the persona step).
+Map<String, dynamic>? _draftExtra(Object? extra) =>
+    extra is Map ? Map<String, dynamic>.from(extra) : null;
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   redirect: (context, state) {
+    if (!Hive.isBoxOpen('settings')) return null;
     final completed = Hive.box(
       'settings',
     ).get('onboarding_complete', defaultValue: false) as bool;
-    if (state.matchedLocation == '/') {
+    final location = state.matchedLocation;
+    final isOnboarding =
+        location == '/' || location.startsWith('/onboarding');
+    if (location == '/') {
       return completed ? '/home' : '/onboarding/splash';
     }
+    // First launch must flow through onboarding (including the farmer farm
+    // step); finished users can never land back on the welcome screens.
+    if (!completed && !isOnboarding) return '/onboarding/splash';
+    if (completed && isOnboarding) return '/home';
     return null;
   },
   routes: [
@@ -52,6 +69,23 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/onboarding/focus',
       builder: (_, __) => const FocusSelectScreen(),
+    ),
+    // Farmer farm step: Talk-vs-type choice first, then the form or the
+    // voice conversation. Draft handoffs travel as Map extras.
+    GoRoute(
+      path: '/onboarding/farm',
+      builder: (_, state) =>
+          FarmChoiceScreen(initialDraft: _draftExtra(state.extra)),
+    ),
+    GoRoute(
+      path: '/onboarding/farm-form',
+      builder: (_, state) =>
+          FarmDetailsScreen(initialDraft: _draftExtra(state.extra)),
+    ),
+    GoRoute(
+      path: '/onboarding/farm-voice',
+      builder: (_, state) =>
+          FarmVoiceScreen(initialDraft: _draftExtra(state.extra)),
     ),
     GoRoute(
       path: '/voice/listening',
@@ -75,6 +109,10 @@ final GoRouter appRouter = GoRouter(
       path: '/debug',
       parentNavigatorKey: rootNavigatorKey,
       builder: (_, __) => const DebugScreen(),
+    ),
+    GoRoute(
+      path: '/settings/voice',
+      builder: (_, __) => const VoicePickerScreen(),
     ),
     GoRoute(
       path: '/farmer/farm-profile',

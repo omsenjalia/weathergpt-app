@@ -18,6 +18,7 @@ import '../providers/location_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/atmosphere_theme.dart';
 import '../widgets/atmosphere_video_background.dart';
+import '../widgets/location_search_section.dart';
 import '../widgets/voice_orb.dart';
 import '../widgets/weather_detail_panels.dart';
 import '../widgets/weather_hero_card.dart';
@@ -276,7 +277,9 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                       ),
                     // Source / run / freshness chips live on the developer
                     // Debug screen; they only return to the home screen when a
-                    // developer explicitly asks for them.
+                    // developer explicitly asks for them. The compact status
+                    // line is developer-only too — regular users see no
+                    // provenance or freshness UI on Home at all.
                     if (dev.enabled && dev.showProvenanceOnHome)
                       SliverToBoxAdapter(
                         child: WeatherProvenanceBar(
@@ -285,9 +288,9 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                           showEnrichments: mode == AppMode.everyone,
                         ),
                       )
-                    else
+                    else if (dev.enabled)
                       SliverToBoxAdapter(
-                        child: _CompactStatusLine(weather: w, palette: palette, devEnabled: dev.enabled),
+                        child: _CompactStatusLine(weather: w, palette: palette),
                       ),
                     SliverToBoxAdapter(
                       child: Padding(
@@ -313,18 +316,22 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                             ? WeatherOverviewGrid(
                                 weather: w,
                                 palette: palette,
-                                showSourceBadges: !dev.enabled || dev.showFieldSourceBadges,
+                                showSourceBadges: dev.enabled &&
+                                    dev.showFieldSourceBadges,
+                                showProvenance: dev.enabled,
                               )
                             : _tab == 1
                                 ? WeatherHourlyPanel(
                                     weather: w,
                                     palette: palette,
                                     maxHours: dev.enabled ? dev.hourlyHours : 48,
+                                    showProvenance: dev.enabled,
                                   )
                                 : WeatherDailyPanel(
                                     weather: w,
                                     palette: palette,
                                     maxDays: dev.enabled ? dev.forecastDays : 7,
+                                    showProvenance: dev.enabled,
                                   ),
                       ),
                     ),
@@ -355,14 +362,16 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
   }
 }
 
-/// One quiet line under the hero: honest source attribution, a stale/degraded
-/// warning when — and only when — the backend says so, and a shortcut to the
-/// Debug screen in developer mode.
+/// Developer-only one-liner under the hero: full "source · run · stale"
+/// attribution, a stale/degraded warning when — and only when — the backend
+/// says so, and a shortcut to the Debug screen.
+///
+/// Regular users see no status line at all — provenance and freshness live
+/// on the Debug screen.
 class _CompactStatusLine extends StatelessWidget {
-  const _CompactStatusLine({required this.weather, required this.palette, required this.devEnabled});
+  const _CompactStatusLine({required this.weather, required this.palette});
   final WeatherSnapshot weather;
   final AtmospherePalette palette;
-  final bool devEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +397,7 @@ class _CompactStatusLine extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
       child: GestureDetector(
-        onTap: devEnabled ? () => context.push('/debug') : null,
+        onTap: () => context.push('/debug'),
         child: Row(
           children: [
             Icon(
@@ -410,8 +419,7 @@ class _CompactStatusLine extends StatelessWidget {
                 ),
               ),
             ),
-            if (devEnabled)
-              Icon(Icons.bug_report_outlined, size: 14, color: palette.textMuted),
+            Icon(Icons.bug_report_outlined, size: 14, color: palette.textMuted),
           ],
         ),
       ),
@@ -468,12 +476,18 @@ class _LocationSheet extends ConsumerWidget {
             ),
             const Divider(height: 1, color: AppColors.borderSubtle),
             Expanded(
-              child: ListView.builder(
-                itemCount: unique.length,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: LocationSearchSection(
+                  onSelected: (loc) => Navigator.pop(context, loc),
+                  idleChild: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: unique.length,
                 itemBuilder: (_, i) {
                   final loc = unique[i];
                   final sel = loc.name == current.name;
                   return ListTile(
+                    contentPadding: EdgeInsets.zero,
                     leading: Icon(
                       Icons.place_outlined,
                       color: sel ? AppColors.accent : AppColors.textSecondary,
@@ -486,6 +500,8 @@ class _LocationSheet extends ConsumerWidget {
                     onTap: () => Navigator.pop(context, loc),
                   );
                 },
+                  ),
+                ),
               ),
             ),
           ],

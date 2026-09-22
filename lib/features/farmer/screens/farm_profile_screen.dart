@@ -1,9 +1,11 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../models/farm_options.dart';
 import '../models/farm_profile_model.dart';
 import '../providers/farm_profile_provider.dart';
 
@@ -21,8 +23,9 @@ class _FarmProfileScreenState extends ConsumerState<FarmProfileScreen> {
     final profile = ref.watch(farmProfileProvider);
     return Scaffold(
       appBar: AppBar(
-          title: const Text('My Farm',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+          title: Text('farmer.farm_profile'.tr(),
+              style:
+                  const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
       body: SafeArea(
           child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
@@ -34,10 +37,10 @@ class _FarmProfileScreenState extends ConsumerState<FarmProfileScreen> {
           Expanded(
               child: _tab == 0
                   ? _Details(profile: profile)
-                  : const _CropsPlaceholder()),
+                  : _Crops(profile: profile)),
           if (_tab == 0)
             PrimaryButton(
-                label: 'Edit Farm Profile',
+                label: 'farmer.edit_farm_profile'.tr(),
                 onPressed: () => _openEditor(profile)),
         ]),
       )),
@@ -56,7 +59,7 @@ class _ProfileTabs extends StatelessWidget {
   final ValueChanged<int> onChanged;
   @override
   Widget build(BuildContext context) => Row(
-      children: ['Farm Details', 'Crops']
+      children: ['farmer.details_tab'.tr(), 'farmer.crops_tab'.tr()]
           .asMap()
           .entries
           .map((entry) => Expanded(
@@ -92,25 +95,28 @@ class _Details extends StatelessWidget {
   Widget build(BuildContext context) => ListView(children: [
         _InfoRow(
             icon: Icons.location_on_outlined,
-            label: 'Location',
+            label: 'farmer.location'.tr(),
             value: profile.location),
-        _InfoRow(icon: Icons.eco_outlined, label: 'Crop', value: profile.crop),
+        _InfoRow(
+            icon: Icons.eco_outlined,
+            label: 'farmer.crop'.tr(),
+            value: profile.crop),
         _InfoRow(
             icon: Icons.spa_outlined,
-            label: 'Growth Stage',
+            label: 'farmer.growth_stage'.tr(),
             value: profile.growthStage),
         _InfoRow(
             icon: Icons.landscape_outlined,
-            label: 'Farm Size',
+            label: 'farmer.farm_size'.tr(),
             value:
-                '${profile.farmSizeAcres.toStringAsFixed(profile.farmSizeAcres % 1 == 0 ? 0 : 1)} acres'),
+                '${profile.farmSizeAcres.toStringAsFixed(profile.farmSizeAcres % 1 == 0 ? 0 : 1)} ${'farmer.acres'.tr()}'),
         _InfoRow(
             icon: Icons.water_drop_outlined,
-            label: 'Irrigation Type',
+            label: 'farmer.irrigation_type'.tr(),
             value: profile.irrigationType),
         _InfoRow(
             icon: Icons.grass_outlined,
-            label: 'Soil Type',
+            label: 'farmer.soil_type'.tr(),
             value: profile.soilType),
       ]);
 }
@@ -145,23 +151,25 @@ class _InfoRow extends StatelessWidget {
       );
 }
 
-class _CropsPlaceholder extends StatelessWidget {
-  const _CropsPlaceholder();
+class _Crops extends StatelessWidget {
+  const _Crops({required this.profile});
+  final FarmProfile profile;
   @override
-  Widget build(BuildContext context) => ListView(children: const [
+  Widget build(BuildContext context) => ListView(children: [
         AppCard(
             child: Row(children: [
-          Icon(Icons.eco_outlined, color: AppColors.farmerGreen),
-          SizedBox(width: 12),
+          const Icon(Icons.eco_outlined, color: AppColors.farmerGreen),
+          const SizedBox(width: 12),
           Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('Wheat', style: TextStyle(fontWeight: FontWeight.w700)),
-                SizedBox(height: 3),
-                Text('Flowering stage',
-                    style:
-                        TextStyle(color: AppColors.textSecondary, fontSize: 13))
+                Text(profile.crop,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(profile.growthStage,
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 13))
               ]))
         ])),
       ]);
@@ -193,44 +201,47 @@ class _FarmProfileEditorState extends ConsumerState<_FarmProfileEditor> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Edit Farm Profile')),
+        appBar:
+            AppBar(title: Text('farmer.edit_farm_profile'.tr())),
         body: SafeArea(
             child: ListView(padding: const EdgeInsets.all(20), children: [
-          _TextField(label: 'Location', controller: _location),
+          _TextField(label: 'farmer.location'.tr(), controller: _location),
           _TextField(
-              label: 'Farm Size (acres)',
+              label: 'farmer.farm_size'.tr(),
               controller: _size,
-              keyboardType: TextInputType.number),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true)),
           _Select(
-              label: 'Crop',
+              label: 'farmer.crop'.tr(),
               value: _crop,
-              values: const ['Wheat', 'Rice', 'Cotton', 'Maize'],
+              values: withCurrentOption(kFarmCrops, _crop),
               onChanged: (value) => setState(() => _crop = value!)),
           _Select(
-              label: 'Growth Stage',
+              label: 'farmer.growth_stage'.tr(),
               value: _stage,
-              values: const ['Vegetative', 'Flowering', 'Fruiting', 'Harvest'],
+              values: withCurrentOption(kGrowthStages, _stage),
               onChanged: (value) => setState(() => _stage = value!)),
           _Select(
-              label: 'Irrigation Type',
+              label: 'farmer.irrigation_type'.tr(),
               value: _irrigation,
-              values: const ['Borewell', 'Canal', 'Drip', 'Rainfed'],
+              values: withCurrentOption(kIrrigationTypes, _irrigation),
               onChanged: (value) => setState(() => _irrigation = value!)),
           _Select(
-              label: 'Soil Type',
+              label: 'farmer.soil_type'.tr(),
               value: _soil,
-              values: const ['Loamy', 'Clay', 'Sandy', 'Silty'],
+              values: withCurrentOption(kSoilTypes, _soil),
               onChanged: (value) => setState(() => _soil = value!)),
           const SizedBox(height: 18),
-          PrimaryButton(label: 'Save Changes', onPressed: _save),
+          PrimaryButton(
+              label: 'farmer.save_changes'.tr(), onPressed: _save),
         ])),
       );
 
   Future<void> _save() async {
     final size = double.tryParse(_size.text.trim());
     if (size == null || size <= 0 || _location.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Enter a location and valid farm size.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('farmer.invalid_details'.tr())));
       return;
     }
     await ref.read(farmProfileProvider.notifier).save(FarmProfile(

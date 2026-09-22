@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/models/app_mode.dart';
 import '../../../core/services/api_client.dart';
+import '../models/tts_voice_option.dart';
 
 export '../../../core/models/app_mode.dart';
 
@@ -17,6 +18,7 @@ class SettingsState {
     this.units = TemperatureUnit.celsius,
     this.ttsVoiceLocale = 'en-US',
     this.ttsSpeed = 0.85,
+    this.ttsVoices = const {},
     this.notificationsEnabled = const {
       'weather_alerts': true,
       'imd_warnings': true,
@@ -31,6 +33,9 @@ class SettingsState {
   final TemperatureUnit units;
   final String ttsVoiceLocale;
   final double ttsSpeed;
+  /// Persisted voice choice per app language code ('en' -> selection).
+  /// Absent means the system default voice for that language.
+  final Map<String, TtsVoiceSelection> ttsVoices;
   final Map<String, bool> notificationsEnabled;
 
   /// Validated product mode derived from the persisted persona string.
@@ -51,6 +56,7 @@ class SettingsState {
           TemperatureUnit? units,
           String? ttsVoiceLocale,
           double? ttsSpeed,
+          Map<String, TtsVoiceSelection>? ttsVoices,
           Map<String, bool>? notificationsEnabled}) =>
       SettingsState(
           displayName: displayName ?? this.displayName,
@@ -60,6 +66,7 @@ class SettingsState {
           units: units ?? this.units,
           ttsVoiceLocale: ttsVoiceLocale ?? this.ttsVoiceLocale,
           ttsSpeed: ttsSpeed ?? this.ttsSpeed,
+          ttsVoices: ttsVoices ?? this.ttsVoices,
           notificationsEnabled:
               notificationsEnabled ?? this.notificationsEnabled);
 }
@@ -90,8 +97,20 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       ttsVoiceLocale:
           box.get('tts_voice_locale', defaultValue: 'en-US') as String,
       ttsSpeed: (box.get('tts_speed', defaultValue: 0.85) as num).toDouble(),
+      ttsVoices: _loadVoices(box.get('tts_voices')),
       notificationsEnabled: notifications,
     );
+  }
+
+  static Map<String, TtsVoiceSelection> _loadVoices(Object? raw) {
+    if (raw is! Map) return const {};
+    final voices = <String, TtsVoiceSelection>{};
+    raw.forEach((key, value) {
+      if (key is! String || value is! Map) return;
+      final selection = TtsVoiceSelection.fromMap(value);
+      if (selection.isValid) voices[key] = selection;
+    });
+    return voices;
   }
 
   /// Single persistence path for every setting.
@@ -139,6 +158,24 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   Future<void> updateTtsVoiceLocale(String locale) async {
     state = state.copyWith(ttsVoiceLocale: locale);
     await _put('tts_voice_locale', locale);
+  }
+
+  /// Remembers [selection] as the voice for [langCode].
+  Future<void> updateTtsVoice(
+      String langCode, TtsVoiceSelection selection) async {
+    final voices = {...state.ttsVoices, langCode: selection};
+    state = state.copyWith(ttsVoices: voices);
+    await _put(
+        'tts_voices', voices.map((k, v) => MapEntry(k, v.toMap())));
+  }
+
+  /// Forgets the voice for [langCode] (system default applies again).
+  Future<void> clearTtsVoice(String langCode) async {
+    if (!state.ttsVoices.containsKey(langCode)) return;
+    final voices = {...state.ttsVoices}..remove(langCode);
+    state = state.copyWith(ttsVoices: voices);
+    await _put(
+        'tts_voices', voices.map((k, v) => MapEntry(k, v.toMap())));
   }
 
   Future<void> updateVoiceSettings(String locale, double speed) async {

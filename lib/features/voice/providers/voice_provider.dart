@@ -239,6 +239,19 @@ class VoiceNotifier extends StateNotifier<VoiceState> {
           : voice.ttsSpeed;
       final rate = (speed * 0.55).clamp(0.25, 0.75);
       await _tts.setSpeechRate(rate);
+      // Per-language voice picked in the voice studio. Skipped when a dev
+      // locale override changes the language (a saved English voice must
+      // never speak Hindi); unknown names fall back to the locale default.
+      final selection = voice.ttsVoices[voice.language];
+      if (selection != null &&
+          selection.isDevice &&
+          selection.isValid &&
+          locale.toLowerCase().startsWith(voice.language.toLowerCase())) {
+        try {
+          await _tts.setVoice(
+              {'name': selection.name, 'locale': selection.locale});
+        } catch (_) {}
+      }
       final clean = MarkdownUtils.forSpeech(text);
       if (clean.isNotEmpty) {
         await _tts.speak(clean);
