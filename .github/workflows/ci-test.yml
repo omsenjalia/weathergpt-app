@@ -75,4 +75,33 @@ jobs:
           exit 1
 
       - name: Test
-        run: flutter test --timeout 30s
+        id: test
+        continue-on-error: true
+        run: |
+          set +e
+          flutter test --timeout 30s > test-output.txt 2>&1
+          code=$?
+          tail -c 60000 test-output.txt
+          exit $code
+
+      # Test output is posted back to the PR so failures are readable
+      # without downloading runner logs.
+      - name: Report test failures on the PR
+        if: steps.test.outcome == 'failure' && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo '### `flutter test` — ${{ github.sha }}'
+            echo '```'
+            tail -c 60000 test-output.txt
+            echo '```'
+          } > test-comment.md
+          gh pr comment "$PR_NUMBER" --body-file test-comment.md
+
+      - name: Fail on test failures
+        if: steps.test.outcome == 'failure'
+        run: |
+          echo "::error::flutter test reported failures"
+          exit 1

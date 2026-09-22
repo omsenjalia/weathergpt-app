@@ -1,7 +1,10 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/api_error_view.dart';
@@ -10,6 +13,7 @@ import '../../../models/weather.dart';
 import '../../explore/providers/saved_locations_provider.dart';
 import '../../settings/providers/developer_options_provider.dart';
 import '../../settings/providers/settings_provider.dart';
+import '../providers/atmosphere_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/atmosphere_theme.dart';
@@ -30,6 +34,66 @@ class WeatherHomeScreen extends ConsumerStatefulWidget {
 
 class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
   int _tab = 0;
+  bool _bannerDismissed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // First launch: ask for location permission once so the app opens on the
+    // user's real city instead of the Ahmedabad default. Silent no-op when
+    // the user already chose a location or denied. If the OS can no longer
+    // show its dialog (permanently denied earlier), the prompt bar below is
+    // the visible fallback.
+    _bannerDismissed = Hive.box('settings')
+        .get('location_banner_dismissed', defaultValue: false) as bool;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(locationProvider.notifier).maybeAutoLocate();
+    });
+  }
+
+  Future<void> _enableLocation() async {
+    final notifier = ref.read(locationProvider.notifier);
+    final loc = await notifier.selectFromGps();
+    if (loc != null || !mounted) return;
+    // Something blocked the ask: explain instead of failing silently.
+    final permanentlyDenied = await notifier.isPermanentlyDenied;
+    if (!mounted) return;
+    if (permanentlyDenied) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surfaceCardAlt,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text('location.settings_title'.tr()),
+          content: Text('location.settings_body'.tr()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('location.cancel'.tr()),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.black,
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                notifier.openSystemSettings();
+              },
+              child: Text('location.open_settings'.tr()),
+            ),
+          ],
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('location.not_available'.tr())),
+      );
+    }
+  }
 
   Future<void> _pickLocation() async {
     final selected = await showModalBottomSheet<AppLocation>(
@@ -50,6 +114,8 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Minute cadence: recompute the sky period while the user sits on Home.
+    ref.watch(clockTickerProvider);
     final location = ref.watch(locationProvider);
     final weatherAsync = ref.watch(weatherProvider);
     // The two compact enrichments are an Everyone-mode contract; Farmer and
@@ -61,9 +127,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: weatherAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.accent),
-        ),
+        loading: () => const _HomeSkeleton(),
         error: (e, _) => ApiErrorView(
           error: e,
           onRetry: () => ref.invalidate(weatherProvider),
@@ -121,7 +185,17 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
               ),
               SafeArea(
                 bottom: false,
-                child: CustomScrollView(
+                child: RefreshIndicator(
+                  color: palette.accent,
+                  backgroundColor: AppColors.bgElevated,
+                  onRefresh: () async {
+                    HapticFeedback.lightImpact();
+                    ref.invalidate(weatherProvider);
+                  },
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
                   slivers: [
                     SliverToBoxAdapter(
                       child: Padding(
@@ -184,6 +258,22 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                         child: WeatherHeroCard(weather: w, palette: palette),
                       ),
                     ),
+                    // First-run helper: when we are still on the default
+                    // city and the OS permission is not granted, offer a
+                    // visible one-tap enable (the OS dialog alone can be
+                    // permanently suppressed by an earlier denial).
+                    if (location.name == kDefaultLocation.name &&
+                        !_bannerDismissed)
+                      SliverToBoxAdapter(
+                        child: _LocationPromptBar(
+                          onEnable: _enableLocation,
+                          onDismiss: () {
+                            setState(() => _bannerDismissed = true);
+                            Hive.box('settings').put(
+                                'location_banner_dismissed', true);
+                          },
+                        ),
+                      ),
                     // Source / run / freshness chips live on the developer
                     // Debug screen; they only return to the home screen when a
                     // developer explicitly asks for them.
@@ -240,6 +330,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                     ),
                     SliverToBoxAdapter(child: SizedBox(height: bottomInset + 24)),
                   ],
+                ),
                 ),
               ),
               // Mic FAB — above floating nav bar (classic position)
@@ -396,6 +487,146 @@ class _LocationSheet extends ConsumerWidget {
                   );
                 },
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Layout-stable shimmer skeleton shown while the first snapshot loads.
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        child: Shimmer.fromColors(
+          baseColor: const Color(0xFF1A2740),
+          highlightColor: const Color(0xFF243149),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 132,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  height: 226,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    for (var i = 0; i < 3; i++) ...[
+                      if (i > 0) const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          height: 104,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One-tap "turn on location" bar shown while the app is still on the
+/// default city. Glass pill with an accent action — dismissible.
+class _LocationPromptBar extends StatelessWidget {
+  const _LocationPromptBar({required this.onEnable, required this.onDismiss});
+
+  final VoidCallback onEnable;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+        decoration: BoxDecoration(
+          color: AppColors.glassFillStrong,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: AppColors.statusAmber.withValues(alpha: 0.4),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.location_on_outlined,
+              size: 20,
+              color: AppColors.statusAmber,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'location.banner'.tr(),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  height: 1.3,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: onEnable,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.ctaTextDark,
+                backgroundColor: AppColors.accent,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                shape: const StadiumBorder(),
+              ),
+              child: Text(
+                'location.enable'.tr(),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              onPressed: onDismiss,
+              icon: const Icon(Icons.close_rounded,
+                  size: 18, color: AppColors.textSecondary),
             ),
           ],
         ),

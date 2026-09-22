@@ -14,4 +14,17 @@ abstract final class AppTextStyles {
         labelMedium:
             GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
       );
+
+  /// Numerals that keep a constant width while a value animates or updates
+  /// (temperature counts, metric readouts) so nothing jitters sideways.
+  static TextStyle numeric(TextStyle base) => base.copyWith(
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
+  /// Section eyebrow — the small uppercase label above card groups.
+  static const TextStyle sectionLabel = TextStyle(
+    fontSize: 11.5,
+    letterSpacing: 1.3,
+    fontWeight: FontWeight.w700,
+  );
 }

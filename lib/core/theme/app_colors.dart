@@ -44,4 +44,21 @@ abstract final class AppColors {
   static const gradientAccent = LinearGradient(
     colors: [Color(0xFF2DD4BF), Color(0xFF38BDF8)],
   );
+
+  // ---- Glass system -------------------------------------------------------
+  // Frosted surfaces used across the app. Fills are translucent dark navy so
+  // white text stays readable on every sky — including bright daylight —
+  // exactly how professional weather apps keep cards legible over a bright
+  // gradient. Hairline white borders keep edges crisp on all densities.
+  static const glassFill = Color(0x99101930); // ~60% dark navy
+  static const glassFillStrong = Color(0xC0101930); // ~75% dark navy
+  static const glassBorder = Color(0x1FFFFFFF); // ~12% white
+  static const glassBorderStrong = Color(0x33FFFFFF); // ~20% white
+
+  /// Deep scrim laid over the sky gradient so text-heavy screens stay
+  /// readable without hiding the atmosphere.
+  static const scrim = Color(0xB20B1220); // ~70% bgPrimary
+
+  static const glassBlurRadius = 24.0;
+
 }

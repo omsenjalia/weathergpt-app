@@ -9,9 +9,15 @@ import '../../home/providers/location_provider.dart';
 import '../../settings/providers/settings_provider.dart';
 
 class ChatMessage {
-  const ChatMessage({required this.role, required this.content, this.meta});
+  ChatMessage({
+    required this.role,
+    required this.content,
+    this.meta,
+    DateTime? at,
+  }) : at = at ?? DateTime.now();
   final String role; // user | assistant
   final String content;
+  final DateTime at;
 
   /// Additive response metadata from the backend (`meta` in /chat responses).
   /// Present on the assistant message when the server sent it; used to surface
@@ -121,7 +127,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
     _generation++;
     state = const ChatState();
   }
+
+  /// Re-sends the last user message after a failure (banner "Retry" action).
+  void retryLast() {
+    final hasUserTurn = state.messages.any((m) => m.role == 'user');
+    if (!hasUserTurn) return;
+    final lastUser =
+        state.messages.lastWhere((m) => m.role == 'user');
+    if (lastUser.content.trim().isEmpty) return;
+    send(lastUser.content);
+  }
 }
+
 
 final chatProvider =
     StateNotifierProvider<ChatNotifier, ChatState>((ref) => ChatNotifier(ref));

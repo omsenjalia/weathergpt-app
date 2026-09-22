@@ -3,6 +3,9 @@ class MarkdownUtils {
   MarkdownUtils._();
 
   /// Strip markdown / widget blocks / emojis so TTS does not read syntax aloud.
+  ///
+  /// Tables are flattened into spoken sentences ("Temp: 31. Rain: low") and
+  /// LaTeX delimiters are removed so equations are not read as backslashes.
   static String forSpeech(String input) {
     var text = input;
     // Remove fenced code / widget blocks
@@ -11,6 +14,21 @@ class MarkdownUtils {
     text = text.replaceAll(RegExp(r'widget:\w+\s*'), ' ');
     // Headings (including emoji titles like "## 🌤️ WeatherGPT Live Status")
     text = text.replaceAll(RegExp(r'^#{1,6}\s*.*$', multiLine: true), ' ');
+    // Table separator rows (|---|---|) vanish; data rows become prose with
+    // every cell divider spoken as a plain pause.
+    text = text.replaceAll(
+      RegExp(r'^\s*\|[\s:\-|]+\|\s*$', multiLine: true),
+      ' ',
+    );
+    text = text.replaceAll('|', ' ');
+    // LaTeX: keep the payload, drop the delimiters and layout commands the
+    // speech engine cannot pronounce.
+    text = text.replaceAll(RegExp(r'\\[\[\]()]'), ' ');
+    text = text.replaceAll(
+      RegExp(r'\\(frac|dfrac|sqrt|text|mathbf|cdot|times|pm|approx)\b'),
+      ' ',
+    );
+    text = text.replaceAll(RegExp(r'[{}^_]'), ' ');
     // Bold / italic / links / list markers
     text = text.replaceAll(RegExp(r'\*\*|__'), '');
     text = text.replaceAll(RegExp(r'\*|_'), '');

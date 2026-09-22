@@ -22,6 +22,13 @@ Never leave `ARCHITECTURE.md` stale or out of sync with code changes.
 
 ---
 
+## Standing Guardrails (user-mandated — do not violate)
+
+1. **The mic orb is frozen.** The home-screen voice orb (`lib/features/home/widgets/voice_orb.dart` and its `Positioned` placement / surrounding insets in `weather_home_screen.dart`) is approved exactly as it is. Never restyle, move, resize, re-animate, or change any spacing/insets around it. If a layout change would shift pixels near the orb, leave the orb untouched and adjust elsewhere.
+2. **CI gate = `flutter analyze` (+ `flutter test`).** A change counts as verified once the **CI Test** workflow (analyze + test) is green on the PR. Do **not** wait for the **CI Build Signed APK** check, and never block progress, reporting, or PR readiness on it — the APK workflow only produces release artifacts and is far slower.
+
+---
+
 ## Complexity Handling
 For any task spanning more than 3 files or requiring multiple decisions:
 - Apply Fable Mode: stage map → delegate → verify → self-critique

@@ -67,7 +67,7 @@ It translates multi-source meteorological telemetry into actionable, hyper-local
 graph TB
     subgraph "Mobile Client - Flutter 3.44"
         UI["Flutter UI - Material 3, Glassmorphism, Video Sky"]
-        NAV["GoRouter Shell - /home, /chat, /explore, /farmer, /settings"]
+        NAV["GoRouter Shell - /home, /chat, /explore, /farmer|/researcher (persona tab), /profile"]
         STATE["Riverpod Providers - Weather, Chat, Voice, Farm, Researcher"]
         CLIENT["ApiClient Dio - Accept-Language, Interceptors, RequestLog"]
         CACHE["Hive - settings, farm_profile, saved_locations"]
@@ -143,7 +143,7 @@ graph TB
 | Media | video_player | ^2.9.2 | Looping sky videos |
 | Fonts | google_fonts | ^6.2.1 → 6.3.3 | Inter, Poppins |
 | Animation | flutter_animate | ^4.5.0 → 4.5.2 | Micro-interactions |
-| Markdown | flutter_markdown | ^0.7.4+1 | Chat rendering |
+| Markdown | gpt_markdown | ^1.3.0 | AI-grade rendering: GFM tables, code blocks with copy, LaTeX, links (replaces the discontinued flutter_markdown) |
 | Permissions | permission_handler / geolocator | ^11.3.1 → 11.4.0 / ^12.0.0 | GPS, mic |
 
 ### 3.2 Backend
@@ -196,7 +196,7 @@ weathergpt-app/
 │   ├── app_data_contracts.md     # Mobile data contracts, null semantics
 │   └── web_app_api_contract.md   # Backend endpoint audit
 ├── lib/
-│   ├── main.dart                 # Hive init (settings, farm_profile, saved_locations), EasyLocalization 9 locales, Riverpod
+│   ├── main.dart                 # Hive init (settings, farm_profile, saved_locations), EasyLocalization 9 locales, Riverpod; release ErrorWidget.builder → compact dark pill (never Flutter's gray 400×400 error slab)
 │   ├── router/app_router.dart    # GoRouter ShellRoute, 7 routes
 │   ├── models/
 │   │   ├── location.dart         # AppLocation
@@ -226,14 +226,18 @@ weathergpt-app/
 │   │   └── widgets/
 │   │       ├── api_error_view.dart
 │   │       ├── app_card.dart
+│   │       ├── atmosphere_background.dart # Blurred live-sky canvas (sun/moon, horizon warmth, drifting glows) driven by atmospherePaletteProvider
+│   │       ├── atmosphere_scaffold.dart  # Immersive scaffold wrapper
+│   │       ├── glass_card.dart           # Frosted-glass surface primitive
 │   │       ├── metric_chip.dart
-│   │       ├── navigation_shell.dart # Floating pill nav
+│   │       ├── navigation_shell.dart # Floating glass pill nav; persona-aware tab set (Farm/Lab tab for farmer/researcher)
 │   │       ├── outlined_button_pill.dart
 │   │       ├── persona_badge.dart
-│   │       └── primary_button.dart
+│   │       ├── primary_button.dart
+│   │       └── rich_markdown.dart   # Shared GptMarkdown renderer (tables, code, LaTeX)
 │   └── features/
 │       ├── home/
-│       │   ├── providers/ weatherProvider (FutureProvider, v2→legacy), locationProvider
+│       │   ├── providers/ weatherProvider (FutureProvider, v2→legacy), locationProvider (one-time GPS permission prompt + reverse geocode + visible prompt bar with app-settings deep link), clockTickerProvider + atmospherePaletteProvider (live app-wide sky)
 │       │   ├── screens/weather_home_screen.dart
 │       │   ├── theme/atmosphere_theme.dart # 11 periods + 12 conditions
 │       │   └── widgets/ atmosphere_background, atmosphere_video_background, weather_hero_card, weather_metric_strip, weather_provenance_bar, weather_detail_panels, voice_orb, weather_segment_tabs
@@ -246,11 +250,11 @@ weathergpt-app/
 │       ├── farmer/
 │       │   ├── models/advisory_models.dart, farm_profile_model.dart
 │       │   ├── providers/action_windows_provider.dart (generation guard + contextKey), farm_profile_provider.dart
-│       │   ├── screens/action_windows_screen.dart, farm_profile_screen.dart
+│       │   ├── screens/farmer_hub_screen.dart (Farm tab hub), action_windows_screen.dart, farm_profile_screen.dart
 │       │   └── widgets/time_window_bar.dart # 12 buckets
 │       ├── researcher/
 │       │   ├── providers/historicalDataProvider, comparisonProvider, anomaly_trends_provider
-│       │   └── screens/HistoricalDataScreen, ComparisonScreen, AnomalyTrendsScreen
+│       │   └── screens/researcher_hub_screen.dart (Lab tab hub), HistoricalDataScreen, ComparisonScreen, AnomalyTrendsScreen
 │       ├── voice/
 │       │   ├── models/voice_card.dart # VoiceCard, CardTone good/caution/avoid
 │       │   ├── mappers/voice_response_mapper.dart
@@ -559,7 +563,7 @@ AI embeds native cards in markdown via code fences. Mobile sanitizes and renders
 | ```widget:weather | ChatWeatherWidget | Temp, condition, humidity, wind, advisory |
 | ```widget:forecast | ChatForecastWidget | Multi-day strip |
 
-Sanitization: `lib/core/utils/markdown_utils.dart` strips widget blocks for TTS via `forSpeech()`.
+Sanitization: `lib/core/utils/markdown_utils.dart` strips widget blocks for TTS via `forSpeech()` (tables are flattened into spoken prose, LaTeX delimiters removed). Display rendering goes through the shared `RichMarkdown` widget (`lib/core/widgets/rich_markdown.dart`), which wraps `gpt_markdown`'s `GptMarkdown`: GFM tables (bordered, header-tinted, zebra-striped, horizontally scrollable), fenced code blocks with a copy button, inline and display LaTeX, styled blockquotes/lists/links, and `widget:`/`json` fence stripping so native-card instructions never leak into the conversation. Chat, the voice result screen and all AI surfaces share this one renderer.
 
 ### VoiceCard (Structured)
 

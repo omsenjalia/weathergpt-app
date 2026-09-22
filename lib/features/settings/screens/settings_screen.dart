@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/atmosphere_background.dart';
 import '../providers/settings_provider.dart';
 import '../providers/developer_options_provider.dart';
+import '../../home/providers/atmosphere_provider.dart';
 import '../../home/theme/atmosphere_theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -41,20 +43,33 @@ class SettingsScreen extends ConsumerWidget {
     final n = ref.read(settingsProvider.notifier);
     final dev = ref.watch(developerOptionsProvider);
     final devN = ref.read(developerOptionsProvider.notifier);
-    final bottom = MediaQuery.paddingOf(context).bottom + 80;
+    final bottom = MediaQuery.paddingOf(context).bottom + 108;
+    final palette = ref.watch(atmospherePaletteProvider);
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: SafeArea(
-        bottom: false,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, bottom),
-          children: [
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          AtmosphereBackground(
+            palette: palette,
+          ),
+          SafeArea(
+            bottom: false,
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, bottom),
+              children: [
             const Text('Settings',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.6)),
             const SizedBox(height: 6),
-            const Text('Language, voice, and experience',
-                style: TextStyle(color: AppColors.textSecondary)),
+            Text('Language, voice, and experience',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontWeight: FontWeight.w500,
+                )),
             const SizedBox(height: 24),
             _section('Language'),
             _card(
@@ -131,41 +146,6 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 20),
-            _section('Tools'),
-            _card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.map_outlined, color: AppColors.sky),
-                    title: const Text('Weather map'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.go('/explore'),
-                  ),
-                  if (settings.userPersona == 'researcher') ...[
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.insights_outlined,
-                          color: AppColors.researcherBlue),
-                      title: const Text('Historical data'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/researcher/historical'),
-                    ),
-                  ],
-                  if (settings.userPersona == 'farmer') ...[
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.agriculture_outlined,
-                          color: AppColors.farmerGreen),
-                      title: const Text('Farm profile'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/farmer/farm-profile'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
             _section('Developer'),
             _card(
               child: Column(
@@ -189,7 +169,7 @@ class SettingsScreen extends ConsumerWidget {
                     const Divider(height: 1),
                     const ListTile(
                       dense: true,
-                      title: Text('DATA SOURCE', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: AppColors.textTertiary)),
+                      title: Text('DATA SOURCE', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: Colors.white54)),
                     ),
                     ListTile(
                       title: const Text('Pin forecast source'),
@@ -268,7 +248,7 @@ class SettingsScreen extends ConsumerWidget {
                     const Divider(height: 1),
                     const ListTile(
                       dense: true,
-                      title: Text('DISPLAY', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: AppColors.textTertiary)),
+                      title: Text('DISPLAY', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: Colors.white54)),
                     ),
                     SwitchListTile(
                       title: const Text('Show provenance bar on Home'),
@@ -294,7 +274,7 @@ class SettingsScreen extends ConsumerWidget {
                     const Divider(height: 1),
                     const ListTile(
                       dense: true,
-                      title: Text('SKY & TTS OVERRIDES', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: AppColors.textTertiary)),
+                      title: Text('SKY & TTS OVERRIDES', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: Colors.white54)),
                     ),
                     ListTile(
                       title: const Text('Force time of day'),
@@ -401,8 +381,48 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
 
-          ],
-        ),
+            const SizedBox(height: 26),
+            Center(
+              child: Column(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.gradientAccent,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.wb_cloudy_rounded,
+                        size: 24, color: Colors.black),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'common.weather_gpt'.tr(),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'settings.footer'.tr(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Colors.white.withValues(alpha: 0.65),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -411,20 +431,20 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 8, left: 4),
         child: Text(
           t.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 11,
+          style: TextStyle(
+            fontSize: 11.5,
             letterSpacing: 1.2,
             fontWeight: FontWeight.w700,
-            color: AppColors.textTertiary,
+            color: Colors.white.withValues(alpha: 0.75),
           ),
         ),
       );
 
   Widget _card({required Widget child}) => Container(
         decoration: BoxDecoration(
-          color: AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.borderSubtle),
+          color: AppColors.glassFillStrong,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.glassBorder),
         ),
         clipBehavior: Clip.antiAlias,
         child: child,

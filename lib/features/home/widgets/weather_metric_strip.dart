@@ -1,10 +1,12 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/text_styles.dart';
 import '../../../models/weather.dart';
 import '../theme/atmosphere_theme.dart';
 
-/// Horizontal scrolling strip of quick weather metrics.
+/// Horizontal strip of quick weather metrics — glass tiles, each with its
+/// own accent, a small proportional gauge and strict em-dash null semantics.
 class WeatherMetricStrip extends StatelessWidget {
   const WeatherMetricStrip({super.key, required this.weather, required this.palette});
   final WeatherSnapshot weather;
@@ -12,47 +14,63 @@ class WeatherMetricStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final w = weather;
     final items = [
       (
         Icons.water_drop_outlined,
-        weather.rainProbability == null
-            ? '—'
-            : '${weather.rainProbability!.round()}%',
-        'home.rain_chance'.tr()
+        w.rainProbability?.round(),
+        w.rainProbability == null ? '—' : '${w.rainProbability!.round()}%',
+        'home.rain_chance'.tr(),
+        const Color(0xFF38BDF8),
+        w.rainProbability == null ? 0.0 : (w.rainProbability! / 100).clamp(0.05, 1.0),
       ),
       (
         Icons.air,
-        weather.windKmh == null
+        w.windKmh?.round(),
+        w.windKmh == null
             ? '—'
-            : '${weather.windKmh!.toStringAsFixed(0)}${weather.windDirection == null ? '' : ' ${windDirLabel(weather.windDirection)}'}',
-        'home.wind_kmh'.tr()
+            : '${w.windKmh!.toStringAsFixed(0)}${w.windDirection == null ? '' : ' ${windDirLabel(w.windDirection)}'}',
+        'home.wind_kmh'.tr(),
+        const Color(0xFF2DD4BF),
+        w.windKmh == null ? 0.0 : (w.windKmh! / 60).clamp(0.05, 1.0),
       ),
       (
         Icons.opacity,
-        weather.humidity == null ? '—' : '${weather.humidity!.round()}%',
-        'home.humidity'.tr()
+        w.humidity?.round(),
+        w.humidity == null ? '—' : '${w.humidity!.round()}%',
+        'home.humidity'.tr(),
+        const Color(0xFF60A5FA),
+        w.humidity == null ? 0.0 : (w.humidity! / 100).clamp(0.05, 1.0),
       ),
       (
         Icons.compress,
-        weather.pressureHpa == null
-            ? '—'
-            : '${weather.pressureHpa!.round()}',
-        'home.pressure_hpa'.tr()
+        w.pressureHpa?.round(),
+        w.pressureHpa == null ? '—' : '${w.pressureHpa!.round()}',
+        'home.pressure_hpa'.tr(),
+        const Color(0xFFA78BFA),
+        w.pressureHpa == null
+            ? 0.0
+            : ((w.pressureHpa! - 960) / 90).clamp(0.05, 1.0),
       ),
       (
         Icons.cloud_outlined,
-        weather.cloudCover == null ? '—' : '${weather.cloudCover!.round()}%',
-        'home.cloud_cover'.tr()
+        w.cloudCover?.round(),
+        w.cloudCover == null ? '—' : '${w.cloudCover!.round()}%',
+        'home.cloud_cover'.tr(),
+        const Color(0xFFCBD5E1),
+        w.cloudCover == null ? 0.0 : (w.cloudCover! / 100).clamp(0.05, 1.0),
       ),
     ];
     return SizedBox(
-      height: 96,
+      height: 104,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
-          final it = items[i];
+          final (icon, _, display, label, accent, gauge) = items[i];
+          final unavailable = display == '—';
           return TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: 1),
             duration: Duration(milliseconds: 400 + i * 80),
@@ -65,33 +83,63 @@ class WeatherMetricStrip extends StatelessWidget {
               ),
             ),
             child: Container(
-              width: 102,
-              padding: const EdgeInsets.all(12),
+              width: 104,
+              padding: const EdgeInsets.fromLTRB(13, 12, 13, 12),
               decoration: BoxDecoration(
                 color: palette.card,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(20),
                 border:
                     Border.all(color: Colors.white.withValues(alpha: 0.08)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(it.$1, size: 18, color: palette.accent),
+                  Container(
+                    width: 26,
+                    height: 26,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(9),
+                      color: accent.withValues(alpha: 0.14),
+                    ),
+                    child: Icon(icon, size: 15, color: accent),
+                  ),
                   const Spacer(),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text(it.$2,
-                        style: TextStyle(
+                    child: Text(display,
+                        style: AppTextStyles.numeric(TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: it.$2 == '—' ? palette.textMuted : palette.text)),
+                            color: unavailable
+                                ? palette.textMuted
+                                : palette.text))),
                   ),
-                  Text(it.$3,
+                  const SizedBox(height: 2),
+                  Text(label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                          fontSize: 11, color: palette.textMuted)),
+                          fontSize: 10.5, color: palette.textMuted)),
+                  const SizedBox(height: 7),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: SizedBox(
+                      height: 3,
+                      child: Stack(
+                        children: [
+                          Container(
+                              color:
+                                  Colors.white.withValues(alpha: 0.10)),
+                          FractionallySizedBox(
+                            widthFactor: unavailable ? 0 : gauge,
+                            child: Container(
+                                color: accent.withValues(alpha: 0.85)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
