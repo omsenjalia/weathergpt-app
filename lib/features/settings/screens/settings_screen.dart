@@ -7,7 +7,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
 import '../providers/settings_provider.dart';
 import '../providers/developer_options_provider.dart';
-import '../../farmer/models/farm_profile_model.dart';
 import '../../farmer/providers/farm_profile_provider.dart';
 import '../../farmer/screens/farm_profile_screen.dart';
 import '../../home/providers/atmosphere_provider.dart';
