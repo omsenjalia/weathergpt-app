@@ -79,18 +79,3 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
 
-      - name: Build App Bundle (same signing mode)
-        env:
-          SIGNING_MODE: ${{ steps.keystore.outputs.has_keystore == 'true' && 'signed' || 'debug-keys' }}
-          KEYSTORE_PATH: android/app/release.keystore
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: flutter build appbundle --release
-
-      - name: Upload App Bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: weathergpt-bundle-${{ github.sha }}
-          path: build/app/outputs/bundle/release/app-release.aab
-          retention-days: 30
