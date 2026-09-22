@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
 import '../../../core/widgets/hub_card.dart';
-import '../../home/theme/atmosphere_theme.dart';
+import '../../home/providers/atmosphere_provider.dart';
 
 /// Farmer hub — the dedicated "Farm" tab. Every farmer tool lives one tap
 /// from here instead of inside Settings.
@@ -15,7 +15,7 @@ class FarmerHubScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = ambientPalette();
+    final palette = ref.watch(atmospherePaletteProvider);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(

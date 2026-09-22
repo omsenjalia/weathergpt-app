@@ -5,8 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
-import '../../home/providers/weather_provider.dart';
-import '../../home/theme/atmosphere_theme.dart';
+import '../../home/providers/atmosphere_provider.dart';
 import '../providers/voice_provider.dart';
 
 class VoiceListeningScreen extends ConsumerStatefulWidget {
@@ -65,7 +64,7 @@ class _VoiceListeningScreenState extends ConsumerState<VoiceListeningScreen>
     });
 
     final state = ref.watch(voiceProvider);
-    final palette = _palette();
+    final palette = ref.watch(atmospherePaletteProvider);
     final listening = state.status == VoiceStatus.listening;
     final processing = state.status == VoiceStatus.processing;
     final error = state.status == VoiceStatus.error;
@@ -247,11 +246,4 @@ class _VoiceListeningScreenState extends ConsumerState<VoiceListeningScreen>
     );
   }
 
-  AtmospherePalette _palette() {
-    final weather = ref.watch(weatherProvider).value;
-    final w = weather;
-    final sky = w == null ? SkyCondition.clear : conditionFromWeather(w);
-    final period = periodFromLocalTime(DateTime.now(), null, null);
-    return paletteFor(period, sky);
-  }
 }

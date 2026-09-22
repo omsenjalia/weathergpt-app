@@ -8,7 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/primary_button.dart';
-import '../../home/theme/atmosphere_theme.dart';
+import '../../home/providers/atmosphere_provider.dart';
 import '../providers/onboarding_provider.dart';
 
 class LanguageSelectScreen extends ConsumerWidget {
@@ -51,7 +51,7 @@ class LanguageSelectScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(onboardingProvider).selectedLanguage;
-    final palette = ambientPalette();
+    final palette = ref.watch(atmospherePaletteProvider);
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: Stack(

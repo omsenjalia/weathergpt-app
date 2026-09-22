@@ -8,8 +8,7 @@ import '../../../core/utils/markdown_utils.dart';
 import '../../../core/widgets/atmosphere_background.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/rich_markdown.dart';
-import '../../home/providers/weather_provider.dart';
-import '../../home/theme/atmosphere_theme.dart';
+import '../../home/providers/atmosphere_provider.dart';
 import '../providers/voice_provider.dart';
 
 /// Spoken-answer screen: what was heard, the full markdown answer, structured
@@ -47,7 +46,7 @@ class _ConversationalResultScreenState
   @override
   Widget build(BuildContext context) {
     final r = widget.response;
-    final palette = _palette();
+    final palette = ref.watch(atmospherePaletteProvider);
     // Opaque full-screen route — avoids shell bleed / multi-layer ghosting.
     return PopScope(
       canPop: true,
@@ -287,13 +286,5 @@ class _ConversationalResultScreenState
   Future<void> _close() async {
     await _stopVoice();
     if (mounted) context.go('/home');
-  }
-
-  AtmospherePalette _palette() {
-    final weather = ref.watch(weatherProvider).value;
-    final w = weather;
-    final sky = w == null ? SkyCondition.clear : conditionFromWeather(w);
-    final period = periodFromLocalTime(DateTime.now(), null, null);
-    return paletteFor(period, sky);
   }
 }

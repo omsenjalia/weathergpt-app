@@ -526,11 +526,3 @@ String windDirLabel(num? deg) {
   final i = ((deg % 360) / 45).round() % 8;
   return dirs[i];
 }
-
-/// Palette for screens without a weather snapshot (chat, voice, onboarding):
-/// time-of-day only, clear-sky base. Screens that hold a live snapshot pass
-/// the real condition to [paletteFor] instead.
-AtmospherePalette ambientPalette() => paletteFor(
-      periodFromLocalTime(DateTime.now(), null, null),
-      SkyCondition.clear,
-    );

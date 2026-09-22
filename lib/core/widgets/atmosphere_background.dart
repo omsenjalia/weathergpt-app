@@ -8,6 +8,10 @@ import 'package:flutter/material.dart';
 /// time-of-day palette plus two slow-drifting colored glows so the app feels
 /// alive without a video decoder running. Purely decorative — screen content
 /// is layered above by the caller.
+///
+/// When the palette changes (time of day crossing, weather turning), the
+/// gradient and glow colors tween smoothly to the new sky instead of
+/// snapping.
 class AtmosphereBackground extends StatefulWidget {
   const AtmosphereBackground({
     super.key,
@@ -71,36 +75,65 @@ class _AtmosphereBackgroundState extends State<AtmosphereBackground>
       child: Stack(
         fit: StackFit.expand,
         children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [widget.top, widget.mid, widget.bottom],
-                stops: const [0.0, 0.55, 1.0],
+          TweenAnimationBuilder<Color?>(
+            tween: ColorTween(end: widget.top),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOut,
+            builder: (_, top, __) => TweenAnimationBuilder<Color?>(
+              tween: ColorTween(end: widget.mid),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeOut,
+              builder: (_, mid, ___) => TweenAnimationBuilder<Color?>(
+                tween: ColorTween(end: widget.bottom),
+                duration: const Duration(milliseconds: 900),
+                curve: Curves.easeOut,
+                builder: (_, bottom, ____) => DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        top ?? widget.top,
+                        mid ?? widget.mid,
+                        bottom ?? widget.bottom,
+                      ],
+                      stops: const [0.0, 0.55, 1.0],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-          AnimatedBuilder(
-            animation: _drift,
-            builder: (context, _) {
-              final t = Curves.easeInOut.transform(_drift.value);
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  Positioned(
-                    left: -size.width * 0.35 + t * 28,
-                    top: -size.height * 0.12 - t * 18,
-                    child: _glow(size * 0.9, widget.glow, 0.16),
-                  ),
-                  Positioned(
-                    right: -size.width * 0.30 - t * 24,
-                    bottom: -size.height * 0.18 + t * 14,
-                    child: _glow(size * 0.8, widget.secondaryGlow, 0.10),
-                  ),
-                ],
-              );
-            },
+          TweenAnimationBuilder<Color?>(
+            tween: ColorTween(end: widget.glow),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOut,
+            builder: (_, glow, __) => TweenAnimationBuilder<Color?>(
+              tween: ColorTween(end: widget.secondaryGlow),
+              duration: const Duration(milliseconds: 900),
+              curve: Curves.easeOut,
+              builder: (_, glow2, ___) => AnimatedBuilder(
+                animation: _drift,
+                builder: (context, _) {
+                  final t = Curves.easeInOut.transform(_drift.value);
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Positioned(
+                        left: -size.width * 0.35 + t * 28,
+                        top: -size.height * 0.12 - t * 18,
+                        child: _glow(size * 0.9, glow ?? widget.glow, 0.16),
+                      ),
+                      Positioned(
+                        right: -size.width * 0.30 - t * 24,
+                        bottom: -size.height * 0.18 + t * 14,
+                        child: _glow(size * 0.8, glow2 ?? widget.secondaryGlow, 0.10),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
           if (widget.scrim)
             DecoratedBox(

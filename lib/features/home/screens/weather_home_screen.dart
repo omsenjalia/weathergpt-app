@@ -12,6 +12,7 @@ import '../../../models/weather.dart';
 import '../../explore/providers/saved_locations_provider.dart';
 import '../../settings/providers/developer_options_provider.dart';
 import '../../settings/providers/settings_provider.dart';
+import '../providers/atmosphere_provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/weather_provider.dart';
 import '../theme/atmosphere_theme.dart';
@@ -32,6 +33,18 @@ class WeatherHomeScreen extends ConsumerStatefulWidget {
 
 class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
   int _tab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // First launch: ask for location permission once so the app opens on the
+    // user's real city instead of the Ahmedabad default. Silent no-op when
+    // the user already chose a location or denied.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(locationProvider.notifier).maybeAutoLocate();
+    });
+  }
 
   Future<void> _pickLocation() async {
     final selected = await showModalBottomSheet<AppLocation>(

@@ -10,7 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/rich_markdown.dart';
-import '../../home/providers/weather_provider.dart';
+import '../../home/providers/atmosphere_provider.dart';
 import '../../home/theme/atmosphere_theme.dart';
 import '../../settings/providers/settings_provider.dart';
 import '../providers/chat_provider.dart';
@@ -85,7 +85,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chat = ref.watch(chatProvider);
     ref.listen(chatProvider, (_, __) => _scrollDown());
 
-    final palette = _palette();
+    // Live sky: follows time of day AND the latest weather snapshot, and
+    // repaints automatically as either changes.
+    final palette = ref.watch(atmospherePaletteProvider);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final navPad = MediaQuery.paddingOf(context).bottom;
 
@@ -156,16 +158,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
     );
-  }
-
-  /// Ambient sky matching the current time (and live condition when the
-  /// weather snapshot is already in memory).
-  AtmospherePalette _palette() {
-    final weather = ref.watch(weatherProvider).value;
-    final w = weather;
-    final sky = w == null ? SkyCondition.clear : conditionFromWeather(w);
-    final period = periodFromLocalTime(DateTime.now(), null, null);
-    return paletteFor(period, sky);
   }
 }
 

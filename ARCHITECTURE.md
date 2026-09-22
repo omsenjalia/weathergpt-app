@@ -237,7 +237,7 @@ weathergpt-app/
 │   │       └── rich_markdown.dart   # Shared GptMarkdown renderer (tables, code, LaTeX)
 │   └── features/
 │       ├── home/
-│       │   ├── providers/ weatherProvider (FutureProvider, v2→legacy), locationProvider
+│       │   ├── providers/ weatherProvider (FutureProvider, v2→legacy), locationProvider (one-time GPS permission prompt + reverse geocode), clockTickerProvider + atmospherePaletteProvider (live app-wide sky)
 │       │   ├── screens/weather_home_screen.dart
 │       │   ├── theme/atmosphere_theme.dart # 11 periods + 12 conditions
 │       │   └── widgets/ atmosphere_background, atmosphere_video_background, weather_hero_card, weather_metric_strip, weather_provenance_bar, weather_detail_panels, voice_orb, weather_segment_tabs

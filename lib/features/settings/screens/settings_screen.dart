@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
 import '../providers/settings_provider.dart';
 import '../providers/developer_options_provider.dart';
+import '../../home/providers/atmosphere_provider.dart';
 import '../../home/theme/atmosphere_theme.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -43,7 +44,7 @@ class SettingsScreen extends ConsumerWidget {
     final dev = ref.watch(developerOptionsProvider);
     final devN = ref.read(developerOptionsProvider.notifier);
     final bottom = MediaQuery.paddingOf(context).bottom + 108;
-    final palette = ambientPalette();
+    final palette = ref.watch(atmospherePaletteProvider);
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,

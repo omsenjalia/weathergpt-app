@@ -41,4 +41,39 @@ class GeocodingService {
       return null;
     }
   }
+
+  /// Best-effort human name for coordinates via BigDataCloud's keyless
+  /// client endpoint. Falls back to [fallback] (never throws) so GPS flows
+  /// always succeed even when the reverse-geocode service is unreachable.
+  static Future<String> reverseName(
+    double lat,
+    double lon, {
+    String fallback = 'Current location',
+  }) async {
+    try {
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 8),
+      ));
+      final res = await dio.get<Map<String, dynamic>>(
+        'https://api.bigdatacloud.net/data/reverse-geocode-client',
+        queryParameters: {
+          'latitude': lat,
+          'longitude': lon,
+          'localityLanguage': 'en',
+        },
+      );
+      final data = res.data;
+      if (data == null) return fallback;
+      final city = (data['city'] ?? data['locality']) as String?;
+      final region = data['principalSubdivision'] as String?;
+      final label = [
+        if (city != null && city.isNotEmpty) city,
+        if (region != null && region.isNotEmpty && region != city) region,
+      ].join(', ');
+      return label.isEmpty ? fallback : label;
+    } catch (_) {
+      return fallback;
+    }
+  }
 }
