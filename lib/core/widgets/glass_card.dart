@@ -7,11 +7,16 @@ import '../theme/app_colors.dart';
 /// Frosted-glass surface used across the app.
 ///
 /// Two tiers:
-/// - [blur] (default false): translucent fill + hairline border. Cheap enough
-///   for grids and lists — this is the default card of the design system.
+/// - [blur] (default false): translucent dark fill + hairline border. Cheap
+///   enough for grids and lists — this is the default card of the design
+///   system.
 /// - [blur] true: real `BackdropFilter` frosted glass for chrome that floats
 ///   above changing content (nav bar, chat composer). Use sparingly; blurred
 ///   layers are expensive on low-end devices.
+///
+/// The fill is intentionally a translucent DARK navy on every sky: white text
+/// must stay readable on bright daylight gradients, so cards never turn into
+/// white glass.
 class GlassCard extends StatelessWidget {
   const GlassCard({
     super.key,
@@ -38,7 +43,7 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fillAlpha = strong ? 0.13 : 0.07;
+    final fill = strong ? AppColors.glassFillStrong : AppColors.glassFill;
     final outline =
         borderColor ?? (strong ? AppColors.glassBorderStrong : AppColors.glassBorder);
 
@@ -47,9 +52,7 @@ class GlassCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(radius),
         gradient: gradient,
-        color: gradient == null
-            ? Colors.white.withValues(alpha: fillAlpha)
-            : null,
+        color: gradient == null ? fill : null,
         border: Border.all(color: outline),
       ),
       child: child,

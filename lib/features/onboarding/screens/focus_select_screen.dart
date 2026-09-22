@@ -97,7 +97,7 @@ class FocusSelectScreen extends ConsumerWidget {
                                 border: Border.all(
                                   color: active
                                       ? _accent(option.$1)
-                                      : AppColors.borderStrong,
+                                      : AppColors.glassBorderStrong,
                                 ),
                               ),
                               child: Icon(option.$2,
@@ -134,8 +134,8 @@ class FocusSelectScreen extends ConsumerWidget {
                                 border: Border.all(
                                   color: active
                                       ? _accent(option.$1)
-                                      : AppColors.borderStrong,
-                                  width: 1.6,
+                                      : AppColors.glassBorderStrong,
+                                  width: 1.8,
                                 ),
                               ),
                               child: active

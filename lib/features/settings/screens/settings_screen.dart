@@ -42,7 +42,7 @@ class SettingsScreen extends ConsumerWidget {
     final n = ref.read(settingsProvider.notifier);
     final dev = ref.watch(developerOptionsProvider);
     final devN = ref.read(developerOptionsProvider.notifier);
-    final bottom = MediaQuery.paddingOf(context).bottom + 80;
+    final bottom = MediaQuery.paddingOf(context).bottom + 108;
     final palette = ambientPalette();
 
     return Scaffold(
@@ -56,7 +56,6 @@ class SettingsScreen extends ConsumerWidget {
             bottom: palette.bottom,
             glow: palette.glow,
             secondaryGlow: palette.accent,
-            scrim: false,
           ),
           SafeArea(
             bottom: false,
@@ -146,41 +145,6 @@ class SettingsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            _section('Tools'),
-            _card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.map_outlined, color: AppColors.sky),
-                    title: const Text('Weather map'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.go('/explore'),
-                  ),
-                  if (settings.userPersona == 'researcher') ...[
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.insights_outlined,
-                          color: AppColors.researcherBlue),
-                      title: const Text('Historical data'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/researcher/historical'),
-                    ),
-                  ],
-                  if (settings.userPersona == 'farmer') ...[
-                    const Divider(height: 1),
-                    ListTile(
-                      leading: const Icon(Icons.agriculture_outlined,
-                          color: AppColors.farmerGreen),
-                      title: const Text('Farm profile'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/farmer/farm-profile'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
             const SizedBox(height: 20),
             _section('Developer'),
             _card(
@@ -471,14 +435,14 @@ class SettingsScreen extends ConsumerWidget {
             fontSize: 11,
             letterSpacing: 1.2,
             fontWeight: FontWeight.w700,
-            color: AppColors.textTertiary,
+            color: AppColors.textSecondary,
           ),
         ),
       );
 
   Widget _card({required Widget child}) => Container(
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.055),
+          color: AppColors.glassFill,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.glassBorder),
         ),

@@ -5,28 +5,81 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_colors.dart';
 import '../../features/explore/providers/map_provider.dart';
+import '../../features/settings/providers/settings_provider.dart';
+
+typedef _NavItem = ({
+  String path,
+  IconData icon,
+  IconData activeIcon,
+  String label,
+});
+
+const _homeItem = (
+  path: '/home',
+  icon: Icons.home_outlined,
+  activeIcon: Icons.home_rounded,
+  label: 'Home',
+);
+const _chatItem = (
+  path: '/chat',
+  icon: Icons.forum_outlined,
+  activeIcon: Icons.forum_rounded,
+  label: 'Chat',
+);
+const _mapItem = (
+  path: '/explore',
+  icon: Icons.public_outlined,
+  activeIcon: Icons.public_rounded,
+  label: 'Map',
+);
+const _farmItem = (
+  path: '/farmer',
+  icon: Icons.agriculture_outlined,
+  activeIcon: Icons.agriculture_rounded,
+  label: 'Farm',
+);
+const _labItem = (
+  path: '/researcher',
+  icon: Icons.analytics_outlined,
+  activeIcon: Icons.analytics_rounded,
+  label: 'Lab',
+);
+const _settingsItem = (
+  path: '/profile',
+  icon: Icons.tune_outlined,
+  activeIcon: Icons.tune_rounded,
+  label: 'Settings',
+);
 
 /// Floating pill navigation bar shared by all main app routes.
 ///
 /// Frosted glass over the screen content, with a soft gradient pill that
-/// slides between tabs and light haptics on selection.
+/// slides between tabs and light haptics on selection. The tab set adapts to
+/// the active persona: farmer and researcher modes get a dedicated tab for
+/// their tools instead of burying them inside Settings.
 class NavigationShell extends ConsumerWidget {
   const NavigationShell({super.key, required this.child});
   final Widget child;
 
-  static const _items = [
-    (path: '/home', icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Home'),
-    (path: '/chat', icon: Icons.forum_outlined, activeIcon: Icons.forum_rounded, label: 'Chat'),
-    (path: '/explore', icon: Icons.public_outlined, activeIcon: Icons.public_rounded, label: 'Map'),
-    (path: '/profile', icon: Icons.tune_outlined, activeIcon: Icons.tune_rounded, label: 'Settings'),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.path;
+    final persona = ref.watch(settingsProvider.select((s) => s.userPersona));
+
+    final items = <_NavItem>[
+      _homeItem,
+      _chatItem,
+      _mapItem,
+      if (persona == 'farmer')
+        _farmItem
+      else if (persona == 'researcher')
+        _labItem,
+      _settingsItem,
+    ];
+
     var currentIndex = 0;
-    for (var i = 0; i < _items.length; i++) {
-      final path = _items[i].path;
+    for (var i = 0; i < items.length; i++) {
+      final path = items[i].path;
       if (location == path || location.startsWith('$path/')) {
         currentIndex = i;
         break;
@@ -59,8 +112,8 @@ class NavigationShell extends ConsumerWidget {
                 child: SizedBox(
                   height: 66,
                   child: Row(
-                    children: List.generate(_items.length, (i) {
-                      final item = _items[i];
+                    children: List.generate(items.length, (i) {
+                      final item = items[i];
                       final active = i == currentIndex;
                       return Expanded(
                         child: GestureDetector(

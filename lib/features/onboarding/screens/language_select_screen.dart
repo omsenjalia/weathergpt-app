@@ -177,14 +177,16 @@ class _SelectionDot extends StatelessWidget {
   final bool selected;
   @override
   Widget build(BuildContext context) => Container(
-        width: 20,
-        height: 20,
+        width: 22,
+        height: 22,
         decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: selected ? AppColors.farmerGreen : Colors.transparent,
             border: Border.all(
-                color:
-                    selected ? AppColors.farmerGreen : AppColors.borderSubtle)),
+                color: selected
+                    ? AppColors.farmerGreen
+                    : AppColors.glassBorderStrong,
+                width: 1.8)),
         child: selected
             ? const Icon(Icons.check, size: 14, color: Colors.white)
             : null,

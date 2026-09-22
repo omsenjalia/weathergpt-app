@@ -67,7 +67,7 @@ It translates multi-source meteorological telemetry into actionable, hyper-local
 graph TB
     subgraph "Mobile Client - Flutter 3.44"
         UI["Flutter UI - Material 3, Glassmorphism, Video Sky"]
-        NAV["GoRouter Shell - /home, /chat, /explore, /farmer, /settings"]
+        NAV["GoRouter Shell - /home, /chat, /explore, /farmer|/researcher (persona tab), /profile"]
         STATE["Riverpod Providers - Weather, Chat, Voice, Farm, Researcher"]
         CLIENT["ApiClient Dio - Accept-Language, Interceptors, RequestLog"]
         CACHE["Hive - settings, farm_profile, saved_locations"]
@@ -230,7 +230,7 @@ weathergpt-app/
 │   │       ├── atmosphere_scaffold.dart  # Immersive scaffold wrapper
 │   │       ├── glass_card.dart           # Frosted-glass surface primitive
 │   │       ├── metric_chip.dart
-│   │       ├── navigation_shell.dart # Floating glass pill nav
+│   │       ├── navigation_shell.dart # Floating glass pill nav; persona-aware tab set (Farm/Lab tab for farmer/researcher)
 │   │       ├── outlined_button_pill.dart
 │   │       ├── persona_badge.dart
 │   │       ├── primary_button.dart
@@ -250,11 +250,11 @@ weathergpt-app/
 │       ├── farmer/
 │       │   ├── models/advisory_models.dart, farm_profile_model.dart
 │       │   ├── providers/action_windows_provider.dart (generation guard + contextKey), farm_profile_provider.dart
-│       │   ├── screens/action_windows_screen.dart, farm_profile_screen.dart
+│       │   ├── screens/farmer_hub_screen.dart (Farm tab hub), action_windows_screen.dart, farm_profile_screen.dart
 │       │   └── widgets/time_window_bar.dart # 12 buckets
 │       ├── researcher/
 │       │   ├── providers/historicalDataProvider, comparisonProvider, anomaly_trends_provider
-│       │   └── screens/HistoricalDataScreen, ComparisonScreen, AnomalyTrendsScreen
+│       │   └── screens/researcher_hub_screen.dart (Lab tab hub), HistoricalDataScreen, ComparisonScreen, AnomalyTrendsScreen
 │       ├── voice/
 │       │   ├── models/voice_card.dart # VoiceCard, CardTone good/caution/avoid
 │       │   ├── mappers/voice_response_mapper.dart

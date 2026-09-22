@@ -17,9 +17,11 @@ import '../features/voice/screens/conversational_result_screen.dart';
 import '../features/voice/screens/voice_listening_screen.dart';
 import '../features/farmer/screens/action_windows_screen.dart';
 import '../features/farmer/screens/farm_profile_screen.dart';
+import '../features/farmer/screens/farmer_hub_screen.dart';
 import '../features/researcher/screens/anomaly_trends_screen.dart';
 import '../features/researcher/screens/comparison_screen.dart';
 import '../features/researcher/screens/historical_data_screen.dart';
+import '../features/researcher/screens/researcher_hub_screen.dart';
 import '../features/researcher/providers/anomaly_trends_provider.dart';
 import '../features/settings/screens/debug_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
@@ -118,6 +120,14 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: '/explore',
           builder: (_, __) => const ExploreScreen(),
+        ),
+        GoRoute(
+          path: '/farmer',
+          builder: (_, __) => const FarmerHubScreen(),
+        ),
+        GoRoute(
+          path: '/researcher',
+          builder: (_, __) => const ResearcherHubScreen(),
         ),
         GoRoute(
           path: '/saved',

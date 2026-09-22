@@ -46,11 +46,12 @@ abstract final class AppColors {
   );
 
   // ---- Glass system -------------------------------------------------------
-  // Frosted surfaces used across the app. Fills are translucent whites so the
-  // atmospheric gradient behind them reads through; hairlines keep edges
-  // crisp on every screen density.
-  static const glassFill = Color(0x14FFFFFF); // ~8% white
-  static const glassFillStrong = Color(0x22FFFFFF); // ~13% white
+  // Frosted surfaces used across the app. Fills are translucent dark navy so
+  // white text stays readable on every sky — including bright daylight —
+  // exactly how professional weather apps keep cards legible over a bright
+  // gradient. Hairline white borders keep edges crisp on all densities.
+  static const glassFill = Color(0x99101930); // ~60% dark navy
+  static const glassFillStrong = Color(0xC0101930); // ~75% dark navy
   static const glassBorder = Color(0x1FFFFFFF); // ~12% white
   static const glassBorderStrong = Color(0x33FFFFFF); // ~20% white
 
