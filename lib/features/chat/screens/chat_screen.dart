@@ -138,10 +138,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                 Padding(
                   padding: EdgeInsets.fromLTRB(
-                    14,
-                    8,
-                    14,
-                    navPad + bottomInset + 78,
+                    16,
+                    10,
+                    16,
+                    navPad + bottomInset + 82,
                   ),
                   child: _Composer(
                     controller: _controller,
@@ -313,10 +313,11 @@ class _EmptyState extends ConsumerWidget {
             Text(
               'chat.welcome_subtitle'.tr(),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 14.5,
                 height: 1.45,
+                fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 26),
@@ -698,9 +699,9 @@ class _ComposerState extends State<_Composer> {
               filled: true,
               fillColor: AppColors.surfaceCard.withValues(alpha: 0.85),
               contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(26),
                 borderSide: const BorderSide(color: AppColors.glassBorder),
               ),
               enabledBorder: OutlineInputBorder(
@@ -714,24 +715,41 @@ class _ComposerState extends State<_Composer> {
             ),
           ),
         ),
-        const SizedBox(width: 10),
-        Material(
-          color: active ? Colors.transparent : AppColors.borderStrong,
-          shape: const CircleBorder(),
-          elevation: active ? 6 : 0,
-          shadowColor: AppColors.accent.withValues(alpha: 0.35),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: active ? widget.onSubmit : null,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: active ? AppColors.gradientAccent : null,
+        // The send button only occupies space when there is something to
+        // send — an idle grey circle next to an empty field wasted a slot.
+        ClipRect(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            width: active ? 58 : 0,
+            child: Opacity(
+              opacity: active ? 1 : 0,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(width: 10),
+                  Material(
+                    color: Colors.transparent,
+                    shape: const CircleBorder(),
+                    elevation: 6,
+                    shadowColor: AppColors.accent.withValues(alpha: 0.35),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: active ? widget.onSubmit : null,
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppColors.gradientAccent,
+                        ),
+                        child: const Icon(Icons.arrow_upward_rounded,
+                            color: Colors.black),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.arrow_upward_rounded,
-                  color: Colors.black),
             ),
           ),
         ),

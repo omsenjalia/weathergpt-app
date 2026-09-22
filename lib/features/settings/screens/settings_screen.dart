@@ -68,8 +68,11 @@ class SettingsScreen extends ConsumerWidget {
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.6)),
             const SizedBox(height: 6),
-            const Text('Language, voice, and experience',
-                style: TextStyle(color: AppColors.textSecondary)),
+            Text('Language, voice, and experience',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontWeight: FontWeight.w500,
+                )),
             const SizedBox(height: 24),
             _section('Language'),
             _card(
@@ -169,7 +172,7 @@ class SettingsScreen extends ConsumerWidget {
                     const Divider(height: 1),
                     const ListTile(
                       dense: true,
-                      title: Text('DATA SOURCE', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: AppColors.textTertiary)),
+                      title: Text('DATA SOURCE', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: Colors.white54)),
                     ),
                     ListTile(
                       title: const Text('Pin forecast source'),
@@ -248,7 +251,7 @@ class SettingsScreen extends ConsumerWidget {
                     const Divider(height: 1),
                     const ListTile(
                       dense: true,
-                      title: Text('DISPLAY', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: AppColors.textTertiary)),
+                      title: Text('DISPLAY', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: Colors.white54)),
                     ),
                     SwitchListTile(
                       title: const Text('Show provenance bar on Home'),
@@ -274,7 +277,7 @@ class SettingsScreen extends ConsumerWidget {
                     const Divider(height: 1),
                     const ListTile(
                       dense: true,
-                      title: Text('SKY & TTS OVERRIDES', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: AppColors.textTertiary)),
+                      title: Text('SKY & TTS OVERRIDES', style: TextStyle(fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700, color: Colors.white54)),
                     ),
                     ListTile(
                       title: const Text('Force time of day'),
@@ -408,9 +411,9 @@ class SettingsScreen extends ConsumerWidget {
                   Text(
                     'settings.footer'.tr(),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
-                      color: AppColors.textTertiary,
+                      color: Colors.white.withValues(alpha: 0.65),
                       height: 1.4,
                     ),
                   ),
@@ -431,18 +434,18 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 8, left: 4),
         child: Text(
           t.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 11,
+          style: TextStyle(
+            fontSize: 11.5,
             letterSpacing: 1.2,
             fontWeight: FontWeight.w700,
-            color: AppColors.textSecondary,
+            color: Colors.white.withValues(alpha: 0.75),
           ),
         ),
       );
 
   Widget _card({required Widget child}) => Container(
         decoration: BoxDecoration(
-          color: AppColors.glassFill,
+          color: AppColors.glassFillStrong,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.glassBorder),
         ),

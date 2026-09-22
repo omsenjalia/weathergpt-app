@@ -57,7 +57,7 @@ abstract final class AppTheme {
           fillColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.selected)
                 ? AppColors.accent
-                : AppColors.textTertiary,
+                : Colors.white.withValues(alpha: 0.55),
           ),
         ),
         switchTheme: SwitchThemeData(

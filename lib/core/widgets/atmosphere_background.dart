@@ -110,10 +110,10 @@ class _AtmosphereBackgroundState extends State<AtmosphereBackground>
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    widget.bottom.withValues(alpha: 0.35),
-                    Colors.black.withValues(alpha: 0.22),
+                    widget.bottom.withValues(alpha: 0.42),
+                    Colors.black.withValues(alpha: 0.30),
                   ],
-                  stops: const [0.35, 0.75, 1.0],
+                  stops: const [0.30, 0.72, 1.0],
                 ),
               ),
             ),
