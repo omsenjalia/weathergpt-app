@@ -14,13 +14,13 @@ class MarkdownUtils {
     text = text.replaceAll(RegExp(r'widget:\w+\s*'), ' ');
     // Headings (including emoji titles like "## 🌤️ WeatherGPT Live Status")
     text = text.replaceAll(RegExp(r'^#{1,6}\s*.*$', multiLine: true), ' ');
-    // Table separator rows (|---|---|) vanish; data rows become prose.
+    // Table separator rows (|---|---|) vanish; data rows become prose with
+    // every cell divider spoken as a plain pause.
     text = text.replaceAll(
       RegExp(r'^\s*\|[\s:\-|]+\|\s*$', multiLine: true),
       ' ',
     );
-    text = text.replaceAll(RegExp(r'^\s*\|', multiLine: true), ' ');
-    text = text.replaceAll(RegExp(r'\|\s*$', multiLine: true), ' ');
+    text = text.replaceAll('|', ' ');
     // LaTeX: keep the payload, drop the delimiters and layout commands the
     // speech engine cannot pronounce.
     text = text.replaceAll(RegExp(r'\\[\[\]()]'), ' ');
