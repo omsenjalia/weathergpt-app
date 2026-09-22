@@ -20,8 +20,15 @@ import '../providers/onboarding_provider.dart';
 ///
 /// Everything here stays editable later in **Settings → Farm profile** (and
 /// in the Farm tab), and skipping keeps the default profile.
+///
+/// First-time farmers choose between this form and the voice conversation
+/// ([FarmVoiceScreen]) on the choice step; both hand unsaved drafts to each
+/// other via route extras, so switching never loses answers.
 class FarmDetailsScreen extends ConsumerStatefulWidget {
-  const FarmDetailsScreen({super.key});
+  const FarmDetailsScreen({super.key, this.initialDraft});
+
+  /// Unsaved answers handed over from the voice flow, shown for editing.
+  final Map<String, dynamic>? initialDraft;
 
   @override
   ConsumerState<FarmDetailsScreen> createState() => _FarmDetailsScreenState();
@@ -39,7 +46,10 @@ class _FarmDetailsScreenState extends ConsumerState<FarmDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _initFrom(ref.read(farmProfileProvider));
+    final draft = widget.initialDraft;
+    _initFrom(draft != null
+        ? FarmProfile.fromMap(draft)
+        : ref.read(farmProfileProvider));
   }
 
   @override
@@ -58,6 +68,25 @@ class _FarmDetailsScreenState extends ConsumerState<FarmDetailsScreen> {
     _stage = profile.growthStage;
     _irrigation = profile.irrigationType;
     _soil = profile.soilType;
+  }
+
+  /// Current field values as a handoff map. Unlike saving, this never
+  /// validates: unparsable entries fall back to the stored profile so the
+  /// other flow can fix them.
+  Map<String, dynamic> _currentDraftMap() {
+    final base = ref.read(farmProfileProvider);
+    final size = double.tryParse(_size.text.trim());
+    return {
+      'location': _location.text.trim().isEmpty
+          ? base.location
+          : _location.text.trim(),
+      'crop': _crop,
+      'growthStage': _stage,
+      'farmSizeAcres':
+          (size == null || size <= 0) ? base.farmSizeAcres : size,
+      'irrigationType': _irrigation,
+      'soilType': _soil,
+    };
   }
 
   Future<void> _finish({required bool save}) async {
@@ -103,7 +132,8 @@ class _FarmDetailsScreenState extends ConsumerState<FarmDetailsScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
-                    onPressed: () => context.go('/onboarding/focus'),
+                    onPressed: () => context.go('/onboarding/farm',
+                        extra: _currentDraftMap()),
                     icon: const Icon(Icons.arrow_back_rounded, size: 18),
                     label: Text('onboarding.back'.tr()),
                     style: TextButton.styleFrom(
@@ -173,6 +203,18 @@ class _FarmDetailsScreenState extends ConsumerState<FarmDetailsScreen> {
                     child: Text('onboarding.skip_for_now'.tr(),
                         style:
                             const TextStyle(color: AppColors.textSecondary)),
+                  ),
+                ),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: _saving
+                        ? null
+                        : () => context.go('/onboarding/farm-voice',
+                            extra: _currentDraftMap()),
+                    icon: const Icon(Icons.mic_rounded, size: 18),
+                    label: Text('farm.voice_talk_instead'.tr()),
+                    style: TextButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary),
                   ),
                 ),
               ],

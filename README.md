@@ -135,7 +135,7 @@ WeatherGPT dynamically personalizes its UI, insights, and data depth based on th
 └─────────────────────┴───────────────────────────┴───────────────────────────┘
 ```
 
-> Choosing **Farmer** during onboarding asks for farm details (location, crop, growth stage, size, irrigation, soil) so advisories are tuned from the first session. These stay editable anytime in **Settings → Farm profile** (and in the Farm tab).
+> Choosing **Farmer** during onboarding asks for farm details (location, crop, growth stage, size, irrigation, soil) so advisories are tuned from the first session — either by typing a short form or by answering six spoken questions, with a review step before saving. These stay editable anytime in **Settings → Farm profile** (and in the Farm tab).
 
 ---
 

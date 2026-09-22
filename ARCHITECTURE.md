@@ -265,8 +265,8 @@ weathergpt-app/
 │       │   ├── providers/settingsProvider, developerOptionsProvider (DevSourcePin, wnModel, hourly 1-168, forecast 1-15)
 │       │   └── screens/debug_screen.dart (5 tabs), settings_screen.dart (farmer persona gains a Farm profile section)
 │       └── onboarding/
-│           ├── providers/onboarding_provider.dart (persona/language state, Hive completion write, settings re-sync)
-│           └── screens/SplashScreen, LanguageSelectScreen, FocusSelectScreen, FarmDetailsScreen (extra farmer step: location, crop, stage, size, irrigation, soil)
+│           ├── providers/onboarding_provider.dart (persona/language state, Hive completion write, settings re-sync), farm_voice_provider.dart (voice onboarding STT/TTS + scripted step machine)
+│           └── screens/SplashScreen, LanguageSelectScreen, FocusSelectScreen, FarmChoiceScreen (Talk/Type choice) + FarmDetailsScreen (form) + FarmVoiceScreen (voice Q&A + tap-to-correct review) — extra farmer step: location, crop, stage, size, irrigation, soil
 ├── pubspec.yaml
 ├── pubspec.lock
 ├── scripts/push-all.sh           # Submodule-aware push
@@ -643,7 +643,8 @@ Hazard handling is **backend-driven**, not a custom in-app RED/YELLOW/GREEN thre
 
 ### Farm Profile Onboarding & Settings
 
-- Picking **Farmer** in onboarding routes to `FarmDetailsScreen` (location, crop, growth stage, farm size, irrigation, soil) before `/home`; skipping keeps the default profile. The same data feeds `GET /advisory` and `POST /chat` farm context.
+- Picking **Farmer** in onboarding routes to a Talk-vs-type choice (`/onboarding/farm`), then the `FarmDetailsScreen` form (`/onboarding/farm-form`) or the `FarmVoiceScreen` voice conversation (`/onboarding/farm-voice`) before `/home`; skipping keeps the default profile. The same data feeds `GET /advisory` and `POST /chat` farm context.
+- Voice onboarding is a scripted on-device loop, not a backend chat: TTS asks six questions in the onboarding language, STT captures each answer, and `farm_voice_parser.dart` maps it to a wire value (en/hi/gu aliases + romanized forms, fuzzy longest-phrase match, Indic-digit sizes). It runs its own STT/TTS engine in `farm_voice_provider.dart` — the main voice surface auto-submits to `/chat` and reads the settings locale, neither of which fits pre-sync onboarding. The mic never auto-starts (TTS echo); every question also has tappable chips plus per-step skip, a GPS shortcut for location, Talk↔Type draft handoffs via route extras, and a tap-to-correct review before saving.
 - Option catalogs live in `farm_options.dart` and are shared with the profile editor, so a stored value can never be missing from a dropdown (which would throw). Catalog strings are backend wire values and stay in English; only field labels are localized.
 - **Settings → Farm profile** (visible for the farmer persona) shows the saved summary or a "Complete your farm profile" prompt, and switching to the farmer persona with an incomplete profile opens the editor directly.
 

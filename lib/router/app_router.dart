@@ -9,7 +9,9 @@ import '../features/home/screens/weather_home_screen.dart';
 import '../features/chat/screens/chat_screen.dart';
 import '../features/explore/screens/explore_screen.dart';
 import '../features/explore/screens/saved_locations_screen.dart';
+import '../features/onboarding/screens/farm_choice_screen.dart';
 import '../features/onboarding/screens/farm_details_screen.dart';
+import '../features/onboarding/screens/farm_voice_screen.dart';
 import '../features/onboarding/screens/focus_select_screen.dart';
 import '../features/onboarding/screens/language_select_screen.dart';
 import '../features/onboarding/screens/splash_screen.dart';
@@ -28,6 +30,11 @@ import '../features/settings/screens/debug_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+/// Reads a farm draft handoff from a route extra. Returns null when absent
+/// (fresh entry from the persona step).
+Map<String, dynamic>? _draftExtra(Object? extra) =>
+    extra is Map ? Map<String, dynamic>.from(extra) : null;
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
@@ -62,9 +69,22 @@ final GoRouter appRouter = GoRouter(
       path: '/onboarding/focus',
       builder: (_, __) => const FocusSelectScreen(),
     ),
+    // Farmer farm step: Talk-vs-type choice first, then the form or the
+    // voice conversation. Draft handoffs travel as Map extras.
     GoRoute(
       path: '/onboarding/farm',
-      builder: (_, __) => const FarmDetailsScreen(),
+      builder: (_, state) =>
+          FarmChoiceScreen(initialDraft: _draftExtra(state.extra)),
+    ),
+    GoRoute(
+      path: '/onboarding/farm-form',
+      builder: (_, state) =>
+          FarmDetailsScreen(initialDraft: _draftExtra(state.extra)),
+    ),
+    GoRoute(
+      path: '/onboarding/farm-voice',
+      builder: (_, state) =>
+          FarmVoiceScreen(initialDraft: _draftExtra(state.extra)),
     ),
     GoRoute(
       path: '/voice/listening',
