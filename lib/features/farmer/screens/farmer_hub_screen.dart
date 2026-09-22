@@ -22,11 +22,8 @@ class FarmerHubScreen extends ConsumerWidget {
         fit: StackFit.expand,
         children: [
           AtmosphereBackground(
-            top: palette.top,
-            mid: palette.mid,
-            bottom: palette.bottom,
-            glow: AppColors.farmerGreen,
-            secondaryGlow: palette.accent,
+            palette: palette,
+            glowOverride: AppColors.farmerGreen,
           ),
           SafeArea(
             bottom: false,

@@ -224,5 +224,12 @@
   "voice.error": "કંઈક ખોટું થયું",
   "voice.hint": "હવામાન, વરસાદ કે ખેતી વિશે પૂછો",
   "voice.done_speaking": "બોલી પૂરી",
-  "voice.try_again": "ફરી પ્રયાસ કરો"
+  "voice.try_again": "ફરી પ્રયાસ કરો",
+  "location.banner": "સચુક સ્થળિય હવામાન માટે લોકેશન ચાલુ કરો",
+  "location.enable": "ચાલુ કરો",
+  "location.settings_title": "લોકેશન મંજૂરી જરૂરી",
+  "location.settings_body": "WeatherGPT ને પહેલા લોકેશનની મંજૂરી સે નકારવામાં આવી હતી. તમારાં સચુક સ્થળ ના હવામાન માટે સિસ્ટમ સેટિંગ્સમાં સક્ષમ કરો.",
+  "location.open_settings": "સેટિંગ્સ ખોલો",
+  "location.cancel": "હમલે નહીં",
+  "location.not_available": "લોકેશન ઉપલબ્ધ નથી. તમે શહેર પસંદ કરી શકો છો."
 }

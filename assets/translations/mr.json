@@ -224,5 +224,12 @@
   "voice.error": "काहीतरी चूक झाली",
   "voice.hint": "हवामान, पाऊस किंवा शेतीबद्दल विचारा",
   "voice.done_speaking": "बोलणे पूर्ण",
-  "voice.try_again": "पुन्हा प्रयत्न करा"
+  "voice.try_again": "पुन्हा प्रयत्न करा",
+  "location.banner": "अचूऺ स्थळिक हवामानासाठी लोकेशन सुरू करा",
+  "location.enable": "सुरू करा",
+  "location.settings_title": "लोकेशन परवानगी आवश्यक",
+  "location.settings_body": "WeatherGPT ला आधी लोकेशनची परवानगी नकारली गेली होती. तुमच्या अचूऺ ठिकाणीचे हवामान मिळण्यासाठी सिस्टम सेटिंग्समध्ये सक्षम करा.",
+  "location.open_settings": "सेटिंग्स उला",
+  "location.cancel": "आता नको",
+  "location.not_available": "लोकेशन उपलब्ध नाही. तुमी शहर निवडू शकता."
 }

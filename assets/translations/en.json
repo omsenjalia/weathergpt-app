@@ -224,5 +224,12 @@
   "voice.error": "Something went wrong",
   "voice.hint": "Ask about weather, rain or farming",
   "voice.done_speaking": "Done speaking",
-  "voice.try_again": "Try again"
+  "voice.try_again": "Try again",
+  "location.banner": "Turn on location for accurate local weather",
+  "location.enable": "Enable",
+  "location.settings_title": "Location permission needed",
+  "location.settings_body": "WeatherGPT was previously denied location access. Enable it in system settings to get weather for your exact spot.",
+  "location.open_settings": "Open settings",
+  "location.cancel": "Not now",
+  "location.not_available": "Location unavailable. You can pick a city instead."
 }

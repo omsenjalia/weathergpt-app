@@ -224,5 +224,12 @@
   "voice.error": "ಏನೋ ತಪ್ಪಾಗಿದೆ",
   "voice.hint": "ಹವಾಮಾನ, ಮಳೆ ಅಥವ ಕೃಷಿ ಬಗ್ಗೆ ಕೇಳಿ",
   "voice.done_speaking": "ಮಾತನಾಡಲು ಮುಗಿದೆ",
-  "voice.try_again": "ಮರು ಪ್ರಯತ್ನಿಸಿ"
+  "voice.try_again": "ಮರು ಪ್ರಯತ್ನಿಸಿ",
+  "location.banner": "ನಿಶ್ಚಿತ ಸ್ಥಳೀಯ ಹವಾಮಾನಕ್ಕಆಗಿ ಸ್ಥಳಾವಕಾಶವನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ",
+  "location.enable": "ಸಕ್ರಿಯಗೊಳಿಸಿ",
+  "location.settings_title": "ಸ್ಥಳಾವಕಾಶ ಅನುಮತಿ ಬೇಕು",
+  "location.settings_body": "WeatherGPT ಗೆ ಹಿಂದೆ ಸ್ಥಳಾವಕಾಶ ಅನುಮತಿ ನಿರಾಕರಿಸಲಾಗಿತ್ತು. ನಿಮໍಮ ನಿಶ್ಚಿತ ಸ್ಥಳದ ಹವಾಮಾನ ಪಡೆಯಲು ಸಿಸ್ಟಮ್ ಸೆಟಿಂಗ್‌ಸ್‌ನಲ್ಲಿ ಸಕ್ರಿಯಗೊಳಿಸಿ.",
+  "location.open_settings": "ಸೆಟಿಂಗ್‌ಸ್ ತೆರವಿ",
+  "location.cancel": "ಈಗೆ ಬೇಡ",
+  "location.not_available": "ಸ್ಥಳಾವಕಾಶ ಲಭ್ಯವಿಲ್ಲ. ನಗರವನ್ನು ಆಯ್ಕೆಮಾಡಬಹುದು."
 }

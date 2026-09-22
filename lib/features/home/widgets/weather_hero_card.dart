@@ -102,7 +102,11 @@ class WeatherHeroCard extends StatelessWidget {
                     letterSpacing: -0.2,
                     color: palette.text)),
             const SizedBox(height: 14),
-            Row(
+            // Wrap (not Row): on narrow screens the low pill flows to the
+            // next line instead of being clipped by the card edge.
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 if (weather.feelsLikeC != null)
                   _pill(
@@ -111,14 +115,12 @@ class WeatherHeroCard extends StatelessWidget {
                         '${'home.feels_like'.tr()} ${weather.feelsLikeC!.round()}°',
                     palette: palette,
                   ),
-                if (weather.feelsLikeC != null) const SizedBox(width: 8),
                 _pill(
                   icon: Icons.arrow_upward_rounded,
                   label: 'H ${weather.highC?.round() ?? '—'}°',
                   palette: palette,
                   strong: true,
                 ),
-                const SizedBox(width: 8),
                 _pill(
                   icon: Icons.arrow_downward_rounded,
                   label: 'L ${weather.lowC?.round() ?? '—'}°',

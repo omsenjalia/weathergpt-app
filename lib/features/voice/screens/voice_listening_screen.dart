@@ -83,11 +83,8 @@ class _VoiceListeningScreenState extends ConsumerState<VoiceListeningScreen>
         fit: StackFit.expand,
         children: [
           AtmosphereBackground(
-            top: palette.top,
-            mid: palette.mid,
-            bottom: palette.bottom,
-            glow: palette.glow,
-            secondaryGlow: _accent,
+            palette: palette,
+            secondaryGlowOverride: _accent,
           ),
           Material(
             color: Colors.transparent,

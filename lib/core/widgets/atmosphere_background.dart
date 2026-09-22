@@ -1,38 +1,40 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
-/// The immersive sky-gradient canvas behind non-home screens (chat, voice,
-/// settings, onboarding…).
+import '../../features/home/theme/atmosphere_theme.dart';
+
+/// The immersive sky canvas behind non-home screens (chat, voice, settings,
+/// persona hubs, onboarding).
 ///
-/// Home keeps its video atmosphere; every other screen shares this cheaper
-/// rendering of the same idea: a deep vertical gradient in the current
-/// time-of-day palette plus two slow-drifting colored glows so the app feels
-/// alive without a video decoder running. Purely decorative — screen content
-/// is layered above by the caller.
-///
-/// When the palette changes (time of day crossing, weather turning), the
-/// gradient and glow colors tween smoothly to the new sky instead of
-/// snapping.
+/// It renders the same live sky Home shows — time-of-day gradient, sun/moon
+/// disc at its real altitude, warm horizon band, drifting weather glow — and
+/// then blurs the whole composition heavily, so every page visibly follows
+/// time and weather *quietly*, keeping full contrast for the content above.
 class AtmosphereBackground extends StatefulWidget {
   const AtmosphereBackground({
     super.key,
-    required this.top,
-    required this.mid,
-    required this.bottom,
-    this.glow = const Color(0xFF2DD4BF),
-    this.secondaryGlow = const Color(0xFF38BDF8),
-    this.animate = true,
+    required this.palette,
     this.scrim = true,
+    this.animate = true,
+    this.secondaryGlowOverride,
   });
 
-  final Color top;
-  final Color mid;
-  final Color bottom;
-  final Color glow;
-  final Color secondaryGlow;
-  final bool animate;
+  /// The live sky. Watch [atmospherePaletteProvider] upstream so palette
+  /// changes (time crossing, weather turning) tween in automatically.
+  final AtmospherePalette palette;
 
   /// Darkens the lower half so lists and cards stay legible.
   final bool scrim;
+
+  final bool animate;
+
+  /// Lets a screen tint the secondary glow (e.g. the voice result card tints
+  /// it with its answer accent).
+  final Color? secondaryGlowOverride;
+
+  /// Persona hubs tint the main glow with their brand color.
+  final Color? glowOverride;
 
   @override
   State<AtmosphereBackground> createState() => _AtmosphereBackgroundState();
@@ -47,7 +49,7 @@ class _AtmosphereBackgroundState extends State<AtmosphereBackground>
     super.initState();
     _drift = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 14),
+      duration: const Duration(seconds: 16),
     );
     if (widget.animate) _drift.repeat(reverse: true);
   }
@@ -71,68 +73,115 @@ class _AtmosphereBackgroundState extends State<AtmosphereBackground>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    return RepaintBoundary(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          TweenAnimationBuilder<Color?>(
-            tween: ColorTween(end: widget.top),
+    final p = widget.palette;
+    final secondary = widget.secondaryGlowOverride ?? p.accent;
+
+    final sky = Stack(
+      fit: StackFit.expand,
+      children: [
+        // Base vertical gradient, tweened so palette changes glide.
+        TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: p.top),
+          duration: const Duration(milliseconds: 900),
+          curve: Curves.easeOut,
+          builder: (_, top, __) => TweenAnimationBuilder<Color?>(
+            tween: ColorTween(end: p.mid),
             duration: const Duration(milliseconds: 900),
             curve: Curves.easeOut,
-            builder: (_, top, __) => TweenAnimationBuilder<Color?>(
-              tween: ColorTween(end: widget.mid),
+            builder: (_, mid, ___) => TweenAnimationBuilder<Color?>(
+              tween: ColorTween(end: p.bottom),
               duration: const Duration(milliseconds: 900),
               curve: Curves.easeOut,
-              builder: (_, mid, ___) => TweenAnimationBuilder<Color?>(
-                tween: ColorTween(end: widget.bottom),
-                duration: const Duration(milliseconds: 900),
-                curve: Curves.easeOut,
-                builder: (_, bottom, ____) => DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        top ?? widget.top,
-                        mid ?? widget.mid,
-                        bottom ?? widget.bottom,
-                      ],
-                      stops: const [0.0, 0.55, 1.0],
-                    ),
+              builder: (_, bottom, ____) => DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      top ?? p.top,
+                      mid ?? p.mid,
+                      bottom ?? p.bottom,
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
                   ),
                 ),
               ),
             ),
           ),
-          TweenAnimationBuilder<Color?>(
-            tween: ColorTween(end: widget.glow),
-            duration: const Duration(milliseconds: 900),
-            curve: Curves.easeOut,
-            builder: (_, glow, __) => TweenAnimationBuilder<Color?>(
-              tween: ColorTween(end: widget.secondaryGlow),
-              duration: const Duration(milliseconds: 900),
-              curve: Curves.easeOut,
-              builder: (_, glow2, ___) => AnimatedBuilder(
-                animation: _drift,
-                builder: (context, _) {
-                  final t = Curves.easeInOut.transform(_drift.value);
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Positioned(
-                        left: -size.width * 0.35 + t * 28,
-                        top: -size.height * 0.12 - t * 18,
-                        child: _glow(size * 0.9, glow ?? widget.glow, 0.16),
-                      ),
-                      Positioned(
-                        right: -size.width * 0.30 - t * 24,
-                        bottom: -size.height * 0.18 + t * 14,
-                        child: _glow(size * 0.8, glow2 ?? widget.secondaryGlow, 0.10),
-                      ),
-                    ],
-                  );
-                },
+        ),
+        // Sun / moon disc at its real altitude — reads unmistakably as "the
+        // sky moved" once blurred into a soft orb of light.
+        if (p.showSun)
+          _celestialBodies(
+            y: p.sunY,
+            color: const Color(0xFFFFE9A8),
+            halo: const Color(0xFFFBBF24),
+            size: size,
+            t: _driftValue,
+          ),
+        if (p.showMoon)
+          _celestialBodies(
+            y: p.moonY,
+            color: const Color(0xFFE2E8F0),
+            halo: const Color(0xFF94A3B8),
+            size: size,
+            t: _driftValue + 0.5,
+          ),
+        // Warm band at the horizon for sunrise/sunset periods.
+        if (p.horizonWarmth > 0)
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: size.height * 0.42,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFFFB923C).withValues(alpha: 0),
+                    const Color(0xFFF97316)
+                        .withValues(alpha: 0.55 * p.horizonWarmth),
+                  ],
+                ),
               ),
+            ),
+          ),
+        // Two slow-drifting weather glows (accent + secondary).
+        AnimatedBuilder(
+          animation: _drift,
+          builder: (context, _) {
+            final t = Curves.easeInOut.transform(_drift.value);
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned(
+                  left: -size.width * 0.35 + t * 30,
+                  top: -size.height * 0.12 - t * 20,
+                  child: _softCircle(size * 0.9, primaryGlow, 0.20),
+                ),
+                Positioned(
+                  right: -size.width * 0.30 - t * 26,
+                  bottom: -size.height * 0.18 + t * 16,
+                  child: _softCircle(size * 0.8, secondary, 0.14),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+
+    return RepaintBoundary(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // The "quiet" mandate: heavy gaussian blur over the whole sky so
+          // it reads as a soft out-of-focus atmosphere, never competing
+          // with chat/list content.
+          IgnorePointer(
+            child: ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(sigmaX: 46, sigmaY: 46),
+              child: sky,
             ),
           ),
           if (widget.scrim)
@@ -142,11 +191,11 @@ class _AtmosphereBackgroundState extends State<AtmosphereBackground>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.transparent,
-                    widget.bottom.withValues(alpha: 0.42),
-                    Colors.black.withValues(alpha: 0.30),
+                    Colors.black.withValues(alpha: 0.10),
+                    Colors.black.withValues(alpha: 0.16),
+                    Colors.black.withValues(alpha: 0.26),
                   ],
-                  stops: const [0.30, 0.72, 1.0],
+                  stops: const [0.0, 0.55, 1.0],
                 ),
               ),
             ),
@@ -155,7 +204,37 @@ class _AtmosphereBackgroundState extends State<AtmosphereBackground>
     );
   }
 
-  Widget _glow(Size s, Color color, double alpha) => IgnorePointer(
+  double get _driftValue => Curves.easeInOut.transform(_drift.value);
+
+  Widget _celestialBodies({
+    required double y,
+    required Color color,
+    required Color halo,
+    required Size size,
+    required double t,
+  }) {
+    return Positioned(
+      left: size.width * (0.60 + 0.06 * (t - 0.5)),
+      top: size.height * y - 60,
+      child: Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [
+              color.withValues(alpha: 0.95),
+              halo.withValues(alpha: 0.55),
+              halo.withValues(alpha: 0),
+            ],
+            stops: const [0.0, 0.35, 1.0],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _softCircle(Size s, Color color, double alpha) => IgnorePointer(
         child: Container(
           width: s.width,
           height: s.height,

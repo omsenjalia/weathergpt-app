@@ -7,6 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
+import '../../home/theme/atmosphere_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -27,22 +28,33 @@ class _SplashScreenState extends State<SplashScreen> {
     });
   }
 
+  /// A calm dusk palette — the same atmosphere system the rest of the app
+  /// uses, so the very first frame already feels like WeatherGPT.
+  static const AtmospherePalette _dusk = AtmospherePalette(
+    top: Color(0xFF1E1B4B),
+    mid: Color(0xFF134E4A),
+    bottom: Color(0xFF0B1220),
+    accent: Color(0xFF2DD4BF),
+    glow: Color(0xFF2DD4BF),
+    card: Color(0xE60F172A),
+    text: Color(0xFFF8FAFC),
+    textMuted: Color(0xFF94A3B8),
+    orbStart: Color(0xFF2DD4BF),
+    orbEnd: Color(0xFF38BDF8),
+    showSun: false,
+    showMoon: true,
+    sunY: 1.3,
+    moonY: 0.3,
+  );
+
   @override
   Widget build(BuildContext context) {
-    // A calm dusk palette — the same atmosphere system the rest of the app
-    // uses, so the very first frame already feels like WeatherGPT.
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          const AtmosphereBackground(
-            top: Color(0xFF1E1B4B),
-            mid: Color(0xFF134E4A),
-            bottom: Color(0xFF0B1220),
-            glow: Color(0xFF2DD4BF),
-            secondaryGlow: Color(0xFF38BDF8),
-          ),
+          const AtmosphereBackground(palette: _dusk),
           SafeArea(
             child: Center(
               child: Column(

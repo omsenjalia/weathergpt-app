@@ -21,11 +21,8 @@ class ResearcherHubScreen extends ConsumerWidget {
         fit: StackFit.expand,
         children: [
           AtmosphereBackground(
-            top: palette.top,
-            mid: palette.mid,
-            bottom: palette.bottom,
-            glow: AppColors.researcherBlue,
-            secondaryGlow: palette.accent,
+            palette: palette,
+            glowOverride: AppColors.researcherBlue,
           ),
           SafeArea(
             bottom: false,

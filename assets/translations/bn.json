@@ -224,5 +224,12 @@
   "voice.error": "কিছু একটা ভুল হয়েছে",
   "voice.hint": "আবহাওয়া, বৃষ্টি বা কৃষি সম্পর্কে জিজ্ঞাসা করুন",
   "voice.done_speaking": "বলা শেষ",
-  "voice.try_again": "আবার চেষ্টা করুন"
+  "voice.try_again": "আবার চেষ্টা করুন",
+  "location.banner": "সটিক স্থানীয় আবহাওয়ার জন্য লোকেশন চালু করুন",
+  "location.enable": "চালু করুন",
+  "location.settings_title": "লোকেশন অনুমতি প্রয়োজন",
+  "location.settings_body": "WeatherGPT আগে লোকেশনের অনুমতি পাচ্ছিল না। আপনার সটিক জায়গার আবহাওয়া পেতে সিস্টেম সেটিংসে চালু করুন।",
+  "location.open_settings": "সেটিংস খুলুন",
+  "location.cancel": "এখন নয়",
+  "location.not_available": "লোকেশন অনুপলব্ধ। আপনি শহর বাছিয়ে নিতে পারেন।"
 }

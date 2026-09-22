@@ -31,8 +31,8 @@ class LocationNotifier extends StateNotifier<AppLocation> {
   ///   who denied is never nagged again.
   /// - Never overrides an explicit choice (`selected_location` already set).
   /// - Every failure path (service off, denied, denied-forever, timeout)
-  ///   silently keeps the default location; the location sheet remains the
-  ///   manual fallback.
+  ///   silently keeps the default location; the home-screen prompt bar is
+  ///   the visible fallback (it can deep-link to app settings).
   Future<void> maybeAutoLocate() async {
     if (!Hive.isBoxOpen('settings')) return;
     final box = Hive.box('settings');
@@ -41,6 +41,25 @@ class LocationNotifier extends StateNotifier<AppLocation> {
     await box.put('location_prompted', true);
     await selectFromGps();
   }
+
+  /// Whether the OS will show a permission dialog when we ask right now:
+  /// yes only when permission has not been decided or denied-forever yet.
+  Future<bool> get canAskOs async {
+    if (!await Geolocator.isLocationServiceEnabled()) return false;
+    final permission = await Geolocator.checkPermission();
+    return permission == LocationPermission.denied ||
+        permission == LocationPermission.unable;
+  }
+
+  /// True when permission was permanently refused and only the system
+  /// settings page can change it.
+  Future<bool> get isPermanentlyDenied async =>
+      await Geolocator.checkPermission() == LocationPermission.deniedForever;
+
+  /// Opens the app's system settings page (the only path left when the OS
+  /// permission was permanently refused).
+  Future<void> openSystemSettings() => Geolocator.openAppSettings();
+
 
   /// Resolve GPS, reverse-geocode a place name, and persist as the active
   /// home location. Returns null when the user denied or the fix failed.
