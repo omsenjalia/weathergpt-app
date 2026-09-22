@@ -149,9 +149,17 @@ class FocusSelectScreen extends ConsumerWidget {
                 PrimaryButton(
                     label: 'onboarding.continue'.tr(),
                     onPressed: () async {
+                      // Farmers add their farm details on the next step; the
+                      // profile stays editable later in Settings → Farm.
+                      if (selected == 'farmer') {
+                        context.go('/onboarding/farm');
+                        return;
+                      }
                       await ref
                           .read(onboardingProvider.notifier)
                           .completeOnboarding();
+                      if (!context.mounted) return;
+                      syncSettingsAfterOnboarding(ref);
                       if (context.mounted) context.go('/home');
                     }),
               ]),

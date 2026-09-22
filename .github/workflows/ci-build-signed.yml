@@ -1,5 +1,9 @@
 name: CI Build Signed APK
 
+# Per-commit judge build. Publishes the raw `release.apk` ONLY — no zip, no
+# AAB. (GitHub wraps Action *artifacts* in a .zip on download; judges who want
+# a direct no-extract download should use the dated APK on the Releases page,
+# published daily by nightly-release.yml.)
 on:
   pull_request:
   push:
@@ -72,10 +76,14 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: flutter build apk --release --no-obfuscate
 
+      - name: Prepare APK artifact (release.apk only)
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk release.apk
+          ls -la release.apk
+
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
           name: weathergpt-signed-${{ github.sha }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: release.apk
           retention-days: 30
-

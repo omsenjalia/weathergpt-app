@@ -62,11 +62,13 @@ class DeveloperOptions {
   final bool disableVideoSky;
 
   /// Show the source / run / freshness chip row on the home screen. Off by
-  /// default: that information lives on the Debug screen now.
+  /// default: provider names are developer-only, and the full attribution
+  /// always lives on the Debug screen.
   final bool showProvenanceOnHome;
 
   /// Show a small "via Open-Meteo" badge on tiles whose value did not come
-  /// from the selected provider.
+  /// from the selected provider. Applies only when developer mode is on —
+  /// regular users never see provider names.
   final bool showFieldSourceBadges;
 
   /// Explicit provider pin sent as `requested_source`.

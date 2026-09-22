@@ -313,18 +313,22 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                             ? WeatherOverviewGrid(
                                 weather: w,
                                 palette: palette,
-                                showSourceBadges: !dev.enabled || dev.showFieldSourceBadges,
+                                showSourceBadges: dev.enabled &&
+                                    dev.showFieldSourceBadges,
+                                showProvenance: dev.enabled,
                               )
                             : _tab == 1
                                 ? WeatherHourlyPanel(
                                     weather: w,
                                     palette: palette,
                                     maxHours: dev.enabled ? dev.hourlyHours : 48,
+                                    showProvenance: dev.enabled,
                                   )
                                 : WeatherDailyPanel(
                                     weather: w,
                                     palette: palette,
                                     maxDays: dev.enabled ? dev.forecastDays : 7,
+                                    showProvenance: dev.enabled,
                                   ),
                       ),
                     ),
@@ -355,9 +359,14 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
   }
 }
 
-/// One quiet line under the hero: honest source attribution, a stale/degraded
-/// warning when — and only when — the backend says so, and a shortcut to the
-/// Debug screen in developer mode.
+/// One quiet line under the hero: freshness plus a stale/degraded warning when
+/// — and only when — the backend says so, and a shortcut to the Debug screen
+/// in developer mode.
+///
+/// Provider names (IMD, WeatherNext, …) are developer-only: regular users see
+/// just "Updated 14:30" or a warning, while dev mode keeps the full "source ·
+/// run · stale" attribution. Full per-field provenance always lives on the
+/// Debug screen.
 class _CompactStatusLine extends StatelessWidget {
   const _CompactStatusLine({required this.weather, required this.palette, required this.devEnabled});
   final WeatherSnapshot weather;
@@ -367,24 +376,47 @@ class _CompactStatusLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = weather.provenance;
-    final name = !p.hasSource
-        ? 'home.source_not_reported'.tr()
-        : switch (p.provider) {
-            WeatherProvider.imd => 'IMD',
-            WeatherProvider.weathernext => 'WeatherNext',
-            WeatherProvider.accuweather => 'AccuWeather',
-            WeatherProvider.openMeteo => 'Open-Meteo',
-            WeatherProvider.unknown => p.selectedSource ?? p.source!,
-          };
     final stale = p.isStaleAt(DateTime.now().toUtc(), maxAge: const Duration(hours: 24));
     final warn = (weather.degraded ?? p.fallback) || stale;
     final stamp = p.issuedAtUtc;
     final when = stamp == null ? null : DateFormat('HH:mm').format(weather.toLocationLocal(stamp));
-    final parts = <String>[
-      name,
-      if (when != null) 'home.run_at'.tr(namedArgs: {'time': when}),
-      if (stale) 'home.stale'.tr(),
-    ];
+
+    final List<String> parts;
+    if (devEnabled) {
+      final name = !p.hasSource
+          ? 'home.source_not_reported'.tr()
+          : switch (p.provider) {
+              WeatherProvider.imd => 'IMD',
+              WeatherProvider.weathernext => 'WeatherNext',
+              WeatherProvider.accuweather => 'AccuWeather',
+              WeatherProvider.openMeteo => 'Open-Meteo',
+              WeatherProvider.unknown => p.selectedSource ?? p.source!,
+            };
+      parts = <String>[
+        name,
+        if (when != null) 'home.run_at'.tr(namedArgs: {'time': when}),
+        if (stale) 'home.stale'.tr(),
+      ];
+    } else if (stale) {
+      parts = <String>[
+        if (when != null)
+          'home.data_stale'.tr(namedArgs: {'time': when})
+        else
+          'home.stale'.tr(),
+      ];
+    } else if (warn) {
+      parts = <String>[
+        'home.limited_data'.tr(),
+        if (when != null) 'home.updated'.tr(namedArgs: {'time': when}),
+      ];
+    } else if (when != null) {
+      parts = <String>['home.updated'.tr(namedArgs: {'time': when})];
+    } else {
+      // No timestamp and nothing wrong: there is nothing user-meaningful to
+      // say (the provider name that used to sit here is dev-only now).
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
       child: GestureDetector(
@@ -392,7 +424,9 @@ class _CompactStatusLine extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              warn ? Icons.report_gmailerrorred_outlined : (p.isWeatherNext ? Icons.auto_awesome : Icons.public),
+              warn
+                  ? Icons.report_gmailerrorred_outlined
+                  : (devEnabled && p.isWeatherNext ? Icons.auto_awesome : Icons.schedule),
               size: 13,
               color: warn ? const Color(0xFFFBBF24) : palette.textMuted,
             ),

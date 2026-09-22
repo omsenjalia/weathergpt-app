@@ -9,6 +9,7 @@ import '../features/home/screens/weather_home_screen.dart';
 import '../features/chat/screens/chat_screen.dart';
 import '../features/explore/screens/explore_screen.dart';
 import '../features/explore/screens/saved_locations_screen.dart';
+import '../features/onboarding/screens/farm_details_screen.dart';
 import '../features/onboarding/screens/focus_select_screen.dart';
 import '../features/onboarding/screens/language_select_screen.dart';
 import '../features/onboarding/screens/splash_screen.dart';
@@ -32,12 +33,20 @@ final GoRouter appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   redirect: (context, state) {
+    if (!Hive.isBoxOpen('settings')) return null;
     final completed = Hive.box(
       'settings',
     ).get('onboarding_complete', defaultValue: false) as bool;
-    if (state.matchedLocation == '/') {
+    final location = state.matchedLocation;
+    final isOnboarding =
+        location == '/' || location.startsWith('/onboarding');
+    if (location == '/') {
       return completed ? '/home' : '/onboarding/splash';
     }
+    // First launch must flow through onboarding (including the farmer farm
+    // step); finished users can never land back on the welcome screens.
+    if (!completed && !isOnboarding) return '/onboarding/splash';
+    if (completed && isOnboarding) return '/home';
     return null;
   },
   routes: [
@@ -52,6 +61,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/onboarding/focus',
       builder: (_, __) => const FocusSelectScreen(),
+    ),
+    GoRoute(
+      path: '/onboarding/farm',
+      builder: (_, __) => const FarmDetailsScreen(),
     ),
     GoRoute(
       path: '/voice/listening',

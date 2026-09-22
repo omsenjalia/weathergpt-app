@@ -110,20 +110,25 @@ class _OverviewTile {
 
 /// Tab body: grid of secondary conditions (AQI, UV, sun, …).
 ///
-/// Every value is labelled with its unit, its meaning (e.g. UV "High"), and —
-/// when the value came from a different provider than the headline forecast —
-/// a small "via Open-Meteo" badge, so a WeatherNext screen never silently
-/// mixes providers.
+/// Every value is labelled with its unit and its meaning (e.g. UV "High").
+/// Provider attribution — the small "via Open-Meteo" badges and the source
+/// rows inside the detail sheets — is developer-only, so a WeatherNext screen
+/// never names providers to regular users; developers still see exactly which
+/// provider each value came from.
 class WeatherOverviewGrid extends StatelessWidget {
   const WeatherOverviewGrid({
     super.key,
     required this.weather,
     required this.palette,
     this.showSourceBadges = true,
+    this.showProvenance = false,
   });
   final WeatherSnapshot weather;
   final AtmospherePalette palette;
   final bool showSourceBadges;
+
+  /// Show provider names / run ids inside the tapped detail sheets.
+  final bool showProvenance;
 
   @override
   Widget build(BuildContext context) {
@@ -254,6 +259,7 @@ class WeatherOverviewGrid extends StatelessWidget {
           icon: t.icon,
           field: t.field,
           accent: t.accent,
+          showProvenance: showProvenance,
         ),
         child: Container(
           padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
@@ -355,10 +361,13 @@ class SourceBadge extends StatelessWidget {
 
 /// Tab body: horizontal scroll of hourly temperatures, tap for detail.
 class WeatherHourlyPanel extends StatelessWidget {
-  const WeatherHourlyPanel({super.key, required this.weather, required this.palette, this.maxHours = 48});
+  const WeatherHourlyPanel({super.key, required this.weather, required this.palette, this.maxHours = 48, this.showProvenance = false});
   final WeatherSnapshot weather;
   final AtmospherePalette palette;
   final int maxHours;
+
+  /// Show provider names / run ids inside the tapped detail sheets.
+  final bool showProvenance;
 
   @override
   Widget build(BuildContext context) {
@@ -413,7 +422,7 @@ class WeatherHourlyPanel extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: () => showHourDetailSheet(context, weather: weather, palette: palette, hour: h, index: i, all: shown),
+                  onTap: () => showHourDetailSheet(context, weather: weather, palette: palette, hour: h, index: i, all: shown, showProvenance: showProvenance),
                   child: Container(
                     width: 74,
                     padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
@@ -500,10 +509,13 @@ class WeatherHourlyPanel extends StatelessWidget {
 
 /// Tab body: 7-day forecast list, tap a row for detail.
 class WeatherDailyPanel extends StatelessWidget {
-  const WeatherDailyPanel({super.key, required this.weather, required this.palette, this.maxDays = 7});
+  const WeatherDailyPanel({super.key, required this.weather, required this.palette, this.maxDays = 7, this.showProvenance = false});
   final WeatherSnapshot weather;
   final AtmospherePalette palette;
   final int maxDays;
+
+  /// Show provider names / run ids inside the tapped detail sheets.
+  final bool showProvenance;
 
   @override
   Widget build(BuildContext context) {
@@ -559,7 +571,7 @@ class WeatherDailyPanel extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
-                onTap: () => showDayDetailSheet(context, weather: weather, palette: palette, day: d, index: i),
+                onTap: () => showDayDetailSheet(context, weather: weather, palette: palette, day: d, index: i, showProvenance: showProvenance),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(

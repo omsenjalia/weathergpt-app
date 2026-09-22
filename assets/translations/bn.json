@@ -231,5 +231,20 @@
   "location.settings_body": "WeatherGPT আগে লোকেশনের অনুমতি পাচ্ছিল না। আপনার সটিক জায়গার আবহাওয়া পেতে সিস্টেম সেটিংসে চালু করুন।",
   "location.open_settings": "সেটিংস খুলুন",
   "location.cancel": "এখন নয়",
-  "location.not_available": "লোকেশন অনুপলব্ধ। আপনি শহর বাছিয়ে নিতে পারেন।"
+  "location.not_available": "লোকেশন অনুপলব্ধ। আপনি শহর বাছিয়ে নিতে পারেন।",
+  "onboarding.farm_headline": "Tell us about your farm",
+  "onboarding.farm_hint": "Crop advice is tuned to your field.",
+  "onboarding.farm_location_hint": "Village or city",
+  "onboarding.farm_size_hint": "e.g. 4",
+  "onboarding.skip_for_now": "Skip for now",
+  "onboarding.back": "Back",
+  "farmer.complete_profile": "Complete your farm profile",
+  "farmer.profile_complete_hint": "Crop advice is tuned to these details.",
+  "farmer.invalid_details": "Enter a location and a valid farm size.",
+  "farmer.details_tab": "Farm Details",
+  "farmer.crops_tab": "Crops",
+  "farmer.save_changes": "Save changes",
+  "farmer.acres": "acres",
+  "home.limited_data": "Limited data",
+  "home.unavailable_generic_short": "Not available from the current forecast."
 }

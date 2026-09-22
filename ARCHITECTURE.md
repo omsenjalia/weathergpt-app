@@ -185,7 +185,8 @@ graph TB
 weathergpt-app/
 ├── .github/workflows/
 │   ├── ci-test.yml               # flutter pub get, analyze, test (Flutter 3.44.0)
-│   └── ci-build-signed.yml       # Signed APK + AAB
+│   ├── ci-build-signed.yml       # Per-commit signed APK artifact (release.apk only, no zip/AAB)
+│   └── nightly-release.yml       # Daily dated GitHub Release with direct release.apk (only when commits landed in the last 24h)
 ├── android/                      # Gradle 8, keystore signing
 ├── assets/
 │   ├── translations/             # 9 JSON: bn, en, gu, hi, kn, ml, mr, ta, te
@@ -197,7 +198,7 @@ weathergpt-app/
 │   └── web_app_api_contract.md   # Backend endpoint audit
 ├── lib/
 │   ├── main.dart                 # Hive init (settings, farm_profile, saved_locations), EasyLocalization 9 locales, Riverpod; release ErrorWidget.builder → compact dark pill (never Flutter's gray 400×400 error slab)
-│   ├── router/app_router.dart    # GoRouter ShellRoute, 7 routes
+│   ├── router/app_router.dart    # GoRouter ShellRoute + onboarding guards (unfinished → splash, finished users can never return to welcome screens)
 │   ├── models/
 │   │   ├── location.dart         # AppLocation
 │   │   ├── weather.dart          # WeatherSnapshot, HourlyPoint, DayForecast, FieldSources, Provenance
@@ -248,9 +249,9 @@ weathergpt-app/
 │       │   ├── providers/map_provider.dart, saved_locations_provider.dart
 │       │   └── screens/explore_screen.dart, saved_locations_screen.dart # Windy WebView
 │       ├── farmer/
-│       │   ├── models/advisory_models.dart, farm_profile_model.dart
-│       │   ├── providers/action_windows_provider.dart (generation guard + contextKey), farm_profile_provider.dart
-│       │   ├── screens/farmer_hub_screen.dart (Farm tab hub), action_windows_screen.dart, farm_profile_screen.dart
+│       │   ├── models/advisory_models.dart, farm_profile_model.dart, farm_options.dart (shared crop/stage/irrigation/soil wire-value catalogs)
+│       │   ├── providers/action_windows_provider.dart (generation guard + contextKey), farm_profile_provider.dart (+ farmProfileCompletedProvider completion flag)
+│       │   ├── screens/farmer_hub_screen.dart (Farm tab hub), action_windows_screen.dart, farm_profile_screen.dart (localized, crash-guarded dropdowns)
 │       │   └── widgets/time_window_bar.dart # 12 buckets
 │       ├── researcher/
 │       │   ├── providers/historicalDataProvider, comparisonProvider, anomaly_trends_provider
@@ -262,9 +263,10 @@ weathergpt-app/
 │       │   └── screens/conversational_result_screen.dart, voice_listening_screen.dart
 │       ├── settings/
 │       │   ├── providers/settingsProvider, developerOptionsProvider (DevSourcePin, wnModel, hourly 1-168, forecast 1-15)
-│       │   └── screens/debug_screen.dart (5 tabs), settings_screen.dart
+│       │   └── screens/debug_screen.dart (5 tabs), settings_screen.dart (farmer persona gains a Farm profile section)
 │       └── onboarding/
-│           └── screens/SplashScreen, LanguageSelectScreen, FocusSelectScreen
+│           ├── providers/onboarding_provider.dart (persona/language state, Hive completion write, settings re-sync)
+│           └── screens/SplashScreen, LanguageSelectScreen, FocusSelectScreen, FarmDetailsScreen (extra farmer step: location, crop, stage, size, irrigation, soil)
 ├── pubspec.yaml
 ├── pubspec.lock
 ├── scripts/push-all.sh           # Submodule-aware push
@@ -387,7 +389,9 @@ graph TD
 - **chatProvider**: `StateNotifier<ChatState>` — history, streaming, intent meta, generation guard
 - **actionWindowsProvider**: Farm suitability — watches farm profile (crop, soil, irrigation), location, contextKey = `lat,lon|crop|stage|soil|irrig|UTCdate`, generation guard
 - **settingsProvider**: Language, persona, units — persisted to Hive, validates persona
-- **developerOptionsProvider**: DevSourcePin (auto/weathernext/open_meteo/accuweather/imd), wnModel, hourly 1-168, forecast 1-15, supplement toggle
+- **developerOptionsProvider**: DevSourcePin (auto/weathernext/open_meteo/accuweather/imd), wnModel, hourly 1-168, forecast 1-15, supplement toggle, provenance display toggles (`showProvenanceOnHome`, `showFieldSourceBadges` — provider names render only when dev mode is on)
+- **farmProfileProvider / farmProfileCompletedProvider**: FarmProfile draft + save (Hive `farm_profile`), plus an explicit-saved flag (pre-flag saves count as completed)
+- **onboardingProvider**: language/persona selection; `completeOnboarding()` writes language + TTS locale + persona + completion flag to Hive, then `syncSettingsAfterOnboarding()` invalidates `settingsProvider` so the first home fetch already uses the chosen mode
 - **voiceProvider**: STT + TTS + generation guard
 - **mapProvider / saved_locations_provider**: GIS layers, saved locations
 - **historicalDataProvider / comparisonProvider / anomaly_trends_provider**: Researcher data
@@ -474,7 +478,7 @@ graph TD
 **Flow**:
 - App sends `requested_source`: `auto` (backend policy) or pinned (`weathernext`, `open_meteo`, `accuweather`, `imd`) via `DevSourcePin`. Researcher mode pins `weathernext` unless dev override.
 - Backend returns `provenance: {selected_source, requested_source, fallback_reasons[], tried_providers[], source, product, run_id, issued_at, degraded}` and `field_sources: {temperature_c: "weathernext", humidity: "open_meteo", uv_index: null, _supplement: {provider, enabled, attempted, filled[], errors[], cache_hit}}`
-- `FieldSources` in `lib/models/weather.dart` keeps per-field attribution; UI shows "via Open-Meteo" badge when supplemented
+- `FieldSources` in `lib/models/weather.dart` keeps per-field attribution; the "via Open-Meteo" badges, the home status-line source name and the source/run rows in the detail sheets render **only in developer mode** — regular users see freshness ("Updated 14:30") and stale/limited-data warnings without provider names
 - `degraded` = true only when configured provider failed or stale, not when IMD skipped for missing key
 - Enrichments (Everyone mode): `temperature_spread {p10_c, p90_c, source, run_id, valid_from, valid_to, members}` (rejected if inverted/one-sided) and `precip_next_24h {total_mm, start, end, complete}` (partial labelled)
 
@@ -637,6 +641,12 @@ Hazard handling is **backend-driven**, not a custom in-app RED/YELLOW/GREEN thre
 - **Badge**: When shaped by System One, shows `System One · 88% confident`. Without credentials, falls back to rule-based thresholds
 - **No Bundled Offline Advisory**: Backend unreachable → explicit unavailable state, never empty neutral bars. Cache keyed on `lat,lon|crop|stage|soil|irrig|UTCdate`, discarded on move/profile edit/midnight
 
+### Farm Profile Onboarding & Settings
+
+- Picking **Farmer** in onboarding routes to `FarmDetailsScreen` (location, crop, growth stage, farm size, irrigation, soil) before `/home`; skipping keeps the default profile. The same data feeds `GET /advisory` and `POST /chat` farm context.
+- Option catalogs live in `farm_options.dart` and are shared with the profile editor, so a stored value can never be missing from a dropdown (which would throw). Catalog strings are backend wire values and stay in English; only field labels are localized.
+- **Settings → Farm profile** (visible for the farmer persona) shows the saved summary or a "Complete your farm profile" prompt, and switching to the farmer persona with an incomplete profile opens the editor directly.
+
 ### Farm Action Windows
 
 3 tracks × 12 two-hour buckets:
@@ -682,6 +692,7 @@ Enable via **Settings → Developer → Enable developer options → Debug & sta
 - Forecast days slider: 1–15 days
 - Supplement toggle: Disable Open-Meteo supplementation to inspect raw primary
 - wnModel pin: Non-default WeatherNext model
+- Provenance display: `Show provenance bar on Home` restores the source/run/freshness chips on the home screen; `Per-field source badges` toggles the "via …" pills. Both apply only with developer mode on — provider names never render for regular users, and the Debug screen stays the canonical attribution surface.
 
 ---
 
@@ -695,17 +706,20 @@ graph LR
         T3 --> T4["flutter analyze"]
         T4 --> T5["flutter test"]
     end
-    subgraph "CD ci-build-signed.yml"
+    subgraph "CD ci-build-signed.yml - per commit"
         B1["Decode KEYSTORE_BASE64"] --> B2["flutter build apk --release"]
-        B2 --> B3["flutter build appbundle --release"]
-        B3 --> B4["Upload APK weathergpt-signed-{sha}"]
-        B4 --> B5["Upload AAB weathergpt-bundle-{sha}"]
+        B2 --> B4["Upload release.apk as weathergpt-signed-{sha}"]
+    end
+    subgraph "CD nightly-release.yml - daily, only with commits"
+        N1["git log --since 24h"] --> N2["flutter build apk --release"]
+        N2 --> N3["GitHub Release nightly-YYYYMMDD with release.apk"]
     end
     T5 --> B1
 ```
 
-- Every push/PR builds signed release APK at **GitHub Actions → Artifacts**
-- Without keystore secrets, falls back to debug signing, never breaks
+- Every push/PR builds a signed release APK at **GitHub Actions → Artifacts** (`weathergpt-signed-{sha}`, containing `release.apk` only — no zip archives, no AAB)
+- Every day with new commits (00:00 IST), `nightly-release.yml` publishes a dated GitHub Release (`nightly-YYYYMMDD`) whose sole asset is a direct-download `release.apk` for judges — versioned `1.0.0-nightly.YYYYMMDD` with an incrementing build number so daily installs upgrade cleanly
+- Without keystore secrets, both APK workflows fall back to debug signing, never break
 - Publishing: `./scripts/push-all.sh "message"` pushes backend submodule then app (required, not bare `git push`)
 
 ---

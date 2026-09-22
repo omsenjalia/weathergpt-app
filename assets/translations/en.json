@@ -231,5 +231,20 @@
   "location.settings_body": "WeatherGPT was previously denied location access. Enable it in system settings to get weather for your exact spot.",
   "location.open_settings": "Open settings",
   "location.cancel": "Not now",
-  "location.not_available": "Location unavailable. You can pick a city instead."
+  "location.not_available": "Location unavailable. You can pick a city instead.",
+  "onboarding.farm_headline": "Tell us about your farm",
+  "onboarding.farm_hint": "Crop advice is tuned to your field.",
+  "onboarding.farm_location_hint": "Village or city",
+  "onboarding.farm_size_hint": "e.g. 4",
+  "onboarding.skip_for_now": "Skip for now",
+  "onboarding.back": "Back",
+  "farmer.complete_profile": "Complete your farm profile",
+  "farmer.profile_complete_hint": "Crop advice is tuned to these details.",
+  "farmer.invalid_details": "Enter a location and a valid farm size.",
+  "farmer.details_tab": "Farm Details",
+  "farmer.crops_tab": "Crops",
+  "farmer.save_changes": "Save changes",
+  "farmer.acres": "acres",
+  "home.limited_data": "Limited data",
+  "home.unavailable_generic_short": "Not available from the current forecast."
 }

@@ -19,26 +19,34 @@
 
 We have made evaluating WeatherGPT Mobile seamless. Judges can either install the pre-compiled, signed Android APK directly onto any Android phone or tablet, or run the project locally.
 
-### ⚡ Method 1: Download Pre-Built Signed Release APK (Recommended — 2 Minutes)
+### ⚡ Method 1: Download the Nightly Release APK (Recommended — 1 Minute)
 
-Every commit and pull request automatically triggers our GitHub Actions CD pipeline (`.github/workflows/ci-build-signed.yml`), building a signed release APK:
+Every day with new commits, our scheduled CD pipeline (`.github/workflows/nightly-release.yml`) publishes a signed release APK as a **direct download** — no zip extraction, no build steps:
+
+1. **Open the Releases page**:  
+   👉 [**WeatherGPT Releases**](https://github.com/omsenjalia/weathergpt-app/releases)
+2. **Download the APK**: under the latest `WeatherGPT Nightly <date>` release, tap  
+   📦 **`release.apk`** in the **Assets** section (direct `.apk` download — that is the only file published).
+3. **Install on Your Android Device**:
+   - Tap the downloaded `release.apk`, then tap **Install**.
+   - *(If prompted: enable "Install unknown apps" for your browser or file manager).*
+   - Open **WeatherGPT** and experience the live app!
+
+### 🔧 Method 2: Download a Per-Commit CI Build
+
+Every commit and pull request also triggers `.github/workflows/ci-build-signed.yml`, building the same signed APK:
 
 1. **Open the GitHub Actions Builds**:  
    👉 [**WeatherGPT GitHub Actions CI Runs**](https://github.com/omsenjalia/weathergpt-app/actions/workflows/ci-build-signed.yml)
 2. **Select the Latest Successful Run** (marked with a green checkmark `✓`).
 3. **Download the Signed APK Artifact**:  
-   Scroll down to the **Artifacts** section at the bottom of the page and click:  
-   📦 **`weathergpt-signed-<sha>`** (contains `app-release.apk`)  
-   *(Also available: `weathergpt-bundle-<sha>` for Google Play App Bundle).*
-4. **Install on Your Android Device**:
-   - Transfer or download the `.zip` / `.apk` directly on your Android phone.
-   - Extract the zip if needed, tap `app-release.apk`, and tap **Install**.
-   - *(If prompted: enable "Install unknown apps" for your browser or file manager).*
-   - Open **WeatherGPT** and experience the live app!
+   Scroll down to the **Artifacts** section and click  
+   📦 **`weathergpt-signed-<sha>`** (contains `release.apk` — the only file published, no zip archives or bundles).
+4. **Install**: GitHub wraps Action artifacts in a `.zip` on download — extract it, tap `release.apk`, and tap **Install**. *(For a direct no-extract download, prefer Method 1.)*
 
 ---
 
-### 💻 Method 2: Build & Run from Source (Local Machine)
+### 💻 Method 3: Build & Run from Source (Local Machine)
 
 #### Prerequisites
 - **Flutter SDK**: `3.44.0` (stable channel)
@@ -127,6 +135,8 @@ WeatherGPT dynamically personalizes its UI, insights, and data depth based on th
 └─────────────────────┴───────────────────────────┴───────────────────────────┘
 ```
 
+> Choosing **Farmer** during onboarding asks for farm details (location, crop, growth stage, size, irrigation, soil) so advisories are tuned from the first session. These stay editable anytime in **Settings → Farm profile** (and in the Farm tab).
+
 ---
 
 ## 🏛️ System Architecture
@@ -209,7 +219,7 @@ WeatherGPT Mobile breaks language barriers with native script rendering and voic
 
 ## 🛠️ On-Device Developer & Diagnostics Suite
 
-Built-in developer tools give judges complete transparency into internal system operations:
+Data-source attribution (IMD / WeatherNext / AccuWeather / Open-Meteo) is developer-only: regular users see just freshness and warnings, while developers get full per-field provenance. Built-in developer tools give judges complete transparency into internal system operations:
 
 1. Open **Settings** (bottom right tab).
 2. Scroll to **Developer** and toggle **Enable developer options**.

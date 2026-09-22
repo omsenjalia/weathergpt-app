@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
 import '../providers/settings_provider.dart';
 import '../providers/developer_options_provider.dart';
+import '../../farmer/providers/farm_profile_provider.dart';
 import '../../home/providers/atmosphere_provider.dart';
 import '../../home/theme/atmosphere_theme.dart';
 
@@ -43,6 +44,9 @@ class SettingsScreen extends ConsumerWidget {
     final n = ref.read(settingsProvider.notifier);
     final dev = ref.watch(developerOptionsProvider);
     final devN = ref.read(developerOptionsProvider.notifier);
+    final farm = ref.watch(farmProfileProvider);
+    final farmCompleted = ref.watch(farmProfileCompletedProvider);
+    final isFarmer = settings.userPersona == 'farmer';
     final bottom = MediaQuery.paddingOf(context).bottom + 108;
     final palette = ref.watch(atmospherePaletteProvider);
 
@@ -100,8 +104,16 @@ class SettingsScreen extends ConsumerWidget {
             _card(
               child: RadioGroup<String>(
                 groupValue: settings.userPersona,
-                onChanged: (v) {
-                  if (v != null) n.updatePersona(v);
+                onChanged: (v) async {
+                  if (v == null) return;
+                  await n.updatePersona(v);
+                  // A fresh farmer without farm details lands straight on the
+                  // profile editor so advisories are tuned from day one.
+                  if (v == 'farmer' &&
+                      !ref.read(farmProfileCompletedProvider) &&
+                      context.mounted) {
+                    context.push('/farmer/farm-profile');
+                  }
                 },
                 child: Column(
                   children: [
@@ -119,6 +131,38 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            if (isFarmer) ...[
+              const SizedBox(height: 20),
+              _section('farmer.farm_profile'.tr()),
+              _card(
+                child: Column(
+                  children: [
+                    if (!farmCompleted)
+                      ListTile(
+                        leading: const Icon(Icons.eco_outlined,
+                            color: AppColors.statusAmber),
+                        title: Text('farmer.complete_profile'.tr()),
+                        subtitle:
+                            Text('farmer.profile_complete_hint'.tr()),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            context.push('/farmer/farm-profile'),
+                      )
+                    else
+                      ListTile(
+                        leading: const Icon(Icons.agriculture_outlined,
+                            color: AppColors.farmerGreen),
+                        title: Text(farm.location),
+                        subtitle: Text(
+                            '${farm.crop} · ${farm.growthStage} · ${farm.farmSizeAcres.toStringAsFixed(farm.farmSizeAcres % 1 == 0 ? 0 : 1)} ${'farmer.acres'.tr()}'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () =>
+                            context.push('/farmer/farm-profile'),
+                      ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             _section('Voice'),
             _card(
