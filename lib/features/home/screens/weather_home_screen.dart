@@ -58,10 +58,7 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
     // Researcher get their own scope instead of the same card recoloured.
     final mode = ref.watch(settingsProvider.select((s) => s.mode));
     final bottomPad = MediaQuery.paddingOf(context).bottom;
-    // Space for the floating nav bar AND the mic orb floating above it
-    // (orb top edge sits at bottomPad + 150) so scroll content never
-    // slides underneath either.
-    final bottomInset = bottomPad + 164; // space for nav + mic
+    final bottomInset = bottomPad + 100; // space for nav + mic
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
