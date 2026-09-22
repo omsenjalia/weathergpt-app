@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/rich_markdown.dart';
 import '../providers/action_windows_provider.dart';
 import '../widgets/time_window_bar.dart';
 
@@ -125,14 +126,25 @@ class _ActionWindowsScreenState extends ConsumerState<ActionWindowsScreen> {
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 5),
-                        Text(
-                            state.summaryExplanation.isNotEmpty
-                                ? state.summaryExplanation
-                                : 'farmer.advisory_unavailable_body'.tr(),
-                            style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
-                                height: 1.35)),
+                        // Advisory bodies come from the AI and may carry
+                        // markdown (bullets, bold, tables) — render properly.
+                        if (state.summaryExplanation.isNotEmpty)
+                          RichMarkdown(
+                            state.summaryExplanation,
+                            baseStyle: const TextStyle(
+                              fontSize: 13.5,
+                              color: AppColors.textSecondary,
+                            ),
+                            textColor: AppColors.textSecondary,
+                            accentColor: AppColors.farmerGreen,
+                            selectable: false,
+                          )
+                        else
+                          Text('farmer.advisory_unavailable_body'.tr(),
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                  height: 1.35)),
                         if (state.aiAssisted && state.aiConfidence != null)
                           Padding(
                               padding: const EdgeInsets.only(top: 8),

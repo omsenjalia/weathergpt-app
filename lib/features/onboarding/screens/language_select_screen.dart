@@ -94,8 +94,10 @@ class LanguageSelectScreen extends ConsumerWidget {
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   if (index == _languages.length) {
-                    return AppCard(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    return GlassCard(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      radius: 18,
                       child: SizedBox(
                           height: 54,
                           child: Row(children: [

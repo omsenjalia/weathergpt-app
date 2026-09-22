@@ -5,7 +5,7 @@ import '../../../models/weather.dart';
 import '../theme/atmosphere_theme.dart';
 import 'weather_detail_panels.dart';
 
-const _sheetBg = Color(0xFF0F172A);
+const _sheetBg = Color(0xF50E1626);
 
 Future<void> _showSheet(BuildContext context, {required Widget child}) => showModalBottomSheet<void>(
       context: context,
@@ -17,9 +17,12 @@ Future<void> _showSheet(BuildContext context, {required Widget child}) => showMo
         minChildSize: 0.4,
         maxChildSize: 0.92,
         builder: (ctx, controller) => Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: _sheetBg,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(
+              top: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+            ),
           ),
           child: ListView(
             controller: controller,

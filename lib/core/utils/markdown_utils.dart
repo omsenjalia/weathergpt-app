@@ -32,7 +32,7 @@ class MarkdownUtils {
     // Bold / italic / links / list markers
     text = text.replaceAll(RegExp(r'\*\*|__'), '');
     text = text.replaceAll(RegExp(r'\*|_'), '');
-    text = text.replaceAll(RegExp(r'\[([^\]]+)\]\(([^)]+)\)'), r'$1 $2');
+    text = text.replaceAll(RegExp(r'\[([^\]]+)\]\([^)]+\)'), r'$1');
     text = text.replaceAll(RegExp(r'^\s*[-*•]\s+', multiLine: true), '');
     // Drop common status titles if they leaked as plain text
     text = text.replaceAll(
