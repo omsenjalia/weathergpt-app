@@ -313,18 +313,24 @@ class _WeatherHomeScreenState extends ConsumerState<WeatherHomeScreen> {
                             ? WeatherOverviewGrid(
                                 weather: w,
                                 palette: palette,
-                                showSourceBadges: !dev.enabled || dev.showFieldSourceBadges,
+                                showSourceBadges:
+                                    dev.enabled && dev.showFieldSourceBadges,
+                                devEnabled: dev.enabled,
                               )
                             : _tab == 1
                                 ? WeatherHourlyPanel(
                                     weather: w,
                                     palette: palette,
-                                    maxHours: dev.enabled ? dev.hourlyHours : 48,
+                                    maxHours:
+                                        dev.enabled ? dev.hourlyHours : 48,
+                                    devEnabled: dev.enabled,
                                   )
                                 : WeatherDailyPanel(
                                     weather: w,
                                     palette: palette,
-                                    maxDays: dev.enabled ? dev.forecastDays : 7,
+                                    maxDays:
+                                        dev.enabled ? dev.forecastDays : 7,
+                                    devEnabled: dev.enabled,
                                   ),
                       ),
                     ),
@@ -381,10 +387,18 @@ class _CompactStatusLine extends StatelessWidget {
     final stamp = p.issuedAtUtc;
     final when = stamp == null ? null : DateFormat('HH:mm').format(weather.toLocationLocal(stamp));
     final parts = <String>[
-      name,
+      if (devEnabled) name,
       if (when != null) 'home.run_at'.tr(namedArgs: {'time': when}),
       if (stale) 'home.stale'.tr(),
     ];
+    if (parts.isEmpty) return const SizedBox.shrink();
+
+    final leadingIcon = warn
+        ? Icons.report_gmailerrorred_outlined
+        : (devEnabled
+            ? (p.isWeatherNext ? Icons.auto_awesome : Icons.public)
+            : Icons.schedule_rounded);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
       child: GestureDetector(
@@ -392,7 +406,7 @@ class _CompactStatusLine extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              warn ? Icons.report_gmailerrorred_outlined : (p.isWeatherNext ? Icons.auto_awesome : Icons.public),
+              leadingIcon,
               size: 13,
               color: warn ? const Color(0xFFFBBF24) : palette.textMuted,
             ),

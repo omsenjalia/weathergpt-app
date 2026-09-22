@@ -171,25 +171,34 @@ String _sourceLine(WeatherSnapshot w) {
   return extra.isEmpty ? src : '$src · ${extra.join(' · ')}';
 }
 
-Widget _footer(WeatherSnapshot w) {
+Widget _footer(WeatherSnapshot w, {bool devEnabled = false}) {
   final contributors = w.fieldSources.contributors
       .where((c) => providerFromName(c) != providerFromName(w.provenance.selectedSource ?? w.provenance.source))
       .map(providerDisplayName)
       .toList();
+  final showSource = devEnabled;
+  final showContributors = devEnabled && contributors.isNotEmpty;
+  final showEnsemble = w.currentIsEnsembleMean == true;
+
+  if (!showSource && !showContributors && !showEnsemble) {
+    return const SizedBox.shrink();
+  }
+
   return Padding(
     padding: const EdgeInsets.only(top: 14),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
-          const Icon(Icons.verified_outlined, size: 13, color: Colors.white38),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text('${'home.source'.tr()}: ${_sourceLine(w)}',
-                style: const TextStyle(fontSize: 11, color: Colors.white38)),
-          ),
-        ]),
-        if (contributors.isNotEmpty)
+        if (showSource)
+          Row(children: [
+            const Icon(Icons.verified_outlined, size: 13, color: Colors.white38),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text('${'home.source'.tr()}: ${_sourceLine(w)}',
+                  style: const TextStyle(fontSize: 11, color: Colors.white38)),
+            ),
+          ]),
+        if (showContributors)
           Padding(
             padding: const EdgeInsets.only(top: 4, left: 19),
             child: Text(
@@ -197,9 +206,9 @@ Widget _footer(WeatherSnapshot w) {
               style: const TextStyle(fontSize: 11, color: Colors.white38),
             ),
           ),
-        if (w.currentIsEnsembleMean == true)
+        if (showEnsemble)
           Padding(
-            padding: const EdgeInsets.only(top: 4, left: 19),
+            padding: EdgeInsets.only(top: showSource ? 4 : 0, left: showSource ? 19 : 0),
             child: Text('home.ensemble_note'.tr(), style: const TextStyle(fontSize: 11, color: Colors.white38)),
           ),
       ],
@@ -215,6 +224,7 @@ Future<void> showHourDetailSheet(
   required HourlyPoint hour,
   required int index,
   required List<HourlyPoint> all,
+  bool devEnabled = false,
 }) {
   final local = hour.timeUtc == null ? null : weather.toLocationLocal(hour.timeUtc!);
   final title = local == null ? hour.label : DateFormat('EEEE, d MMM · h a').format(local);
@@ -267,8 +277,8 @@ Future<void> showHourDetailSheet(
             child: _note(Icons.info_outline, 'home.missing_reason'.tr(namedArgs: {'reason': hour.missingReason!})),
           ),
         const SizedBox(height: 16),
-        _Rows(rows: rows, weather: weather, palette: palette),
-        _footer(weather),
+        _Rows(rows: rows, weather: weather, palette: palette, showSources: devEnabled),
+        _footer(weather, devEnabled: devEnabled),
       ],
     ),
   );
@@ -281,6 +291,7 @@ Future<void> showDayDetailSheet(
   required AtmospherePalette palette,
   required DayForecast day,
   required int index,
+  bool devEnabled = false,
 }) {
   final date = day.dateUtc;
   final title = date == null ? day.date : DateFormat('EEEE, d MMMM').format(date.toUtc());
@@ -311,13 +322,13 @@ Future<void> showDayDetailSheet(
     ),
     _Row('home.max_wind'.tr(), day.windKmhMax == null ? '—' : '${day.windKmhMax!.toStringAsFixed(0)} km/h', icon: Icons.air_rounded),
     _Row('home.sunrise'.tr(), formatClock(day.sunrise), icon: Icons.wb_twilight_rounded, field: index == 0 ? 'sunrise' : null,
-        note: day.fieldSources['sunrise'] != null && index != 0 ? 'home.via'.tr(namedArgs: {'source': providerDisplayName(day.fieldSources['sunrise'])}) : null),
+        note: devEnabled && day.fieldSources['sunrise'] != null && index != 0 ? 'home.via'.tr(namedArgs: {'source': providerDisplayName(day.fieldSources['sunrise'])}) : null),
     _Row('home.sunset'.tr(), formatClock(day.sunset), icon: Icons.nights_stay_outlined, field: index == 0 ? 'sunset' : null,
-        note: day.fieldSources['sunset'] != null && index != 0 ? 'home.via'.tr(namedArgs: {'source': providerDisplayName(day.fieldSources['sunset'])}) : null),
+        note: devEnabled && day.fieldSources['sunset'] != null && index != 0 ? 'home.via'.tr(namedArgs: {'source': providerDisplayName(day.fieldSources['sunset'])}) : null),
     if (day.uvIndexMax != null)
       _Row('home.uv_max'.tr(), '${_n(day.uvIndexMax, digits: day.uvIndexMax! % 1 == 0 ? 0 : 1)} · ${uvBand(day.uvIndexMax)}', icon: Icons.wb_sunny_outlined,
           field: index == 0 ? 'uv_index_max' : null,
-          note: day.fieldSources['uv_index_max'] != null && index != 0 ? 'home.via'.tr(namedArgs: {'source': providerDisplayName(day.fieldSources['uv_index_max'])}) : null),
+          note: devEnabled && day.fieldSources['uv_index_max'] != null && index != 0 ? 'home.via'.tr(namedArgs: {'source': providerDisplayName(day.fieldSources['uv_index_max'])}) : null),
     if (day.weatherCode != null) _Row('home.wmo_code'.tr(), '${day.weatherCode}', icon: Icons.tag_rounded),
     if (day.hoursCovered != null) _Row('home.hours_in_day'.tr(), '${day.hoursCovered} / 24', icon: Icons.schedule_rounded),
   ];
@@ -359,7 +370,7 @@ Future<void> showDayDetailSheet(
                 final h = hours[i];
                 return InkWell(
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () => showHourDetailSheet(ctx, weather: weather, palette: palette, hour: h, index: i, all: hours),
+                  onTap: () => showHourDetailSheet(ctx, weather: weather, palette: palette, hour: h, index: i, all: hours, devEnabled: devEnabled),
                   child: Container(
                     width: 60,
                     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -386,8 +397,8 @@ Future<void> showDayDetailSheet(
           ),
         ],
         const SizedBox(height: 16),
-        _Rows(rows: rows, weather: weather, palette: palette),
-        _footer(weather),
+        _Rows(rows: rows, weather: weather, palette: palette, showSources: devEnabled),
+        _footer(weather, devEnabled: devEnabled),
       ],
     ),
   );
@@ -405,6 +416,7 @@ Future<void> showMetricDetailSheet(
   required IconData icon,
   String? field,
   Color? accent,
+  bool devEnabled = false,
 }) {
   final w = weather;
   final sourceId = field == null ? null : w.fieldSources.providerFor(field);
@@ -433,22 +445,23 @@ Future<void> showMetricDetailSheet(
   final rows = <_Row>[
     _Row('home.value'.tr(), value, icon: icon),
     if (!unavailable) _Row('home.meaning'.tr(), caption, icon: Icons.lightbulb_outline_rounded),
-    _Row(
-      'home.source'.tr(),
-      unavailable
-          ? (explicitNull ? 'home.no_provider_for'.tr() : 'home.source_not_reported'.tr())
-          : providerDisplayName(sourceId ?? primary),
-      icon: Icons.hub_outlined,
-      note: !unavailable && sourceId != null && providerFromName(sourceId) != providerFromName(primary)
-          ? 'home.supplemented_note'.tr(namedArgs: {'primary': providerDisplayName(primary)})
-          : null,
-    ),
+    if (devEnabled)
+      _Row(
+        'home.source'.tr(),
+        unavailable
+            ? (explicitNull ? 'home.no_provider_for'.tr() : 'home.source_not_reported'.tr())
+            : providerDisplayName(sourceId ?? primary),
+        icon: Icons.hub_outlined,
+        note: !unavailable && sourceId != null && providerFromName(sourceId) != providerFromName(primary)
+            ? 'home.supplemented_note'.tr(namedArgs: {'primary': providerDisplayName(primary)})
+            : null,
+      ),
     if (f == 'air_quality' && w.pm25 != null) _Row('PM2.5', '${w.pm25!.toStringAsFixed(0)} µg/m³', icon: Icons.blur_on_rounded),
     if (f == 'air_quality' && w.aqi != null) _Row('home.scale'.tr(), 'European AQI (0–100+)', icon: Icons.straighten_rounded),
     if ((f == 'sunrise' || f == 'sunset') && w.timezoneId != null) _Row('home.timezone'.tr(), w.timezoneId!, icon: Icons.schedule_rounded),
     if (f == 'pressure_hpa' && w.rawPayload?['current'] is Map && (w.rawPayload!['current'] as Map)['pressure_type'] != null)
       _Row('home.pressure_type'.tr(), '${(w.rawPayload!['current'] as Map)['pressure_type']}'.toUpperCase(), icon: Icons.layers_outlined),
-    if (w.provenance.runId != null) _Row('home.run'.tr(), w.provenance.runId!, icon: Icons.memory_rounded),
+    if (devEnabled && w.provenance.runId != null) _Row('home.run'.tr(), w.provenance.runId!, icon: Icons.memory_rounded),
   ];
 
   return _showSheet(
@@ -472,14 +485,16 @@ Future<void> showMetricDetailSheet(
           const SizedBox(height: 12),
           _note(
             Icons.info_outline,
-            explicitNull
-                ? 'home.unavailable_explicit'.tr()
-                : 'home.unavailable_generic'.tr(namedArgs: {'primary': providerDisplayName(primary)}),
+            devEnabled
+                ? (explicitNull
+                    ? 'home.unavailable_explicit'.tr()
+                    : 'home.unavailable_generic'.tr(namedArgs: {'primary': providerDisplayName(primary)}))
+                : 'home.unavailable'.tr(),
           ),
         ],
         const SizedBox(height: 16),
         _Rows(rows: rows, weather: weather, palette: palette, showSources: false),
-        _footer(weather),
+        _footer(weather, devEnabled: devEnabled),
       ],
     ),
   );

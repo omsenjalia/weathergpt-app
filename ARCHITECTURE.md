@@ -662,9 +662,35 @@ Hazard handling is **backend-driven**, not a custom in-app RED/YELLOW/GREEN thre
 | Mustard | Aphid during overcast | Spray timing, cold snap warnings |
 | Vegetables | Blight, desiccation | Drip scheduling, shade management |
 
+### Farm Profile Configuration & Onboarding Flow
+
+- **Welcome Onboarding Prompt**: When a user selects the **Farmer** persona during initial onboarding (`/onboarding/focus`), an inline setup form prompts for key farm parameters:
+  - Farm Location (city/region)
+  - Farm Size (acres)
+  - Primary Crop (Cotton, Wheat, Rice, Sugarcane, Groundnut, Mustard, Maize, Vegetables)
+  - Growth Stage (Sowing, Vegetative, Flowering, Fruiting, Harvest)
+  - Irrigation Type (Borewell, Canal, Drip, Rainfed, Sprinkler)
+  - Soil Type (Loamy, Clay, Sandy, Silty, Black / Regur, Red)
+- **Settings Farm Profile Management**: Whenever Farmer mode is active, **Settings** surfaces a dedicated **Farm Profile** section detailing all current farm attributes. Tapping "Edit Farm Profile" opens `FarmProfileEditor` to modify any field.
+- **Synchronous Downstream Propagation**: Updates saved via `FarmProfileEditor` notify `farmProfileProvider` and persist to Hive (`farm_profile` box), immediately invalidating and refreshing `actionWindowsProvider`, contextualizing LangGraph AI `chatProvider`, and tuning voice recommendations.
+
 ---
 
 ## 16. Developer Diagnostics and Debug Suite
+
+### Data Source Visibility & Dev-Mode Boundary
+
+To maintain a clean consumer-facing UI while providing rich diagnostic transparency for engineers:
+- **Production / Consumer Mode (`dev.enabled == false`)**:
+  - Raw backend data source names (IMD, WeatherNext, AccuWeather, Open-Meteo) are omitted from the UI.
+  - Home screen status bar displays clean freshness / update time (`run HH:mm`) and honest degraded/stale alerts without leaking internal provider names.
+  - Overview metric tiles omit secondary contributor badges (`via Open-Meteo`).
+  - Metric and forecast detail bottom sheets omit internal source attribution lines (`home.source`) and secondary provider footers.
+- **Developer Mode (`dev.enabled == true`)**:
+  - Home status bar displays the active provider name alongside run timestamps and a direct shortcut to the Debug suite.
+  - Overview tiles render `SourceBadge` pills indicating secondary provider contributions when `dev.showFieldSourceBadges` is enabled.
+  - Metric and forecast detail sheets display full source attribution lines, run identifiers, and per-field source attributions.
+  - Developers can optionally enable the persistent `WeatherProvenanceBar` directly on the Home screen via `dev.showProvenanceOnHome`.
 
 Enable via **Settings → Developer → Enable developer options → Debug & state** (`/debug`) — 5 tabs:
 

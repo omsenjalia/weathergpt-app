@@ -7,6 +7,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/atmosphere_background.dart';
 import '../providers/settings_provider.dart';
 import '../providers/developer_options_provider.dart';
+import '../../farmer/models/farm_profile_model.dart';
+import '../../farmer/providers/farm_profile_provider.dart';
+import '../../farmer/screens/farm_profile_screen.dart';
 import '../../home/providers/atmosphere_provider.dart';
 import '../../home/theme/atmosphere_theme.dart';
 
@@ -43,6 +46,7 @@ class SettingsScreen extends ConsumerWidget {
     final n = ref.read(settingsProvider.notifier);
     final dev = ref.watch(developerOptionsProvider);
     final devN = ref.read(developerOptionsProvider.notifier);
+    final farm = ref.watch(farmProfileProvider);
     final bottom = MediaQuery.paddingOf(context).bottom + 108;
     final palette = ref.watch(atmospherePaletteProvider);
 
@@ -119,6 +123,91 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            if (settings.userPersona == 'farmer') ...[
+              const SizedBox(height: 20),
+              _section('farmer.farm_profile'.tr()),
+              _card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: AppColors.farmerGreen.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(Icons.eco_rounded,
+                                color: AppColors.farmerGreen, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${farm.crop} · ${farm.growthStage}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${farm.location} · ${farm.farmSizeAcres.toStringAsFixed(farm.farmSizeAcres % 1 == 0 ? 0 : 1)} acres',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: Colors.white.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.farmerGreen,
+                              side: BorderSide(
+                                color: AppColors.farmerGreen.withValues(alpha: 0.5),
+                              ),
+                              shape: const StadiumBorder(),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                            ),
+                            icon: const Icon(Icons.edit_outlined, size: 14),
+                            label: Text('farmer.edit_farm_profile'.tr(),
+                                style: const TextStyle(fontSize: 12)),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    FarmProfileEditor(initialProfile: farm),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      const Divider(height: 1),
+                      const SizedBox(height: 12),
+                      _farmDetailRow('farmer.location'.tr(), farm.location, Icons.location_on_outlined),
+                      const SizedBox(height: 8),
+                      _farmDetailRow('farmer.crop'.tr(), farm.crop, Icons.eco_outlined),
+                      const SizedBox(height: 8),
+                      _farmDetailRow('farmer.growth_stage'.tr(), farm.growthStage, Icons.spa_outlined),
+                      const SizedBox(height: 8),
+                      _farmDetailRow('farmer.farm_size'.tr(), '${farm.farmSizeAcres.toStringAsFixed(farm.farmSizeAcres % 1 == 0 ? 0 : 1)} acres', Icons.landscape_outlined),
+                      const SizedBox(height: 8),
+                      _farmDetailRow('farmer.irrigation_type'.tr(), farm.irrigationType, Icons.water_drop_outlined),
+                      const SizedBox(height: 8),
+                      _farmDetailRow('farmer.soil_type'.tr(), farm.soilType, Icons.grass_outlined),
+                    ],
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             _section('Voice'),
             _card(
@@ -448,5 +537,18 @@ class SettingsScreen extends ConsumerWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: child,
+      );
+
+  Widget _farmDetailRow(String label, String value, IconData icon) => Row(
+        children: [
+          Icon(icon, size: 15, color: Colors.white54),
+          const SizedBox(width: 8),
+          Text(label,
+              style: const TextStyle(fontSize: 13, color: Colors.white70)),
+          const Spacer(),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        ],
       );
 }

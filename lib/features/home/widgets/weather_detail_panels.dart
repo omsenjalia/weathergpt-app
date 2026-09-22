@@ -119,11 +119,13 @@ class WeatherOverviewGrid extends StatelessWidget {
     super.key,
     required this.weather,
     required this.palette,
-    this.showSourceBadges = true,
+    this.showSourceBadges = false,
+    this.devEnabled = false,
   });
   final WeatherSnapshot weather;
   final AtmospherePalette palette;
   final bool showSourceBadges;
+  final bool devEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -254,6 +256,7 @@ class WeatherOverviewGrid extends StatelessWidget {
           icon: t.icon,
           field: t.field,
           accent: t.accent,
+          devEnabled: devEnabled,
         ),
         child: Container(
           padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
@@ -355,10 +358,17 @@ class SourceBadge extends StatelessWidget {
 
 /// Tab body: horizontal scroll of hourly temperatures, tap for detail.
 class WeatherHourlyPanel extends StatelessWidget {
-  const WeatherHourlyPanel({super.key, required this.weather, required this.palette, this.maxHours = 48});
+  const WeatherHourlyPanel({
+    super.key,
+    required this.weather,
+    required this.palette,
+    this.maxHours = 48,
+    this.devEnabled = false,
+  });
   final WeatherSnapshot weather;
   final AtmospherePalette palette;
   final int maxHours;
+  final bool devEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -413,7 +423,15 @@ class WeatherHourlyPanel extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: () => showHourDetailSheet(context, weather: weather, palette: palette, hour: h, index: i, all: shown),
+                  onTap: () => showHourDetailSheet(
+                    context,
+                    weather: weather,
+                    palette: palette,
+                    hour: h,
+                    index: i,
+                    all: shown,
+                    devEnabled: devEnabled,
+                  ),
                   child: Container(
                     width: 74,
                     padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
@@ -500,10 +518,17 @@ class WeatherHourlyPanel extends StatelessWidget {
 
 /// Tab body: 7-day forecast list, tap a row for detail.
 class WeatherDailyPanel extends StatelessWidget {
-  const WeatherDailyPanel({super.key, required this.weather, required this.palette, this.maxDays = 7});
+  const WeatherDailyPanel({
+    super.key,
+    required this.weather,
+    required this.palette,
+    this.maxDays = 7,
+    this.devEnabled = false,
+  });
   final WeatherSnapshot weather;
   final AtmospherePalette palette;
   final int maxDays;
+  final bool devEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -559,7 +584,14 @@ class WeatherDailyPanel extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
-                onTap: () => showDayDetailSheet(context, weather: weather, palette: palette, day: d, index: i),
+                onTap: () => showDayDetailSheet(
+                  context,
+                  weather: weather,
+                  palette: palette,
+                  day: d,
+                  index: i,
+                  devEnabled: devEnabled,
+                ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
