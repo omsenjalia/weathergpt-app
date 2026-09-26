@@ -3,27 +3,33 @@ import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { useSettingsStore, selectMode } from "../src/features/settings/settingsStore";
 import { useDeveloperOptionsStore } from "../src/features/settings/developerOptionsStore";
 import { useLocationStore } from "../src/features/location/locationStore";
 import { useFarmProfileStore } from "../src/features/farm/farmStores";
 import { useSavedLocationsStore } from "../src/features/explore/exploreStores";
-import { useOnboardingStore } from "../src/features/onboarding/onboardingStore";
+import { useChatStore } from "../src/features/chat/chatStore";
+import { useVoiceStore } from "../src/features/voice/voiceStore";
 import { atmospherePalette, useWeatherStore } from "../src/features/weather/weatherStore";
 import { AtmosphereBackground } from "../src/ui/components/AtmosphereBackground";
-import { NavigationShell } from "../src/ui/components/NavigationShell";
 import { AppColors } from "../src/ui/appColors";
-import { AppMode } from "../src/core/models/appMode";
 
 export default function RootLayout(): React.ReactElement {
   const [hydrated, setHydrated] = useState(false);
-  const settingsHydrated = useSettingsStore((s) => s.hydrated);
-  const mode = useSettingsStore(selectMode);
+  const settings = useSettingsStore();
+  const location = useLocationStore((s) => s.location);
+  const profileCompleted = useFarmProfileStore((s) => s.completed);
+  const profile = useFarmProfileStore((s) => s.profile);
   const dev = useDeveloperOptionsStore();
   const weather = useWeatherStore((s) => s.snapshot);
-  const onboardingComplete = useOnboardingStore;
+  useEffect(() => {
+    if (!hydrated) return;
+    const context = { language: settings.language, userPersona: selectMode(settings), location, profile, profileCompleted };
+    useChatStore.getState().setContext(context);
+    useVoiceStore.getState().setContext({ ...context, ttsVoiceLocale: settings.ttsVoiceLocale, ttsSpeed: settings.ttsSpeed });
+  }, [hydrated, settings.language, settings.userPersona, settings.ttsVoiceLocale, settings.ttsSpeed, location, profile, profileCompleted]);
 
   useEffect(() => {
     void Promise.all([
@@ -59,32 +65,27 @@ export default function RootLayout(): React.ReactElement {
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <AtmosphereBackground palette={palette}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: "transparent" },
-              animation: "fade",
-            }}
-          >
-            <Stack.Screen name="onboarding/index" />
-            <Stack.Screen name="(tabs)" />
-          </Stack>
+          <SafeAreaView style={styles.fill}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: "transparent" },
+                animation: "fade",
+              }}
+            >
+              <Stack.Screen name="onboarding/index" />
+              <Stack.Screen name="(tabs)" />
+            </Stack>
+          </SafeAreaView>
         </AtmosphereBackground>
         <StatusBar style="light" />
-        {onboardingComplete === null ? null : null}
-        <NavigationModeBridge mode={mode} />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
-/// The navigation shell wraps the tab layout; this bridge only keeps the
-/// persona in scope for it.
-function NavigationModeBridge({ mode }: { mode: AppMode }): React.ReactElement | null {
-  return null;
-}
-
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   root: {
     flex: 1,
     backgroundColor: AppColors.bgPrimary,

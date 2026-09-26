@@ -1,7 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "../../src/i18n/useTranslation";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { ScrollView, View, Text, StyleSheet, RefreshControl, Pressable, TextInput, ActivityIndicator } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
+
+import { formatTemperature } from "../../src/core/utils/temperature";
 
 import { GlassCard } from "../../src/ui/components/GlassCard";
 import { ApiErrorView } from "../../src/ui/components/ApiErrorView";
@@ -21,12 +24,14 @@ import { conditionFromWeather } from "../../src/features/weather/theme/atmospher
 type Segment = "overview" | "hourly" | "daily";
 
 export default function HomeScreen(): React.ReactElement {
+  const t = useTranslation();
   const settings = useSettingsStore();
   const mode = useSettingsStore(selectMode);
   const dev = useDeveloperOptionsStore();
   const location = useLocationStore((s) => s.location);
   const { snapshot, loading, error, lastRequest, fetchWeather } = useWeatherStore();
   const [segment, setSegment] = useState<Segment>("overview");
+  const searchGeneration = useRef(0);
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);
   const [suggest, setSuggest] = useState<AppLocation[]>([]);
@@ -46,13 +51,16 @@ export default function HomeScreen(): React.ReactElement {
   );
 
   async function runSearch(query: string): Promise<void> {
+    const generation = ++searchGeneration.current;
     setSearch(query);
     if (query.trim().length < 2) {
+      setSearching(false);
       setSuggest([]);
       return;
     }
     setSearching(true);
     const results = await GeocodingService.searchMany(query, 5);
+    if (generation !== searchGeneration.current) return;
     setSuggest(results);
     setSearching(false);
   }
@@ -87,7 +95,7 @@ export default function HomeScreen(): React.ReactElement {
         <TextInput
           value={search}
           onChangeText={(v) => void runSearch(v)}
-          placeholder="Search location..."
+          placeholder={t("home.search_hint")}
           placeholderTextColor={AppColors.textTertiary}
           style={styles.search}
         />
@@ -99,6 +107,8 @@ export default function HomeScreen(): React.ReactElement {
                 key={`${place.name}-${place.lat}`}
                 style={styles.suggestRow}
                 onPress={() => {
+                  searchGeneration.current++;
+                  setSearching(false);
                   void useLocationStore.getState().select(place);
                   setSuggest([]);
                   setSearch("");
@@ -129,8 +139,8 @@ export default function HomeScreen(): React.ReactElement {
 
       {mode === "farmer" && (
         <View style={styles.farmRow}>
-          <PrimaryButton label="My Farm" onPress={() => router.push("/(tabs)/farm")} style={{ flex: 1 }} />
-          <PrimaryButton label="Action Windows" onPress={() => router.push("/(tabs)/farm")} variant="white" style={{ flex: 1 }} />
+          <PrimaryButton label={t("home.my_farm")} onPress={() => router.push("/(tabs)/farm")} style={{ flex: 1 }} />
+          <PrimaryButton label={t("home.action_windows")} onPress={() => router.push("/(tabs)/farm")} variant="white" style={{ flex: 1 }} />
         </View>
       )}
 
@@ -145,36 +155,38 @@ export default function HomeScreen(): React.ReactElement {
 }
 
 function Overview({ snapshot, palette }: { snapshot: WeatherSnapshot; palette: ReturnType<typeof atmospherePalette> }): React.ReactElement {
+  const t = useTranslation();
+  const units = useSettingsStore((s) => s.units);
   const uvLabel = uvBand(snapshot.uvIndex ?? null);
   return (
     <View style={{ gap: Spacing.md }}>
       <GlassCard strong style={styles.hero}>
-        <Text style={styles.heroTemp}>{snapshot.temperatureC === null || snapshot.temperatureC === undefined ? "—" : `${Math.round(snapshot.temperatureC)}°`}</Text>
+        <Text style={styles.heroTemp}>{formatTemperature(snapshot.temperatureC, units)}</Text>
         <Text style={styles.heroCondition}>{snapshot.condition}</Text>
         <Text style={styles.heroRange}>
-          H: {snapshot.highC === null || snapshot.highC === undefined ? "—" : `${Math.round(snapshot.highC)}°`}  L:{" "}
-          {snapshot.lowC === null || snapshot.lowC === undefined ? "—" : `${Math.round(snapshot.lowC)}°`}
+          H: {formatTemperature(snapshot.highC, units)}  L:{" "}
+          {formatTemperature(snapshot.lowC, units)}
         </Text>
         {snapshot.feelsLikeC !== null && snapshot.feelsLikeC !== undefined && (
-          <Text style={styles.heroFeels}>Feels like {Math.round(snapshot.feelsLikeC)}°</Text>
+          <Text style={styles.heroFeels}>Feels like {formatTemperature(snapshot.feelsLikeC, units)}</Text>
         )}
       </GlassCard>
 
       <View style={styles.chips}>
-        <MetricChip icon="💧" value={snapshot.rainProbability === null || snapshot.rainProbability === undefined ? "—" : `${Math.round(snapshot.rainProbability)}%`} label="Rain" />
-        <MetricChip icon="🌬️" value={snapshot.windKmh === null || snapshot.windKmh === undefined ? "—" : `${Math.round(snapshot.windKmh)} km/h`} label="Wind" />
+        <MetricChip icon="💧" value={snapshot.rainProbability === null || snapshot.rainProbability === undefined ? "—" : `${Math.round(snapshot.rainProbability)}%`} label={t("map.layer_rain")} />
+        <MetricChip icon="🌬️" value={snapshot.windKmh === null || snapshot.windKmh === undefined ? "—" : `${Math.round(snapshot.windKmh)} km/h`} label={t("home.wind")} />
       </View>
       <View style={styles.chips}>
-        <MetricChip icon="💦" value={snapshot.humidity === null || snapshot.humidity === undefined ? "—" : `${Math.round(snapshot.humidity)}%`} label="Humidity" />
-        <MetricChip icon="🧭" value={snapshot.pressureHpa === null || snapshot.pressureHpa === undefined ? "—" : `${Math.round(snapshot.pressureHpa)} hPa`} label="Pressure" />
+        <MetricChip icon="💦" value={snapshot.humidity === null || snapshot.humidity === undefined ? "—" : `${Math.round(snapshot.humidity)}%`} label={t("home.humidity")} />
+        <MetricChip icon="🧭" value={snapshot.pressureHpa === null || snapshot.pressureHpa === undefined ? "—" : `${Math.round(snapshot.pressureHpa)} hPa`} label={t("home.pressure")} />
       </View>
       <View style={styles.chips}>
-        <MetricChip icon="🌅" value={formatClockShort(snapshot.sunrise)} label="Sunrise" />
-        <MetricChip icon="🌇" value={formatClockShort(snapshot.sunset)} label="Sunset" />
+        <MetricChip icon="🌅" value={formatClockShort(snapshot.sunrise)} label={t("home.sunrise")} />
+        <MetricChip icon="🌇" value={formatClockShort(snapshot.sunset)} label={t("home.sunset")} />
       </View>
       <View style={styles.chips}>
         <MetricChip icon={uvLabel === null ? "☀️" : "🕶️"} value={snapshot.uvIndex === null || snapshot.uvIndex === undefined ? "—" : `${snapshot.uvIndex}`} label={`UV${uvLabel !== null ? ` · ${uvLabel}` : ""}`} />
-        <MetricChip icon="🌫️" value={snapshot.aqi === null || snapshot.aqi === undefined ? "—" : `${Math.round(snapshot.aqi)}`} label="AQI" />
+        <MetricChip icon="🌫️" value={snapshot.aqi === null || snapshot.aqi === undefined ? "—" : `${Math.round(snapshot.aqi)}`} label={t("weather.aqi")} />
       </View>
 
       {/* Developer-only provenance row (never shown to regular users) */}
@@ -197,10 +209,12 @@ function devProvenanceVisible(_snapshot: WeatherSnapshot): boolean {
 }
 
 function HourlyStrip({ snapshot, palette }: { snapshot: WeatherSnapshot; palette: ReturnType<typeof atmospherePalette> }): React.ReactElement {
+  const t = useTranslation();
+  const units = useSettingsStore((s) => s.units);
   if (snapshot.hourly.length === 0) {
     return (
       <GlassCard>
-        <Text style={styles.emptyText}>Hourly forecast is not available from this source.</Text>
+        <Text style={styles.emptyText}>{t("home.hourly_unavailable")}</Text>
       </GlassCard>
     );
   }
@@ -225,7 +239,7 @@ function HourlyStrip({ snapshot, palette }: { snapshot: WeatherSnapshot; palette
                   opacity: 0.55 + ratio * 0.45,
                 }}
               />
-              <Text style={styles.hourTemp}>{Math.round(h.tempC)}°</Text>
+              <Text style={styles.hourTemp}>{formatTemperature(h.tempC, units)}</Text>
               {h.rainProbability !== null && h.rainProbability !== undefined && (
                 <Text style={styles.hourRain}>{Math.round(h.rainProbability)}%</Text>
               )}
@@ -238,10 +252,12 @@ function HourlyStrip({ snapshot, palette }: { snapshot: WeatherSnapshot; palette
 }
 
 function DailyList({ snapshot, palette }: { snapshot: WeatherSnapshot; palette: ReturnType<typeof atmospherePalette> }): React.ReactElement {
+  const t = useTranslation();
+  const units = useSettingsStore((s) => s.units);
   if (snapshot.forecast.length === 0) {
     return (
       <GlassCard>
-        <Text style={styles.emptyText}>Daily forecast is not available from this source.</Text>
+        <Text style={styles.emptyText}>{t("home.forecast_unavailable")}</Text>
       </GlassCard>
     );
   }
@@ -256,8 +272,8 @@ function DailyList({ snapshot, palette }: { snapshot: WeatherSnapshot; palette: 
               <Text style={styles.dayName}>{i === 0 ? "Today" : weekdayLabel(day.date, i)}</Text>
               <MaterialCommunityIcons name={icon} size={20} color={palette.accent} />
               <View style={styles.dayTemps}>
-                <Text style={styles.dayHigh}>{day.highC === null || day.highC === undefined ? "—" : `${Math.round(day.highC)}°`}</Text>
-                <Text style={styles.dayLow}>{day.lowC === null || day.lowC === undefined ? "—" : `${Math.round(day.lowC)}°`}</Text>
+                <Text style={styles.dayHigh}>{formatTemperature(day.highC, units)}</Text>
+                <Text style={styles.dayLow}>{formatTemperature(day.lowC, units)}</Text>
               </View>
               <Text style={styles.dayRain}>
                 {day.rainProbability === null || day.rainProbability === undefined ? "—" : `${Math.round(day.rainProbability)}%`}

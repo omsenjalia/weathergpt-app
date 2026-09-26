@@ -17,7 +17,7 @@ export function setApiLanguage(value: string): void {
 
 function envBackendUrl(): string | null {
   // Expo public env vars survive `expo export`; Constants mirrors them too.
-  const fromProcess = typeof process !== "undefined" ? process.env?.EXPO_PUBLIC_BACKEND_URL : undefined;
+  const fromProcess = typeof process !== "undefined" ? process.env.EXPO_PUBLIC_BACKEND_URL : undefined;
   const fromConstants = (Constants.expoConfig?.extra as Record<string, unknown> | undefined)?.BACKEND_URL;
   return (typeof fromProcess === "string" ? fromProcess : null) ?? (typeof fromConstants === "string" ? fromConstants : null);
 }
@@ -101,18 +101,25 @@ async function request(
         body: method === "POST" ? JSON.stringify(opts?.data ?? {}) : undefined,
         signal: controller.signal,
       });
+      status = response.status;
+      bodyText = await response.text();
     } finally {
       clearTimeout(timeout);
     }
-    status = response.status;
-    bodyText = await response.text();
     if (status >= 500) {
       throw new ServerError("WeatherGPT is temporarily unavailable. Please try again.");
     }
     if (status >= 400) {
       throw mapFetchError(new Error(`HTTP ${status}`), status, bodyText);
     }
-    const body = decodeJsonObject(bodyText);
+    let body: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(bodyText);
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+      body = parsed as Record<string, unknown>;
+    } catch {
+      throw new ServerError("WeatherGPT returned an invalid response. Please try again.");
+    }
     recordRequest({
       startedAt,
       method,

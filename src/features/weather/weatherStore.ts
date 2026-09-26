@@ -98,7 +98,7 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
 
   fetchWeather: async (location, mode, dev) => {
     const generation = get().generation + 1;
-    set({ generation, loading: true, error: null });
+    set({ generation, loading: true, error: null, snapshot: null, lastRequest: null });
     // Keep the ring buffer alive from app start so the Debug screen shows the
     // requests that happened before it was first opened.
     useRequestLogStore.getState().setEnabled(!dev.enabled || dev.logRequests);
@@ -110,15 +110,12 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
     try {
       const data = await ApiClient.get(ApiEndpoints.v2Weather, query);
       if (data["status"] === "unavailable") {
-        // The backend answered honestly that nothing could serve this request
-        // (typically a pinned source). Surface that instead of falling back.
-        const reasons = Array.isArray(data["fallback_reasons"])
-          ? (data["fallback_reasons"] as unknown[])
-              .map((r) => (r !== null && typeof r === "object" ? `${(r as Record<string, unknown>)["provider"]}: ${(r as Record<string, unknown>)["reason"]}` : String(r)))
-              .join("; ")
-          : "";
-        const err = data["error"] ?? "No forecast provider available";
-        throw new ServerError(reasons === "" ? String(err) : `${String(err)} (${reasons})`);
+        if (get().generation === generation) set({
+          loading: false,
+          error: String(data["error"] ?? "No forecast provider available"),
+          lastRequest: { endpoint: ApiEndpoints.v2Weather, query, usedLegacyFallback: false },
+        });
+        return;
       }
       if (get().generation !== generation) return;
       set({
@@ -128,6 +125,7 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
       });
       return;
     } catch (error) {
+      if (get().generation !== generation) return;
       v2Error = apiErrorMessage(error);
       if (dev.enabled && dev.disableV2Fallback) {
         if (get().generation === generation) {
@@ -171,7 +169,7 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
     }
   },
 
-  clear: () => set({ snapshot: null, error: null, lastRequest: null, loading: false }),
+  clear: () => set((s) => ({ generation: s.generation + 1, snapshot: null, error: null, lastRequest: null, loading: false })),
 }));
 
 /// Computes the app-wide sky palette from wall-clock time and the live
@@ -184,8 +182,20 @@ export function atmospherePalette(
   if (dev?.forcePeriod !== undefined && dev.forcePeriod !== null && dev.forceSky !== undefined && dev.forceSky !== null) {
     return paletteFor(dev.forcePeriod, dev.forceSky);
   }
-  const sunrise = snapshot === null ? null : parseWeatherTime(snapshot.sunrise);
-  const sunset = snapshot === null ? null : parseWeatherTime(snapshot.sunset);
+  const offset = snapshot?.utcOffsetSeconds;
+  const localClock = (instant: Date): Date => {
+    if (offset == null) return instant;
+    const shifted = new Date(instant.getTime() + offset * 1000);
+    return new Date(2000, 0, 1, shifted.getUTCHours(), shifted.getUTCMinutes());
+  };
+  const solarClock = (raw: string | null | undefined): Date | null => {
+    const parsed = parseWeatherTime(raw);
+    if (!parsed) return null;
+    // Naive solar timestamps already represent location-local wall time.
+    return raw && /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw) ? localClock(parsed) : parsed;
+  };
+  const sunrise = solarClock(snapshot?.sunrise);
+  const sunset = solarClock(snapshot?.sunset);
   const sky =
     dev?.forceSky !== undefined && dev.forceSky !== null
       ? dev.forceSky
@@ -195,6 +205,6 @@ export function atmospherePalette(
   const period =
     dev?.forcePeriod !== undefined && dev.forcePeriod !== null
       ? dev.forcePeriod
-      : periodFromLocalTime(now, sunrise, sunset);
+      : periodFromLocalTime(localClock(now), sunrise, sunset);
   return paletteFor(period, sky);
 }

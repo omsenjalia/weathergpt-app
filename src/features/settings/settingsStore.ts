@@ -10,7 +10,7 @@ import { setApiLanguage } from "../../core/services/apiClient";
 import { AppMode, appModeFromName, appModeWire, AppModeException } from "../../core/models/appMode";
 import { TtsVoiceSelection, ttsSelectionFromMap, ttsSelectionToMap, ttsSelectionIsValid } from "./models/ttsVoiceOption";
 import { loadJson, saveJson, StorageKeys } from "../../lib/persistence";
-import { isSupportedLanguage, LanguageCode } from "../../i18n";
+import { isSupportedLanguage, LanguageCode, LANGUAGE_META } from "../../i18n";
 
 export enum TemperatureUnit {
   Celsius = "celsius",
@@ -85,12 +85,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     daily_summary: false,
   },
   hydrated: false,
-  get mode() {
-    return computeMode(get().userPersona);
-  },
-  get hasRecognisedPersona() {
-    return appModeFromName(get().userPersona) !== null;
-  },
+  mode: "everyone",
+  hasRecognisedPersona: true,
 
   hydrate: async () => {
     if (get().hydrated) return;
@@ -104,12 +100,15 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       }
     }
     const language = isSupportedLanguage(raw?.["language"]) ? raw!["language"] as LanguageCode : "en";
+    const persona = typeof raw?.["userPersona"] === "string" ? raw["userPersona"] as string : "everyone";
     setApiLanguage(language);
     set({
       displayName: typeof raw?.["displayName"] === "string" ? raw["displayName"] as string : null,
       email: typeof raw?.["email"] === "string" ? raw["email"] as string : null,
       language,
-      userPersona: typeof raw?.["userPersona"] === "string" ? raw["userPersona"] as string : "everyone",
+      userPersona: persona,
+      mode: computeMode(persona),
+      hasRecognisedPersona: appModeFromName(persona) !== null,
       units: raw?.["units"] === TemperatureUnit.Fahrenheit ? TemperatureUnit.Fahrenheit : TemperatureUnit.Celsius,
       ttsVoiceLocale: typeof raw?.["ttsVoiceLocale"] === "string" ? raw["ttsVoiceLocale"] as string : "en-US",
       ttsSpeed: typeof raw?.["ttsSpeed"] === "number" ? raw["ttsSpeed"] as number : 0.85,
@@ -128,7 +127,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
 
   updateLanguage: async (code) => {
-    set({ language: code });
+    set({ language: code, ttsVoiceLocale: LANGUAGE_META[code].ttsLocale });
     setApiLanguage(code);
     persist(get());
   },
@@ -136,7 +135,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   updatePersona: async (persona) => {
     const mode = appModeFromName(persona);
     if (mode === null) throw new AppModeException(persona);
-    set({ userPersona: appModeWire(mode) });
+    set({ userPersona: appModeWire(mode), mode, hasRecognisedPersona: true });
     persist(get());
   },
 
@@ -146,7 +145,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   },
 
   updateTtsSpeed: async (speed) => {
-    set({ ttsSpeed: speed });
+    set({ ttsSpeed: Number.isFinite(speed) ? Math.min(1, Math.max(0.3, speed)) : 0.85 });
     persist(get());
   },
 

@@ -22,7 +22,7 @@ export const useSavedLocationsStore = create<SavedLocationsStore>((set, get) => 
   hydrate: async () => {
     if (get().hydrated) return;
     const stored = await loadJson<unknown[] | null>(StorageKeys.savedLocations);
-    const locations = (stored ?? [])
+    const locations = (Array.isArray(stored) ? stored : [])
       .filter((item): item is Record<string, unknown> => item !== null && typeof item === "object")
       .map((item) => SavedLocation.fromMap(item));
     set({ locations, hydrated: true });
@@ -125,5 +125,5 @@ export const useMapStore = create<MapStore>((set, get) => ({
 
 /// Builds the windy.com embed URL for the current map state.
 export function windyEmbedUrl(state: MapState): string {
-  return `https://embed.windy.com/embed2.html?lat=${state.lat}&lon=${state.lon}&detailLat=${state.lat}&detailLon=${state.lon}&zoom=${state.zoom}&level=surface&overlay=${state.activeLayer}&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
+  return `https://embed.windy.com/embed2.html?lat=${state.lat}&lon=${state.lon}&detailLat=${state.lat}&detailLon=${state.lon}&zoom=${state.zoom}&product=${state.product}&level=surface&overlay=${state.activeLayer}&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
 }

@@ -5,7 +5,7 @@
 > **Team**: **visionaries_bvm**  
 > **Target Audience**: Evaluation Panel, Technical Judges, Systems Architects  
 > **Last Updated**: September 2026  
-> **Status**: Production Live System + Future Roadmap  
+> **Status**: React Native migration — source/bundle checks verified; native release/device acceptance pending
 > **Backend**: `https://weathergpt-backend.vercel.app`
 > **Mobile client (September 2026)**: **React Native (Expo SDK 54, TypeScript)** — the app was ported from Flutter 3.44. Full mapping table in [`FLUTTER_TO_REACT_NATIVE_MIGRATION.md`](FLUTTER_TO_REACT_NATIVE_MIGRATION.md). Backend contracts and the fusion policy are unchanged.
 
@@ -22,16 +22,16 @@
 | [5. Environment Variables and Secrets](#5-environment-variables-and-secrets) | Config and credential isolation | Live | EXPO_PUBLIC_BACKEND_URL, Gradle/EAS signing |
 | [6. Backend Integration and API Architecture](#6-backend-integration-and-api-architecture) | FastAPI endpoints | Live | FastAPI, /v2/weather, /chat |
 | [7. Mobile App Architecture](#7-mobile-app-architecture) | State, routing, persistence | Live | Zustand 5, expo-router 6, AsyncStorage |
-| [8. Data Flow and Request Lifecycle](#8-data-flow-and-request-lifecycle) | Request flow and guards | Live | Dio Interceptors, FutureProvider |
+| [8. Data Flow and Request Lifecycle](#8-data-flow-and-request-lifecycle) | Request flow and guards | Live | fetch, generation-guarded Zustand stores |
 | [9. AI Agent Architecture and Conversational Engine](#9-ai-agent-architecture-and-conversational-engine) | LangGraph and Groq | Live | LangGraph, Groq cascade, TypeSafe |
 | [10. Multi-Source Ensemble Fusion Engine](#10-multi-source-ensemble-fusion-engine) | WeatherNext-first + supplementation | Live | IMD, WeatherNext, AccuWeather, Open-Meteo |
 | [11. API Contract Reference](#11-api-contract-reference) | REST contract | Live | /chat, /weather, /v2/weather, /advisory |
 | [12. Widget Protocol and Dynamic UI Cards](#12-widget-protocol-and-dynamic-ui-cards) | Dynamic markdown cards | Live | widget:weather, widget:forecast, VoiceCard |
-| [13. Multilingual Engine and Internationalization](#13-multilingual-engine-and-internationalization) | 9 Indian languages + Voice | Live | easy_localization, STT, TTS |
+| [13. Multilingual Engine and Internationalization](#13-multilingual-engine-and-internationalization) | 9 Indian languages + Voice | Live | typed i18n, expo-speech-recognition, expo-speech |
 | [14. Risk Assessment and Environmental Hazard Engine](#14-risk-assessment-and-environmental-hazard-engine) | Hazard advisory | Live | Backend-driven thresholds |
 | [15. Agricultural Farmer Advisory Mode and TypeSafe System One](#15-agricultural-farmer-advisory-mode-and-typesafe-system-one) | Crop decisions | Live | Jev AI, Farm Action Windows |
 | [16. Developer Diagnostics and Debug Suite](#16-developer-diagnostics-and-debug-suite) | 5-tab debug screen | Live | Request log, provider pinning |
-| [17. Deployment and Release Architecture](#17-deployment-and-release-architecture) | CI/CD and signing | Live | GitHub Actions, Gradle 8 |
+| [17. Deployment and Release Architecture](#17-deployment-and-release-architecture) | CI/CD and signing | Live | GitHub Actions, Expo prebuild, Gradle |
 | [18. Problem Statement and SIH Compliance Matrix](#18-problem-statement-and-sih-compliance-matrix) | SIH26068 compliance | Live | 10-domain matrix |
 | [19. Future Roadmap and Planned Enhancements](#19-future-roadmap-and-planned-enhancements) | Roadmap | Planned | IMD APIs, radar, iOS, LoRaWAN |
 
@@ -51,7 +51,7 @@ It translates multi-source meteorological telemetry into actionable, hyper-local
 ### Core Innovations
 
 - **Persona-Driven UI**:
-  - **Everyone**: Hero weather card, 48h hourly, 7-day forecast, AQI/UV, video skies
+  - **Everyone**: Hero weather card, 48h hourly, 7-day forecast, AQI/UV, gradient skies (video parity planned)
   - **Farmer (Krishi)**: TypeSafe System One crop advisories, spray/irrigation windows, soil moisture
   - **Researcher**: Historical archives, anomaly charts (react-native-svg LineChart), multi-city comparison
 - **TypeSafe System One (Jev)**: Server-side calibrated decisions for farm operations with confidence badges (`System One · 88% confident`)
@@ -138,15 +138,18 @@ graph TB
 | Persistence | @react-native-async-storage/async-storage | 2.2.0 | Key-value store replacing Hive |
 | i18n | custom engine (`src/i18n`) | — | Same 9-language JSON bundles, eager-loaded |
 | TTS | expo-speech | ~14.0.8 | Speech synthesis |
-| STT | native module (optional) | — | Capability-checked; typed fallback on web |
+| STT | expo-speech-recognition | ~3.1.3 | SDK 54 native/web recognition, runtime permissions and typed fallback |
 | Charts | react-native-svg | 15.12 | `LineChart` replacing fl_chart |
-| GIS | iframe / WebView | — | Windy.com embed |
+| GPS | expo-location | ~19.0.8 | Foreground permission + GPS with stale-result guard |
+| GIS | react-native-webview / web iframe | 13.15.0 | Windy.com embed with selected product |
+| Font runtime | expo-font | ~14.0.12 | Native vector-icon fonts |
+| System UI | expo-system-ui | ~6.0.9 | Native dark-mode support |
 | Gradients | expo-linear-gradient | ~15.0.8 | Atmosphere sky canvas |
 | Markdown | custom `RichText` renderer | — | Headings/lists/quotes/links; widget fences stripped |
 | Icons | @expo/vector-icons (MaterialCommunityIcons) | ^15.1 | Iconography |
-| Tests | vitest | ^5.0 | 91 unit tests over ported pure logic |
+| Tests | vitest | ^5.0 | 124 unit tests, including async/native-adapter/HTTP/release regressions |
 | Web runtime | react-native-web + @expo/metro-runtime | 0.21 / ~6.1 | Browser preview |
-| Animation (transitive) | react-native-reanimated via expo-router | ~4.1 / worklets pinned `0.5.1` via `package.json` `overrides` | No direct app usage; bun override pins worklets to the Expo SDK 54-blessed `0.5.1` (the npm `latest` 0.13.x targets RN ≥0.86 and fails reanimated's version assertion on RN 0.81) |
+| Animation | react-native-reanimated + react-native-worklets (direct dependencies) | ~4.1 / worklets pinned `0.5.1` via `package.json` `overrides` | No direct app usage; bun override pins worklets to the Expo SDK 54-blessed `0.5.1` (the npm `latest` 0.13.x targets RN ≥0.86 and fails reanimated's version assertion on RN 0.81) |
 
 ### 3.2 Backend
 
@@ -236,16 +239,20 @@ weathergpt-app/
 ├── test/                                  # vitest ports of the Dart fixture tests + stubs/
 ├── .github/workflows/
 │   ├── ci-test.yml                        # bun install → tsc strict → vitest (the CI gate)
+│   ├── nightly-release.yml                # 00:00 IST daily: checks → prebuild → signed standalone APK → GitHub Release
 │   └── android-compile.yml                # expo prebuild -p android → gradlew assembleDebug → APK artifact
+├── app.config.js                          # nightly APP_VERSION / ANDROID_VERSION_CODE validation
 ├── app.json / metro.config.js / babel.config.js / tsconfig.json / vitest.config.ts
 ├── .env.example                           # EXPO_PUBLIC_BACKEND_URL template (non-secret)
-├── env.example                            # kept in sync (same single value)
 ├── FLUTTER_TO_REACT_NATIVE_MIGRATION.md   # Full before/after mapping table
 ├── backend/                               # Submodule omsenjalia/weathergpt (FastAPI)
 ├── backend-integration/                   # TypeSafe Jev bundle + patches
 ├── docs/
 │   ├── app_data_contracts.md              # Mobile data contracts, null semantics
+│   ├── ANDROID_RELEASES.md                # signing, identity, activation, device checklist
+│   ├── REACT_NATIVE_AUDIT.md               # findings, verification evidence, limitations
 │   └── web_app_api_contract.md            # Backend endpoint audit
+├── scripts/configure-android-release.cjs  # fail-closed release signing transformer
 └── scripts/push-all.sh                    # Submodule-aware push
 ```
 
@@ -345,8 +352,8 @@ graph TD
     PARSERS["Parsers - WeatherParser, WeatherV2Parser, SafeCoercers"]
     MODELS["Models - WeatherSnapshot, DayDecision, VoiceCard, Provenance"]
     SERVICES["Services - ApiClient, GeocodingService, RequestLog"]
-    HIVE["Hive - Settings, Locations, FarmProfile"]
-    HARDWARE["Device - Geolocator, STT, TTS"]
+    STORAGE["AsyncStorage - Settings, Locations, FarmProfile"]
+    HARDWARE["Device - expo-location, expo-speech-recognition, expo-speech"]
 
     VIEWS --> WIDGETS
     VIEWS --> NOTIFIERS
@@ -356,21 +363,36 @@ graph TD
     CONTROLLERS --> HARDWARE
     SERVICES --> PARSERS
     PARSERS --> MODELS
-    SERVICES --> HIVE
+    SERVICES --> STORAGE
 ```
 
 ### State Management (Zustand 5 — `src/features/**/[store].ts`)
 
 - **weatherStore**: fetches on context change (location, mode, dev options). Tries `/v2/weather` primary, falls back to `/weather` legacy unless `disableV2Fallback`. Records `lastRequest` (endpoint, query, usedLegacyFallback, v2Error). No weather cache — on error exposes the message → `ApiErrorView`. Also hosts `atmospherePalette(now, snapshot, dev)` used app-wide.
-- **chatStore**: message history, sending flag, intent meta, generation guard
-- **actionWindowsStore** (`farmStores.ts`): farm suitability — keyed by contextKey = `lat,lon|crop|stage|soil|irrig|UTCdate`, generation guard, per-tab cache, explicit unavailable state
+- **chatStore**: message history, sending flag, intent meta, generation guard; root synchronizes location/mode/language/completed farm context; changing context resets the conversation, and retry replaces the failed user turn
+- **actionWindowsStore** (`farmStores.ts`): farm suitability — keyed by contextKey = `mode|lat,lon|crop|stage|soil|irrig|UTCdate`, generation guard, per-tab cache, explicit unavailable state
 - **settingsStore**: language, persona (validated, unknown values rejected), units, per-language TTS voice picks (`ttsVoices` map) — persisted to AsyncStorage
 - **developerOptionsStore**: DevSourcePin (auto/weathernext/open_meteo/accuweather/imd), wnModel, hourly 1–168, forecast 1–15, supplement toggle, disable-v2-fallback, log-requests
-- **farmProfileStore** (`farmStores.ts`): FarmProfile + explicit-saved completion flag (pre-flag saves count as completed)
+- **farmProfileStore** (`farmStores.ts`): FarmProfile + explicit-saved completion flag (pre-flag saves count as completed). Saves validate farm size and resolve the place into active coordinates before saving; unsaved profiles are not sent as real farm context
 - **onboardingStore**: language/persona selection; `completeOnboarding()` writes language + TTS locale + persona + completion flag, then re-hydrates `settingsStore` so the first home fetch already uses the chosen mode
-- **voiceStore**: STT (native, capability-checked) + TTS (`expo-speech`) + generation guard; `speak()` cleans text via `MarkdownUtils.forSpeech` and applies the saved locale/rate
+- **voiceStore**: installed STT adapter (`expo-speech-recognition`, result/error/end events) + TTS (`expo-speech`) + generation guard on cancel/context changes; chat displays voice-session state/results; `speak()` cleans text via `MarkdownUtils.forSpeech` and applies the saved locale/rate
 - **mapStore / savedLocationsStore** (`exploreStores.ts`): Windy layer/zoom state + embed URL builder, saved locations
 - **researchStores**: `/historical` + `/comparison` fetchers, `ArchiveStatus` (available/empty/unsupported), anomaly display statistics
+
+### Migration correctness boundaries (2026-09-26)
+
+- Weather clear/context requests invalidate old generations; explicit unavailable
+  responses never silently switch providers. New requests clear old-location data.
+- Missing tomorrow windows are unavailable, never copied from today; missing
+  best-window labels no longer imply good conditions.
+- HTTP timeout covers headers **and** body, and malformed/non-object JSON success
+  responses fail rather than parse to an empty success object.
+- `/(tabs)/index.tsx` redirects to Home; the root SafeAreaView respects Android
+  insets; Everyone has neither the Farmer nor Researcher specialized tab.
+- Home unit display converts Celsius to Fahrenheit only at the presentation layer.
+  The atmosphere clock uses the selected location's offset when provided.
+- See the audit report for remaining localization, Hive import, voice onboarding,
+  notifications, named-voice selection and device-testing limitations.
 
 ### Null Semantics
 
@@ -592,6 +614,7 @@ When voice query initiated, backend may return:
 | Malayalam | ml | മലയാളം | ml-IN | ml_IN | ml.json |
 
 - **Storage**: `src/i18n/locales/<iso>.json` (same bundles the Flutter app shipped in `assets/translations/`), eager-loaded by the typed i18n engine
+- **UI binding**: `useTranslation` re-renders matched translated labels when language changes. Some dynamic/new UI labels still lack translations; nine bundles do not imply full UI translation parity.
 - **Header**: `ApiClient` attaches `Accept-Language: <iso>` from the settings store
 - **Speech Cleanup**: `MarkdownUtils.forSpeech()` strips markdown, emojis, URLs, widget blocks before TTS
 - **Keyset guarantee**: the vitest i18n test asserts every locale resolves the full 287-key English set without throwing (port of `localization_keyset_test.dart`)
@@ -616,7 +639,7 @@ Hazard handling is **backend-driven**, not a custom in-app RED/YELLOW/GREEN thre
 - **Server**: `backend-integration/backend/services/typesafe.py` (httpx client), `advisory.py` hourly bands, `chat.py` intent routing, `dev.py` `ai_decisions`
 - **Per-Day Decision**: Each day at `windows[i].ai.overall = {choice, confidence}` — UI renders that day's decision, not global aggregate
 - **Badge**: When shaped by System One, shows `System One · 88% confident`. Without credentials, falls back to rule-based thresholds
-- **No Bundled Offline Advisory**: Backend unreachable → explicit unavailable state, never empty neutral bars. Cache keyed on `lat,lon|crop|stage|soil|irrig|UTCdate`, discarded on move/profile edit/midnight (port: `unavailableActionWindows` + `contextKeyOf` in `src/features/farm/farmStores.ts`)
+- **No Bundled Offline Advisory**: Backend unreachable → explicit unavailable state, never empty neutral bars. Cache keyed on `mode|lat,lon|crop|stage|soil|irrig|UTCdate`, discarded on move/profile edit/midnight (port: `unavailableActionWindows` + `contextKeyOf` in `src/features/farm/farmStores.ts`)
 
 ### Farm Profile Onboarding & Settings
 
@@ -679,26 +702,44 @@ Enable via **Settings → Developer → Enable developer options → Debug & sta
 ```mermaid
 graph LR
     subgraph "CI ci-test.yml"
-        T1["checkout@v4"] --> T2["setup-java 17 & flutter-action 3.44.0"]
-        T2 --> T3["flutter pub get"]
-        T3 --> T4["flutter analyze"]
-        T4 --> T5["flutter test"]
+        T1["Node 22 + Bun 1.4.2"] --> T2["frozen install"]
+        T2 --> T3["strict tsc + Vitest"]
+        T3 --> T4["Expo production bundles: Android/iOS/web"]
     end
-    subgraph "CD ci-build-signed.yml - per commit"
-        B1["Decode KEYSTORE_BASE64"] --> B2["flutter build apk --release"]
-        B2 --> B4["Upload release.apk as weathergpt-signed-{sha}"]
+    subgraph "CI android-compile.yml"
+        A1["Java 17 + frozen install"] --> A2["Expo prebuild Android"]
+        A2 --> A3["Gradle assembleDebug → developer APK artifact"]
     end
-    subgraph "CD nightly-release.yml - daily, only with commits"
-        N1["git log --since 24h"] --> N2["flutter build apk --release"]
-        N2 --> N3["GitHub Release nightly-YYYYMMDD with release.apk"]
+    subgraph "CD nightly-release.yml — daily 00:00 IST"
+        N1["Require original signing secrets"] --> N2["typecheck + Vitest + Expo prebuild"]
+        N2 --> N3["configure release signing → assembleRelease"]
+        N3 --> N4["apksigner verify + SHA-256"]
+        N4 --> N5["GitHub Release: release.apk + checksum"]
     end
-    T5 --> B1
 ```
 
-- Every push/PR builds a signed release APK at **GitHub Actions → Artifacts** (`weathergpt-signed-{sha}`, containing `release.apk` only — no zip archives, no AAB)
-- Every day with new commits (00:00 IST), `nightly-release.yml` publishes a dated GitHub Release (`nightly-YYYYMMDD`) whose sole asset is a direct-download `release.apk` for judges — versioned `1.0.0-nightly.YYYYMMDD` with an incrementing build number so daily installs upgrade cleanly
-- Without keystore secrets, both APK workflows fall back to debug signing, never break
-- Publishing: `./scripts/push-all.sh "message"` pushes backend submodule then app (required, not bare `git push`)
+- PRs and pushes to main/develop run CI and Android Compile Check. Debug APKs
+  require Metro and are **not** standalone judge downloads.
+- Nightly schedule preserves **18:30 UTC / 00:00 IST**, now runs every day even
+  without new commits, and supports manual dispatch. GitHub schedules activate
+  only after the workflow reaches the default branch and may be delayed.
+- Stable release signing requires `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`,
+  `KEY_ALIAS`, `KEY_PASSWORD`; missing secrets fail closed (no debug fallback).
+  Keystore stays in runner temp and is cleaned even after failure. Passwords are
+  environment reads, not literals written into Gradle.
+- Public backend URL comes from `EXPO_PUBLIC_BACKEND_URL` repository variable,
+  legacy `BACKEND_URL` secret, or the production URL, in that order. Expo embeds
+  only the public URL using direct `process.env.EXPO_PUBLIC_BACKEND_URL` access.
+- `app.config.js` validates the Android version code. Nightly code = Unix epoch
+  minute; version name = `1.0.0-nightly.YYYYMMDD` (IST). Unique tags include run ID
+  and attempt and point at the exact built SHA; releases are marked latest.
+- Android identity is **`com.weathergpt.weathergpt_mobile`**, preserving Flutter's
+  application ID. Same-certificate upgrades work at the identity level; Hive data
+  is **not** imported into AsyncStorage. The initial port's alternate package ID
+  (`com.visionariesbvm.weathergpt`) is a separate app.
+- Signing secrets/native compilation/device installation remain release gates,
+  not verified by a Metro export. See [release setup](docs/ANDROID_RELEASES.md)
+  and [audit findings](docs/REACT_NATIVE_AUDIT.md).
 
 ---
 
@@ -708,8 +749,8 @@ graph LR
 
 | Requirement | Implementation | Status | Source |
 | :--- | :--- | :--- | :--- |
-| Real-Time Telemetry | Temp, humidity, pressure, wind, UV, AQI from 5 providers | Live | weather_parser.dart, fusion |
-| Natural Language Querying | LangGraph + Groq cascade | Live | chat_provider.dart, agent.py |
+| Real-Time Telemetry | Temp, humidity, pressure, wind, UV, AQI from 5 providers | Live | weatherParser.ts / weatherV2Parser.ts, fusion |
+| Natural Language Querying | LangGraph + Groq cascade | Live | chatStore.ts, agent.py |
 | NWP Integration | ECMWF/GFS via Open-Meteo + WeatherNext, Priority-1 | Live | fusion, explore |
 | Extreme Weather Warnings | Hazard banners, IMD CAP, advisory Suitability | Live | home/widgets, markdown_utils |
 | Agricultural Advisories | GPS + Farmer Mode + Jev action windows | Live | farmer/, backend-integration |
@@ -755,7 +796,7 @@ graph LR
 
 - **IMD Direct APIs**: City Forecast, District Warning, Cyclone Track, Agromet, Marine Bulletins, Radar, Astronomical — key-authenticated `api.imd.gov.in`
 - **Doppler Radar**: Live DWR composite tiles for metros, sub-30 min nowcasting for flash floods/lightning
-- **iOS**: Flutter iOS build, SFSafariViewController, background location, APNS via TestFlight
+- **iOS**: Expo/React Native iOS build, expo-web-browser, background location, APNS via TestFlight
 - **LoRaWAN**: Low-cost field stations at KVKs for micro-climate ground truth
 - **Voice**: On-device wake-word, neural TTS for low-bandwidth rural, full-duplex streaming
 - **Push**: FCM-based IMD severe alerts background notifications

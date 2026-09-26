@@ -83,7 +83,7 @@ function renderInline(text: string, keyPrefix: string, baseStyle: TextStyle): Re
     } else {
       const link = /\[([^\]]+)\]\(([^)]+)\)/.exec(token)!;
       nodes.push(
-        <Text key={key} style={[baseStyle, styles.link]} onPress={() => void Linking.openURL(link[2])}>
+        <Text key={key} style={[baseStyle, styles.link]} onPress={() => { if (/^https?:\/\//i.test(link[2])) void Linking.openURL(link[2]).catch(() => {}); }}>
           {link[1]}
         </Text>,
       );
@@ -135,7 +135,7 @@ export function RichText({ content, baseColor = AppColors.textPrimary }: RichTex
           <Text key={i} style={[styles.body, bodyStyle]}>
             {block.lines.map((line, j) => (
               <Text key={j}>
-                {line}
+                {renderInline(line, `p${i}-${j}`, styles.body)}
                 {j < block.lines.length - 1 ? " " : ""}
               </Text>
             ))}

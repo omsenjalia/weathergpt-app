@@ -28,7 +28,7 @@ Never leave `ARCHITECTURE.md` stale or out of sync with code changes.
 
 ## Standing Guardrails
 
-1. **CI gate = `bun run typecheck` + `bun test`.** A change counts as verified once the
+1. **CI gate = `bun run typecheck` + `bun run test`.** A change counts as verified once the
    **CI Test** workflow is green on the PR. The **Android Compile Check** workflow
    (expo prebuild + debug APK) proves native compilation; it is slower, so never block
    progress or reporting on it unless native compilation itself is the subject of the
@@ -68,7 +68,7 @@ unpushed inside `backend/` and the submodule pointer stale.
 ```bash
 bun install                 # dependencies
 bun run typecheck           # tsc -b --noEmit (strict)
-bun test                    # vitest unit tests
+bun run test                    # vitest unit tests
 bunx expo start --web       # dev server (web preview)
 bunx expo export --platform web   # static web build
 bunx expo prebuild -p android && (cd android && ./gradlew assembleDebug)  # native Android proof
