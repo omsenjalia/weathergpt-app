@@ -1,0 +1,175 @@
+name: Nightly Release APK
+
+# Daily judge-ready build: when the default branch moved in the last 24 hours,
+# build a signed release APK and publish it as a direct `release.apk` asset on
+# a dated GitHub Release — no zip, no AAB, no extract step. Judges tap the
+# asset on the Releases page and install it straight onto a device.
+#
+# Cadence: every day at 00:00 IST (18:30 UTC). Manual runs via workflow_dispatch
+# always build, regardless of commit activity.
+#
+# Expo/RN port of the original Flutter workflow (see ci-build-signed.yml for
+# the signing approach). The nightly version stamp comes from app.json's
+# version (1.0.0) via `expo prebuild`.
+
+on:
+  schedule:
+    - cron: '30 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for commits in the last 24 hours
+        id: gate
+        run: |
+          STAMP=$(date -u +%Y%m%d)
+          echo "stamp=$STAMP" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Manual run — building regardless of commit activity."
+            exit 0
+          fi
+          COUNT=$(git log --since="24 hours ago" --oneline | wc -l)
+          if [ "$COUNT" -gt 0 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "$COUNT commit(s) in the last 24h — building nightly release."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No commits in the last 24h — skipping nightly release."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          node-version: 20
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.gate.outputs.run == 'true'
+        with:
+          bun-version: latest
+
+      - name: Cache Bun packages
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        if: steps.gate.outputs.run == 'true'
+        run: bun install --frozen-lockfile
+
+      - name: Generate native Android project (expo prebuild)
+        if: steps.gate.outputs.run == 'true'
+        run: bunx expo prebuild -p android --no-install
+
+      - uses: actions/setup-java@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: gradle
+
+      - name: Cache React Native native build artifacts
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/native
+            ~/.gradle/build-cache-1
+          key: ${{ runner.os }}-rn-native-${{ hashFiles('bun.lock', 'android/gradle.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-rn-native-
+
+      - name: Decode release keystore
+        if: steps.gate.outputs.run == 'true'
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "has_keystore=false" >> "$GITHUB_OUTPUT"
+            echo "No KEYSTORE_BASE64 secret — will sign with the Expo debug keystore (dev fallback)."
+          else
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+            echo "has_keystore=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Point release signing at the decoded keystore
+        if: steps.gate.outputs.run == 'true' && steps.keystore.outputs.has_keystore == 'true'
+        working-directory: android
+        run: |
+          python3 - <<'PY'
+          p = 'app/build.gradle'
+          src = open(p).read()
+          props = [
+              "storeFile file('release.keystore')",
+              'storePassword System.getenv("KEYSTORE_PASSWORD")',
+              'keyAlias System.getenv("KEY_ALIAS")',
+              'keyPassword System.getenv("KEY_PASSWORD")',
+          ]
+          block = ''.join('            ' + l + '\n' for l in props)
+          out, in_release, done = [], False, False
+          for line in src.splitlines(keepends=True):
+              s = line.strip()
+              if s == 'release {' and line.startswith('        '):
+                  in_release = True
+                  out.append(line)
+                  out.append(block)
+                  done = True
+                  continue
+              if in_release:
+                  if s == 'signingConfig signingConfigs.debug' or s.startswith('// Caution') or s.startswith('// see https://reactnative.dev/docs/signed-apk-android'):
+                      continue
+                  if s == '}':
+                      in_release = False
+              out.append(line)
+          if not done:
+              raise SystemExit('release buildType block not found in app/build.gradle')
+          open(p, 'w').write(''.join(out))
+          print('Release buildType now signs with release.keystore')
+          PY
+
+      - name: Build signed release APK
+        if: steps.gate.outputs.run == 'true'
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease --no-daemon --build-cache
+          cp app/build/outputs/apk/release/app-release.apk ../release.apk
+          ls -la ../release.apk
+
+      - name: Publish nightly GitHub Release (release.apk only)
+        if: steps.gate.outputs.run == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly-${{ steps.gate.outputs.stamp }}
+          name: WeatherGPT Nightly ${{ steps.gate.outputs.stamp }} (${{ steps.gate.outputs.short_sha }})
+          make_latest: true
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            Daily judge build of WeatherGPT Mobile (`${{ steps.gate.outputs.short_sha }}`).
+
+            **Install:** download **`release.apk`** below directly onto your Android phone, tap it, and tap **Install** (enable "Install unknown apps" for your browser if prompted). No extraction needed.
+          files: release.apk

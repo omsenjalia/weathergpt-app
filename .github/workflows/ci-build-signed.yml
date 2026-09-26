@@ -1,0 +1,134 @@
+name: CI Build Signed APK
+
+# Per-commit judge build. Publishes the raw `release.apk` ONLY — no zip, no
+# AAB. (GitHub wraps Action *artifacts* in a .zip on download; judges who want
+# a direct no-extract download should use the dated APK on the Releases page,
+# published daily by nightly-release.yml.)
+#
+# Expo/RN port of the original Flutter workflow: `expo prebuild` regenerates
+# android/ from app.json, then a small Python patch swaps the release
+# buildType's signingConfig to a real keystore when the KEYSTORE_* secrets
+# exist (base64-decoded release keystore). Without them the build falls back
+# to Expo's generated debug keystore — installable, just not Play-signed.
+#
+# Step order matters for caching: prebuild runs before setup-java(cache:
+# gradle) so the cache key can hash the generated gradle-wrapper.properties.
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  signed-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate native Android project (expo prebuild)
+        run: bunx expo prebuild -p android --no-install
+
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: gradle
+
+      - name: Cache React Native native build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/native
+            ~/.gradle/build-cache-1
+          key: ${{ runner.os }}-rn-native-${{ hashFiles('bun.lock', 'android/gradle.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-rn-native-
+
+      - name: Decode release keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "has_keystore=false" >> "$GITHUB_OUTPUT"
+            echo "No KEYSTORE_BASE64 secret — will sign with the Expo debug keystore (dev fallback)."
+          else
+            echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+            echo "has_keystore=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Point release signing at the decoded keystore
+        if: steps.keystore.outputs.has_keystore == 'true'
+        working-directory: android
+        run: |
+          python3 - <<'PY'
+          p = 'app/build.gradle'
+          src = open(p).read()
+          props = [
+              "storeFile file('release.keystore')",
+              'storePassword System.getenv("KEYSTORE_PASSWORD")',
+              'keyAlias System.getenv("KEY_ALIAS")',
+              'keyPassword System.getenv("KEY_PASSWORD")',
+          ]
+          block = ''.join('            ' + l + '\n' for l in props)
+          out, in_release, done = [], False, False
+          for line in src.splitlines(keepends=True):
+              s = line.strip()
+              if s == 'release {' and line.startswith('        '):
+                  in_release = True
+                  out.append(line)
+                  out.append(block)
+                  done = True
+                  continue
+              if in_release:
+                  if s == 'signingConfig signingConfigs.debug' or s.startswith('// Caution') or s.startswith('// see https://reactnative.dev/docs/signed-apk-android'):
+                      continue
+                  if s == '}':
+                      in_release = False
+              out.append(line)
+          if not done:
+              raise SystemExit('release buildType block not found in app/build.gradle')
+          open(p, 'w').write(''.join(out))
+          print('Release buildType now signs with release.keystore')
+          PY
+
+      - name: Build signed release APK
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --build-cache
+
+      - name: Prepare APK artifact (release.apk only)
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk release.apk
+          ls -la release.apk
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: weathergpt-signed-${{ github.sha }}
+          path: release.apk
+          retention-days: 30
