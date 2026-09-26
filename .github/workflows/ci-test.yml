@@ -1,5 +1,8 @@
 name: CI Test
 
+# CI gate for the React Native port: strict typecheck + unit tests.
+# (The Android Compile Check workflow separately proves native compilation.)
+
 permissions:
   contents: read
   pull-requests: write
@@ -17,91 +20,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - uses: actions/setup-node@v4
         with:
-          flutter-version: '3.44.0'
-          channel: stable
-          cache: true
-          cache-key: flutter-3.44.0-stable
-          pub-cache-key: flutter-pub-${{ hashFiles('**/pubspec.lock') }}
+          node-version: 20
 
-      - name: Cache pub
-        uses: actions/cache@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          path: |
-            ~/.pub-cache
-            .dart_tool
-          key: ${{ runner.os }}-test-${{ hashFiles('pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-test-
-            ${{ runner.os }}-flutter-
-
-      - name: Create environment file
-        run: echo "BACKEND_URL=https://placeholder.onrender.com" > .env
+          bun-version: latest
 
       - name: Install dependencies
-        run: flutter pub get
+        run: bun install --frozen-lockfile
 
-      - name: Analyze
-        id: analyze
-        continue-on-error: true
-        run: |
-          set +e
-          flutter analyze > analyze.txt 2>&1
-          code=$?
-          cat analyze.txt
-          exit $code
+      - name: Typecheck (tsc strict)
+        run: bun run typecheck
 
-      # Analyzer output is posted back to the PR so it is readable without
-      # downloading runner logs.
-      - name: Report analyze failures on the PR
-        if: steps.analyze.outcome == 'failure' && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          {
-            echo '### `flutter analyze` — ${{ github.sha }}'
-            echo '```'
-            cat analyze.txt
-            echo '```'
-          } > analyze-comment.md
-          gh pr comment "$PR_NUMBER" --body-file analyze-comment.md
+      - name: Unit tests (vitest)
+        run: bun test
 
-      - name: Fail on analyze issues
-        if: steps.analyze.outcome == 'failure'
-        run: |
-          echo "::error::flutter analyze reported issues"
-          exit 1
-
-      - name: Test
-        id: test
-        continue-on-error: true
-        run: |
-          set +e
-          flutter test --timeout 30s > test-output.txt 2>&1
-          code=$?
-          tail -c 60000 test-output.txt
-          exit $code
-
-      # Test output is posted back to the PR so failures are readable
-      # without downloading runner logs.
-      - name: Report test failures on the PR
-        if: steps.test.outcome == 'failure' && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          {
-            echo '### `flutter test` — ${{ github.sha }}'
-            echo '```'
-            tail -c 60000 test-output.txt
-            echo '```'
-          } > test-comment.md
-          gh pr comment "$PR_NUMBER" --body-file test-comment.md
-
-      - name: Fail on test failures
-        if: steps.test.outcome == 'failure'
-        run: |
-          echo "::error::flutter test reported failures"
-          exit 1
+      - name: Comment on PR when the gate fails
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "❌ CI Test failed (typecheck or unit tests). Check the Actions run for details."
+            });

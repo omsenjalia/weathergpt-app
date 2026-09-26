@@ -9,6 +9,7 @@ flutter_*.log
 .vscode/
 *.iml
 .env
+.env.local
 *.keystore
 *.jks
 google-services.json
@@ -19,3 +20,12 @@ GoogleService-Info.plist
 # CI analyzer artifacts
 analyze.txt
 analyze-comment.md
+
+# React Native / Expo (port)
+node_modules/
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+expo-env.d.ts
+

@@ -2,75 +2,69 @@
 
 ## ⚠️ Mandatory Architecture Sync Policy
 
-Whenever any change happens in this codebase — whether it is an architectural modification, API contract update, new provider/notifier, new screen/widget, new data model, modified endpoint, changed dependency, or altered workflow:
+Whenever any change happens in this codebase — architectural modification, API contract
+update, new store/component, new screen, new data model, modified endpoint, changed
+dependency, or altered workflow:
 
 **You MUST update `ARCHITECTURE.md` in the repository root synchronously.**
 
-`ARCHITECTURE.md` is the canonical, judge-facing technical architecture annex for WeatherGPT (SIH 2026). It must always accurately reflect the current state of:
-- End-to-end system topology and Mermaid diagrams (Section 2)
-- Tech stack and package versions in `pubspec.yaml` (Section 3)
-- Repository file footprint and directory layout (Section 4)
-- API endpoint surface, parameters, and contract shapes (Sections 6 & 11)
-- State management and Riverpod providers (Section 7)
-- Data flow, null semantics, and generation guards (Section 8)
-- Ensemble fusion algorithm and provider trust weights (Section 10)
-- Multilingual mappings and voice locales (Section 13)
-- Developer options and Debug screen capabilities (Section 16)
-- SIH problem statement compliance matrix (Section 18)
-
-Never leave `ARCHITECTURE.md` stale or out of sync with code changes.
-
----
-
-## Standing Guardrails (user-mandated — do not violate)
-
-1. **The mic orb is frozen.** The home-screen voice orb (`lib/features/home/widgets/voice_orb.dart` and its `Positioned` placement / surrounding insets in `weather_home_screen.dart`) is approved exactly as it is. Never restyle, move, resize, re-animate, or change any spacing/insets around it. If a layout change would shift pixels near the orb, leave the orb untouched and adjust elsewhere.
-2. **CI gate = `flutter analyze` (+ `flutter test`).** A change counts as verified once the **CI Test** workflow (analyze + test) is green on the PR. Do **not** wait for the **CI Build Signed APK** check, and never block progress, reporting, or PR readiness on it — the APK workflow only produces release artifacts and is far slower.
-
----
-
-## Complexity Handling
-For any task spanning more than 3 files or requiring multiple decisions:
-- Apply Fable Mode: stage map → delegate → verify → self-critique
-- Use TodoWrite to track stage progress across tool calls
-- Spawn subagents for independent work rather than serializing it
-- Use Agent Teams when agents need to share partial results mid-work
+It must always accurately reflect the current state of the topology (Section 2), stack
+versions from `package.json` (Section 3), repository layout (Section 4), endpoint
+surface (Sections 6 & 11), Zustand stores (Section 7), data flow and generation guards
+(Section 8), fusion policy (Section 10), multilingual mappings (Section 13), developer
+options (Section 16), and the SIH compliance matrix (Section 18).
 
 ---
 
 ## Codebase Architecture & Conventions
 
-### 1. Feature-First Clean Architecture
-- Code lives in `lib/features/<feature>/` divided into `models/`, `providers/`, `screens/`, and `widgets/`.
-- Shared code lives in `lib/core/` (`constants/`, `errors/`, `localization/`, `models/`, `services/`, `theme/`, `utils/`, `widgets/`).
-- App routing is configured via `GoRouter` in `lib/router/app_router.dart` using `ShellRoute` for the persistent bottom navigation shell.
+The app is **React Native (Expo SDK 54) + TypeScript (strict)** — ported from Flutter in
+September 2026. See [`FLUTTER_TO_REACT_NATIVE_MIGRATION.md`](FLUTTER_TO_REACT_NATIVE_MIGRATION.md).
 
-### 2. State Management (Riverpod 2.5)
-- Use granular `StateNotifier` and `AsyncNotifier` providers.
-- Observe dependencies via `ref.watch()`. In background logic or event handlers, use `ref.read()`.
-- Implement **generation guards** on asynchronous providers (`ActionWindowsNotifier`, `WeatherNotifier`) to prevent out-of-order race conditions when switching locations or profiles.
+### 1. Feature-First Structure
+- Routes: `app/` (expo-router file tree, `(tabs)` group with a persona-aware shell).
+- Domain code: `src/features/<feature>/` with `models/`, stores, and (where present) `theme/`.
+- Shared primitives: `src/core/` (config, errors, models, services, theme, utils) and
+  `src/ui/` (design tokens + components).
+
+### 2. State Management (Zustand 5)
+- One store per concern: `weatherStore`, `chatStore`, `voiceStore`, `settingsStore`,
+  `developerOptionsStore`, `farmStores`, `locationStore`, `exploreStores`,
+  `researchStores`, `onboardingStore`.
+- Implement **generation guards** on asynchronous stores so out-of-order responses
+  (switching location/profile/mode mid-flight) are discarded, never rendered.
 
 ### 3. Strict Null Semantics (Zero Guesswork)
 - Never coerce missing values to default `0` (`0 °C`, `0 mm`, `0%` are deceptive).
-- Use `lib/core/models/json_values.dart` safe coercers (`jsonDouble`, `jsonInt`, `jsonString`, `jsonList`, `jsonMap`).
-- A missing `weather_code` must remain `null` and map to `SkyCondition.unknown`. It must never default to `0` (which is Clear Sky).
+- Use `src/core/models/jsonValues.ts` safe coercers (`jsonDouble`, `jsonInt`,
+  `jsonString`, `jsonList`, `jsonMap`).
+- A missing `weather_code` must remain `null` and map to `SkyCondition.unknown`. It must
+  never default to `0` (which is Clear Sky).
 
 ### 4. Credential & Environment Boundary
-- The Flutter app's `.env` is bundled as an asset and is **not** a secret store.
-- Only non-secret client configuration (`BACKEND_URL`) belongs in `.env`.
-- Upstream credentials (Google Cloud, AccuWeather, Tomorrow.io, OpenWeatherMap, Groq, TypeSafe API keys) belong **strictly on the backend**. Never embed them in mobile code.
+- Only non-secret client configuration (`EXPO_PUBLIC_BACKEND_URL`) belongs in
+  `.env`/`env.example` (template at the repo root).
+- Upstream credentials (Google Cloud, AccuWeather, Tomorrow.io, OpenWeatherMap, Groq,
+  TypeSafe API keys) belong **strictly on the backend**. Never embed them in mobile code.
 
 ### 5. Pushing Changes (Submodule Policy)
 The backend (`omsenjalia/weathergpt`) is linked as a git submodule at `backend/`.
 Always publish with:
+
 ```bash
 ./scripts/push-all.sh "<commit message>"
 ```
-Never use a bare `git push`, as it leaves submodule commits unpushed and submodule pointers stale.
+
+Never use a bare `git push`, as it leaves submodule commits unpushed and submodule
+pointers stale.
 
 ---
 
 ## Verification & Testing
-- Static Analysis: `flutter analyze`
-- Unit & Widget Tests: `flutter test`
-- Release Builds: Handled automatically by GitHub Actions CI (`.github/workflows/ci-build-signed.yml`)
+
+- Typecheck: `bun run typecheck` (strict `tsc --noEmit`)
+- Unit tests: `bun test` (vitest)
+- Web export: `bunx expo export --platform web`
+- Native Android proof: `bunx expo prebuild -p android && (cd android && ./gradlew assembleDebug)`
+- Release builds: handled automatically by GitHub Actions CI
+  (`.github/workflows/android-compile.yml`)
