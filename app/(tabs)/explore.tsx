@@ -1,5 +1,8 @@
+import { useTranslation } from "../../src/i18n/useTranslation";
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform, TextInput, ActivityIndicator } from "react-native";
+
+import { WebView } from "react-native-webview";
 
 import { GlassCard } from "../../src/ui/components/GlassCard";
 import { AppColors } from "../../src/ui/appColors";
@@ -17,6 +20,7 @@ import { SavedLocation } from "../../src/features/models/location";
 import { GeocodingService } from "../../src/core/services/geocodingService";
 
 export default function ExploreScreen(): React.ReactElement {
+  const t = useTranslation();
   const map = useMapStore();
   const saved = useSavedLocationsStore((s) => s.locations);
   const currentLocation = useLocationStore((s) => s.location);
@@ -39,7 +43,7 @@ export default function ExploreScreen(): React.ReactElement {
 
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
-      <Text style={styles.title}>Weather map</Text>
+      <Text style={styles.title}>{t("map.title")}</Text>
 
       <GlassCard style={styles.mapCard}>
         {Platform.OS === "web" ? (
@@ -49,11 +53,14 @@ export default function ExploreScreen(): React.ReactElement {
             style={{ width: "100%", height: 360, border: "none", borderRadius: 12 }}
           />
         ) : (
-          <View style={styles.nativeNote}>
-            <Text style={styles.nativeNoteText}>
-              The interactive Windy map renders on web. On native builds it embeds via WebView.
-            </Text>
-          </View>
+          <WebView
+            source={{ uri: windyEmbedUrl(map) }}
+            style={{ height: 360, backgroundColor: "transparent" }}
+            originWhitelist={["https://*"]}
+            mixedContentMode="never"
+            startInLoadingState
+            renderError={() => <Text style={styles.nativeNoteText}>Map unavailable. Check your connection.</Text>}
+          />
         )}
       </GlassCard>
 
@@ -76,12 +83,12 @@ export default function ExploreScreen(): React.ReactElement {
             value={query}
             onChangeText={setQuery}
             onSubmitEditing={() => void search()}
-            placeholder="Search city or village…"
+            placeholder={t("location.search_hint")}
             placeholderTextColor={AppColors.textTertiary}
             style={styles.input}
           />
           <Pressable style={styles.add} onPress={() => void search()}>
-            {busy ? <ActivityIndicator size="small" color={AppColors.bgPrimary} /> : <Text style={styles.addLabel}>Save</Text>}
+            {busy ? <ActivityIndicator size="small" color={AppColors.bgPrimary} /> : <Text style={styles.addLabel}>{t("location.save")}</Text>}
           </Pressable>
         </View>
         {results.map((place) => (
@@ -95,7 +102,7 @@ export default function ExploreScreen(): React.ReactElement {
             }}
           >
             <Text style={styles.resultText} numberOfLines={1}>{place.name}</Text>
-            <Text style={styles.resultSave}>Save</Text>
+            <Text style={styles.resultSave}>{t("location.save")}</Text>
           </Pressable>
         ))}
       </GlassCard>

@@ -22,11 +22,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: '1.4.2'
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -39,6 +39,9 @@ jobs:
         # aliases in vitest.config.ts); `bun test` would bypass them.
         run: bun run test
 
+      - name: Export production bundles (catch native dependency and Metro regressions)
+        run: bunx expo export --platform all
+
       - name: Comment on PR when the gate fails
         if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
@@ -48,5 +51,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: "❌ CI Test failed (typecheck or unit tests). Check the Actions run for details."
+              body: "❌ CI Test failed (typecheck, unit tests or production bundles). Check the Actions run for details."
             });

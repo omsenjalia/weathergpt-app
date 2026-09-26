@@ -1,13 +1,10 @@
 /// Voice store — port of `lib/features/voice/providers/voice_provider.dart`.
 ///
-/// Speech recognition requires native platform channels (speech_to_text).
-/// In this React Native port the native module is behind a capability check:
-/// when STT is unavailable (web preview, or the module is not installed in a
-/// bare build) the store reports it and the UI falls back to typed input.
-/// Text-to-speech works via `expo-speech` on all platforms.
+/// Native and web recognition via expo-speech-recognition; typed fallback remains available.
 
 import { create } from "zustand";
 import * as Speech from "expo-speech";
+import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 
 import { ApiEndpoints } from "../../core/config/apiEndpoints";
 import { apiErrorMessage, isAppApiError } from "../../core/errors/appErrors";
@@ -41,6 +38,7 @@ export interface VoiceContext {
   ttsSpeed: number;
   location: AppLocation;
   profile: FarmProfile;
+  profileCompleted?: boolean;
 }
 
 export const DEFAULT_VOICE_CONTEXT: VoiceContext = {
@@ -52,14 +50,15 @@ export const DEFAULT_VOICE_CONTEXT: VoiceContext = {
   profile: DEFAULT_FARM_PROFILE,
 };
 
-/// True when speech recognition can run on this platform. Expo web has no
-/// `speech_to_text` equivalent, so voice input gracefully degrades.
 export function speechRecognitionAvailable(): boolean {
-  return typeof ExpoSpeechRecognitionModule !== "undefined";
+  try { return ExpoSpeechRecognitionModule.isRecognitionAvailable(); } catch { return false; }
 }
 
-// Optional native module: resolved at runtime so the web bundle stays clean.
-declare const ExpoSpeechRecognitionModule: Record<string, unknown> | undefined;
+let recognitionSubscriptions: Array<{ remove: () => void }> = [];
+function cleanupRecognition() {
+  recognitionSubscriptions.forEach((subscription) => subscription.remove());
+  recognitionSubscriptions = [];
+}
 
 const STT_LOCALES: Record<string, string> = {
   en: "en_US", hi: "hi_IN", gu: "gu_IN", mr: "mr_IN", ta: "ta_IN",
@@ -92,59 +91,63 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
   context: DEFAULT_VOICE_CONTEXT,
   silenceTimer: null,
 
-  setContext: (context) => set({ context }),
+  setContext: (context) => {
+    if (JSON.stringify(context) !== JSON.stringify(get().context)) {
+      get().cancel();
+      set({ context });
+    }
+  },
 
   startListening: async () => {
-    set({ status: VoiceStatus.Processing, errorMessage: null });
+    get().cancel();
+    const generation = get().generation;
+    set({ status: VoiceStatus.Processing });
     try {
-      if (!speechRecognitionAvailable()) {
-        set({
-          status: VoiceStatus.Error,
-          errorMessage: "Speech recognition is not available here. You can still type a question.",
-        });
-        return;
-      }
-      const recognition = ExpoSpeechRecognitionModule as {
-        start: (opts: Record<string, unknown>) => Promise<void>;
-        stop: () => Promise<void>;
-        onresult: ((event: { results: Array<Array<{ transcript: string }>>; isFinal: boolean }) => void) | undefined;
-      };
-      recognition.onresult = (event) => {
-        const transcript = event.results?.[0]?.[0]?.transcript ?? "";
-        set({ transcript });
-        get().silenceTimer && clearTimeout(get().silenceTimer!);
-        set({ silenceTimer: setTimeout(() => void get().stopListening(), 2500) });
-      };
+      if (!speechRecognitionAvailable()) throw new Error("unavailable");
+      const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (generation !== get().generation) return;
+      if (!permission.granted) throw new Error("permission denied");
+      recognitionSubscriptions = [
+        ExpoSpeechRecognitionModule.addListener("result", (event) => {
+          if (generation !== get().generation) return;
+          set({ transcript: event.results[0]?.transcript ?? "" });
+        }),
+        ExpoSpeechRecognitionModule.addListener("error", (event) => {
+          if (generation !== get().generation) return;
+          cleanupRecognition();
+          set({ status: VoiceStatus.Error, errorMessage: event.message || "Could not recognize speech. Please type your question." });
+        }),
+        ExpoSpeechRecognitionModule.addListener("end", () => {
+          cleanupRecognition();
+          if (generation !== get().generation || get().status !== VoiceStatus.Listening) return;
+          void get().submitQuery(get().transcript);
+        }),
+      ];
       set({ status: VoiceStatus.Listening });
-      await recognition.start({
-        lang: sttLocale(get().context.language),
+      ExpoSpeechRecognitionModule.start({
+        lang: sttLocale(get().context.language).replace("_", "-"),
         interimResults: true,
         continuous: false,
       });
-      get().silenceTimer && clearTimeout(get().silenceTimer!);
-      set({ silenceTimer: setTimeout(() => void get().stopListening(), 2500) });
     } catch {
-      set({ status: VoiceStatus.Error, errorMessage: "Could not start listening. Please try again." });
+      if (generation !== get().generation) return;
+      cleanupRecognition();
+      set({ status: VoiceStatus.Error, errorMessage: "Speech recognition unavailable or permission denied. You can still type a question." });
     }
   },
 
   stopListening: async () => {
     if (get().status !== VoiceStatus.Listening) return;
-    if (get().silenceTimer !== null) clearTimeout(get().silenceTimer!);
-    try {
-      if (speechRecognitionAvailable()) {
-        await (ExpoSpeechRecognitionModule as { stop: () => Promise<void> }).stop();
-      }
-    } catch {
-      // ignore
-    }
-    set({ status: VoiceStatus.Processing });
-    await get().submitQuery(get().transcript);
+    // Submit on the end event so the native final result is not discarded.
+    ExpoSpeechRecognitionModule.stop();
   },
 
   submitQuery: async (text) => {
     if (get().silenceTimer !== null) clearTimeout(get().silenceTimer!);
-    set({ status: VoiceStatus.Processing, transcript: text });
+    cleanupRecognition();
+    ExpoSpeechRecognitionModule.abort();
+    void Speech.stop();
+    set({ status: VoiceStatus.Processing, transcript: text, response: null, errorMessage: null });
     const generation = get().generation + 1;
     set({ generation });
     try {
@@ -159,7 +162,7 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
       // helper the chat surface uses so both send identical context.
       const requestContext = buildAgentRequestContext({
         profilePersona: context.userPersona,
-        farm: {
+        farm: context.profileCompleted === false ? undefined : {
           crop: context.profile.crop,
           growthStage: context.profile.growthStage,
           soilType: context.profile.soilType,
@@ -178,23 +181,9 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
           ...agentContextPayload(requestContext),
         });
 
-      let result = await postChat(transcript);
-      let responseText = typeof result["response"] === "string" ? result["response"] : "";
-      // Backend sometimes returns a generic empty-fail; retry with a simpler weather ask.
-      if (responseText.toLowerCase().includes("couldn't fetch live weather")) {
-        const city = context.location.name.split(",")[0]!.trim();
-        const simplified = `What is the weather forecast for ${city} including rain chances tomorrow?`;
-        try {
-          const retryResult = await postChat(simplified);
-          const retry = typeof retryResult["response"] === "string" ? retryResult["response"] : "";
-          if (retry !== "" && !retry.toLowerCase().includes("couldn't fetch live weather")) {
-            result = retryResult;
-            responseText = retry;
-          }
-        } catch {
-          // keep first response
-        }
-      }
+      const result = await postChat(transcript);
+      const responseText = typeof result["response"] === "string" ? result["response"] : "";
+      // Never silently replace the user's question with a different weather ask.
       // A newer question superseded this one: never render the stale answer.
       if (generation !== get().generation) return;
       set({
@@ -211,37 +200,36 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
   },
 
   speak: async (text) => {
+    const generation = get().generation;
+    await Speech.stop();
+    if (generation !== get().generation) return;
+    const clean = MarkdownUtils.forSpeech(text);
+    if (!clean) { set({ status: VoiceStatus.Done }); return; }
     set({ status: VoiceStatus.Speaking });
+    const done = () => {
+      if (generation === get().generation) set({ status: VoiceStatus.Done });
+    };
     try {
-      const context = get().context;
-      Speech.stop();
-      const clean = MarkdownUtils.forSpeech(text);
-      if (clean !== "") {
-        await Speech.speak(clean, {
-          language: context.ttsVoiceLocale,
-          rate: Math.min(Math.max(context.ttsSpeed * 0.55, 0.25), 0.75),
-        });
-      }
-    } catch {
-      // TTS unavailable — stay silent, the text answer is still on screen.
-    }
-    set({ status: VoiceStatus.Done });
+      Speech.speak(clean, {
+        language: get().context.ttsVoiceLocale,
+        rate: get().context.ttsSpeed,
+        onDone: done,
+        onStopped: done,
+        onError: done,
+      });
+    } catch { done(); }
   },
 
   stopSpeaking: () => {
-    Speech.stop();
+    void Speech.stop();
+    set({ status: VoiceStatus.Done });
   },
 
   cancel: () => {
+    cleanupRecognition();
     if (get().silenceTimer !== null) clearTimeout(get().silenceTimer!);
-    try {
-      if (speechRecognitionAvailable()) {
-        void (ExpoSpeechRecognitionModule as { stop: () => Promise<void> }).stop();
-      }
-    } catch {
-      // ignore
-    }
-    Speech.stop();
-    set({ status: VoiceStatus.Idle, transcript: "", response: null, errorMessage: null });
+    set((s) => ({ generation: s.generation + 1, status: VoiceStatus.Idle, transcript: "", response: null, errorMessage: null, silenceTimer: null }));
+    try { ExpoSpeechRecognitionModule.abort(); } catch { /* no recognition service */ }
+    void Speech.stop();
   },
 }));

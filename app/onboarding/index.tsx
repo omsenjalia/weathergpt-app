@@ -1,5 +1,6 @@
+import { useTranslation } from "../../src/i18n/useTranslation";
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { Alert, View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { router } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -36,6 +37,7 @@ export default function OnboardingScreen(): React.ReactElement {
   });
 
   const onboarding = useOnboardingStore();
+  const t = useTranslation(onboarding.selectedLanguage);
   const settings = useSettingsStore;
 
   async function finish(): Promise<void> {
@@ -50,8 +52,12 @@ export default function OnboardingScreen(): React.ReactElement {
 
   async function saveFarm(): Promise<void> {
     if (farmDraft.location.trim() === "" || !(farmDraft.farmSizeAcres > 0)) return;
-    await useFarmProfileStore.getState().save(farmDraft);
-    await finish();
+    try {
+      await useFarmProfileStore.getState().save(farmDraft);
+      await finish();
+    } catch (error) {
+      Alert.alert("Could not save farm", error instanceof Error ? error.message : "Please try again.");
+    }
   }
 
   async function useGps(): Promise<void> {
@@ -59,21 +65,19 @@ export default function OnboardingScreen(): React.ReactElement {
     if (loc !== null) setFarmDraft((d) => ({ ...d, location: loc.name }));
   }
 
-  async function searchPlace(query: string): Promise<void> {
+  function searchPlace(query: string): void {
+    // Resolve only on Save: never overwrite the user's newer keystrokes.
     setFarmDraft((d) => ({ ...d, location: query }));
-    if (query.trim().length < 3) return;
-    const match = await GeocodingService.search(query);
-    if (match !== null) setFarmDraft((d) => ({ ...d, location: match.name }));
   }
 
   if (step === "splash") {
     return (
       <View style={styles.center}>
         <MaterialCommunityIcons name="weather-partly-snowy-rainy" size={72} color={AppColors.accent} />
-        <Text style={styles.appName}>WeatherGPT</Text>
-        <Text style={styles.tagline}>Real weather. Brighter tomorrows.</Text>
+        <Text style={styles.appName}>{t("common.weather_gpt")}</Text>
+        <Text style={styles.tagline}>{t("onboarding.splash_tagline")}</Text>
         <Text style={styles.footer}>Powered by real data.{"\n"}Built for India.</Text>
-        <PrimaryButton label="Continue" onPress={() => setStep("language")} style={{ marginTop: Spacing.xxl, minWidth: 220 }} />
+        <PrimaryButton label={t("onboarding.continue")} onPress={() => setStep("language")} style={{ marginTop: Spacing.xxl, minWidth: 220 }} />
       </View>
     );
   }
@@ -81,8 +85,8 @@ export default function OnboardingScreen(): React.ReactElement {
   if (step === "language") {
     return (
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.heading}>Choose your language</Text>
-        <Text style={styles.hint}>You can change this anytime.</Text>
+        <Text style={styles.heading}>{t("onboarding.choose_language")}</Text>
+        <Text style={styles.hint}>{t("onboarding.language_hint")}</Text>
         <View style={styles.wrap}>
           {SUPPORTED_LANGUAGES.map((code: LanguageCode) => {
             const meta = LANGUAGE_META[code];
@@ -98,7 +102,7 @@ export default function OnboardingScreen(): React.ReactElement {
             );
           })}
         </View>
-        <PrimaryButton label="Continue" onPress={() => setStep("persona")} style={{ marginTop: Spacing.xl }} />
+        <PrimaryButton label={t("onboarding.continue")} onPress={() => setStep("persona")} style={{ marginTop: Spacing.xl }} />
       </ScrollView>
     );
   }
@@ -106,8 +110,8 @@ export default function OnboardingScreen(): React.ReactElement {
   if (step === "persona") {
     return (
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.heading}>What best describes you?</Text>
-        <Text style={styles.hint}>Get a personalized experience.</Text>
+        <Text style={styles.heading}>{t("onboarding.focus_headline")}</Text>
+        <Text style={styles.hint}>{t("onboarding.focus_hint")}</Text>
         <View style={styles.wrap}>
           {PERSONAS.map((persona) => {
             const selected = onboarding.selectedPersona === persona.id;
@@ -123,12 +127,12 @@ export default function OnboardingScreen(): React.ReactElement {
           })}
         </View>
         {onboarding.selectedPersona === "farmer" ? (
-          <PrimaryButton label="Continue" onPress={() => setStep("farmChoice")} style={{ marginTop: Spacing.lg }} />
+          <PrimaryButton label={t("onboarding.continue")} onPress={() => setStep("farmChoice")} style={{ marginTop: Spacing.lg }} />
         ) : (
-          <PrimaryButton label="Continue" onPress={skipFarm} style={{ marginTop: Spacing.lg }} />
+          <PrimaryButton label={t("onboarding.continue")} onPress={skipFarm} style={{ marginTop: Spacing.lg }} />
         )}
         <Pressable onPress={skipFarm}>
-          <Text style={styles.skip}>Skip for now</Text>
+          <Text style={styles.skip}>{t("onboarding.skip_for_now")}</Text>
         </Pressable>
       </ScrollView>
     );
@@ -137,14 +141,14 @@ export default function OnboardingScreen(): React.ReactElement {
   if (step === "farmChoice") {
     return (
       <View style={styles.center}>
-        <Text style={styles.heading}>Tell us about your farm</Text>
-        <Text style={styles.hint}>Crop advice is tuned to your field.</Text>
-        <PrimaryButton label="Type it myself" onPress={() => setStep("farmDetails")} style={{ minWidth: 240, marginTop: Spacing.lg }} />
+        <Text style={styles.heading}>{t("onboarding.farm_choice_title")}</Text>
+        <Text style={styles.hint}>{t("onboarding.farm_hint")}</Text>
+        <PrimaryButton label={t("onboarding.farm_choice_type")} onPress={() => setStep("farmDetails")} style={{ minWidth: 240, marginTop: Spacing.lg }} />
         <Text style={styles.hintSmall}>
           (Voice onboarding needs the native speech module — unavailable in this build.)
         </Text>
         <Pressable onPress={skipFarm}>
-          <Text style={styles.skip}>Skip for now</Text>
+          <Text style={styles.skip}>{t("onboarding.skip_for_now")}</Text>
         </Pressable>
       </View>
     );
@@ -152,13 +156,13 @@ export default function OnboardingScreen(): React.ReactElement {
 
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
-      <Text style={styles.heading}>Tell us about your farm</Text>
-      <Text style={styles.hint}>Crop advice is tuned to these details.</Text>
+      <Text style={styles.heading}>{t("onboarding.farm_choice_title")}</Text>
+      <Text style={styles.hint}>{t("farmer.profile_complete_hint")}</Text>
       <GlassCard style={{ gap: Spacing.md, marginTop: Spacing.lg }}>
         <Field label="Location (village or city)" value={farmDraft.location} onChangeText={searchPlace} />
         <Field label="Farm size (acres)" value={String(farmDraft.farmSizeAcres)} keyboardType="numbers-and-punctuation" onChangeText={(v) => setFarmDraft((d) => ({ ...d, farmSizeAcres: Number(v) || 0 }))} />
         <PickerRow
-          label="Crop"
+          label={t("farmer.crop")}
           options={[...FARM_CROPS]}
           value={farmDraft.crop}
           onSelect={(crop) => setFarmDraft((d) => ({ ...d, crop }))}
@@ -170,7 +174,7 @@ export default function OnboardingScreen(): React.ReactElement {
           onSelect={(growthStage) => setFarmDraft((d) => ({ ...d, growthStage }))}
         />
         <PickerRow
-          label="Irrigation"
+          label={t("farmer.irrigation")}
           options={[...IRRIGATION_TYPES]}
           value={farmDraft.irrigationType}
           onSelect={(irrigationType) => setFarmDraft((d) => ({ ...d, irrigationType }))}
@@ -184,7 +188,7 @@ export default function OnboardingScreen(): React.ReactElement {
       </GlassCard>
       <PrimaryButton label="Save and continue" onPress={saveFarm} style={{ marginTop: Spacing.lg }} />
       <Pressable onPress={skipFarm}>
-        <Text style={styles.skip}>Skip for now</Text>
+        <Text style={styles.skip}>{t("onboarding.skip_for_now")}</Text>
       </Pressable>
     </ScrollView>
   );

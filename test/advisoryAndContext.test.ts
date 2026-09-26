@@ -11,7 +11,7 @@ import {
   Suitability,
   verdictTextForBand,
 } from "../src/features/farm/models/advisoryModels";
-import { stateForTab, unavailableActionWindows, actionWindowsHasData } from "../src/features/farm/farmStores";
+import { AdvisoryStatus, stateForTab, unavailableActionWindows, actionWindowsHasData } from "../src/features/farm/farmStores";
 import { agentContextPayload, buildAgentRequestContext } from "../src/core/models/requestContext";
 
 describe("suitabilityFromName", () => {
@@ -111,10 +111,11 @@ describe("stateForTab", () => {
     expect(state.irrigationWindows).toHaveLength(12);
   });
 
-  it("tomorrow falls back to today's row when only one day exists", () => {
+  it("tomorrow is unavailable when only today exists", () => {
     const single = { ...payload, windows: payload.windows.slice(0, 1) };
     const state = stateForTab(ActionWindowTab.Tomorrow, single, "Rajkot", new Date());
-    expect(state.summaryExplanation).toBe("Clear morning window");
+    expect(state.status).toBe(AdvisoryStatus.Unavailable);
+    expect(state.summaryExplanation).toBe("");
   });
 
   it("seven day aggregates with mean confidence", () => {
