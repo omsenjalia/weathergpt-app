@@ -146,6 +146,7 @@ graph TB
 | Icons | @expo/vector-icons (MaterialCommunityIcons) | ^15.1 | Iconography |
 | Tests | vitest | ^5.0 | 91 unit tests over ported pure logic |
 | Web runtime | react-native-web + @expo/metro-runtime | 0.21 / ~6.1 | Browser preview |
+| Animation (transitive) | react-native-reanimated via expo-router | ~4.1 / worklets pinned `0.5.1` via `package.json` `overrides` | No direct app usage; bun override pins worklets to the Expo SDK 54-blessed `0.5.1` (the npm `latest` 0.13.x targets RN ≥0.86 and fails reanimated's version assertion on RN 0.81) |
 
 ### 3.2 Backend
 
