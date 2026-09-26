@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { createTranslator, SUPPORTED_LANGUAGES, translationKeyCount } from "../src/i18n";
+import en from "../src/i18n/locales/en.json";
 
-const EN_KEYS = Object.keys(require("../src/i18n/locales/en.json"));
+const EN_KEYS = Object.keys(en).filter((key) => key !== "default");
 
 describe("i18n", () => {
   it("ships 9 live languages", () => {
@@ -33,5 +34,6 @@ describe("i18n", () => {
   it("key counts are reported for the fact-checked 287-key contract", () => {
     expect(translationKeyCount("en")).toBe(EN_KEYS.length);
     expect(EN_KEYS.length).toBeGreaterThanOrEqual(280);
+    expect(EN_KEYS.length).toBeLessThanOrEqual(300);
   });
 });

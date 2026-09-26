@@ -13,6 +13,8 @@ import mr from "./locales/mr.json";
 import ta from "./locales/ta.json";
 import te from "./locales/te.json";
 
+type RawBundle = Record<string, unknown>;
+
 export const SUPPORTED_LANGUAGES = ["en", "hi", "gu", "mr", "ta", "te", "kn", "ml", "bn"] as const;
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number];
 
@@ -39,16 +41,26 @@ export const LANGUAGE_META: Record<LanguageCode, LanguageMeta> = {
   bn: { code: "bn", native: "বাংলা", english: "Bengali", ttsLocale: "bn-IN", sttLocale: "bn_IN" },
 };
 
+const stripDefault = (bundle: Record<string, unknown>): Record<string, string> => {
+  // Some bundlers wrap JSON with a `default` export key; drop it so keyset
+  // arithmetic and lookups never see a phantom "default" translation.
+  const clone: Record<string, string> = {};
+  for (const [key, value] of Object.entries(bundle)) {
+    if (key !== "default" && typeof value === "string") clone[key] = value;
+  }
+  return clone;
+};
+
 const BUNDLES: Record<LanguageCode, Record<string, string>> = {
-  en: en as Record<string, string>,
-  hi: hi as Record<string, string>,
-  gu: gu as Record<string, string>,
-  mr: mr as Record<string, string>,
-  ta: ta as Record<string, string>,
-  te: te as Record<string, string>,
-  kn: kn as Record<string, string>,
-  ml: ml as Record<string, string>,
-  bn: bn as Record<string, string>,
+  en: stripDefault(en),
+  hi: stripDefault(hi as Record<string, unknown>),
+  gu: stripDefault(gu as Record<string, unknown>),
+  mr: stripDefault(mr as Record<string, unknown>),
+  ta: stripDefault(ta as Record<string, unknown>),
+  te: stripDefault(te as Record<string, unknown>),
+  kn: stripDefault(kn as Record<string, unknown>),
+  ml: stripDefault(ml as Record<string, unknown>),
+  bn: stripDefault(bn as Record<string, unknown>),
 };
 
 export function isSupportedLanguage(value: unknown): value is LanguageCode {

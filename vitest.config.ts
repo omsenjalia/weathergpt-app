@@ -1,10 +1,10 @@
 import path from "node:path";
 import { defineConfig } from "vitest/config";
 
-// React Native / Expo ship Flow syntax and native globals that node-side
-// vitest cannot parse or define. The unit tests exercise pure TypeScript
-// modules only, so the RN runtime, AsyncStorage and expo-modules-core are
-// aliased to lightweight stubs. `__DEV__` is defined globally below.
+// React Native / Expo ship Flow syntax and native globals that node-side test
+// runners cannot parse or define. The unit tests exercise pure TypeScript
+// modules only, so the RN runtime and AsyncStorage are aliased to lightweight
+// stubs — these aliases work identically for vitest and `bun test`.
 const rnStub = path.resolve(__dirname, "test/stubs/reactNative.ts");
 const asyncStorageStub = path.resolve(__dirname, "test/stubs/asyncStorage.ts");
 

@@ -35,7 +35,9 @@ jobs:
         run: bun run typecheck
 
       - name: Unit tests (vitest)
-        run: bun test
+        # `bun run test` executes `vitest run` (which applies the RN/Expo test
+        # aliases in vitest.config.ts); `bun test` would bypass them.
+        run: bun run test
 
       - name: Comment on PR when the gate fails
         if: failure() && github.event_name == 'pull_request'
