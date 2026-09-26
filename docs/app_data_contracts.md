@@ -1,7 +1,7 @@
-# App data contracts (Flutter ⇄ backend)
+# App data contracts (mobile app ⇄ backend)
 
-Durable reference for what the Flutter app sends and renders. Migrated out of the
-temporary `feature/app/` planning folder so it survives the plan's removal.
+Durable reference for what the mobile app (React Native / Expo port, formerly Flutter)
+sends and renders.
 Endpoint inventory lives in [`web_app_api_contract.md`](web_app_api_contract.md).
 
 The app **renders and requests**; the backend owns provider selection
@@ -10,11 +10,10 @@ scientific calculation, Jev/TypeSafe evaluation and authorization.
 
 ## Configuration boundary
 
-- The app's `.env` is bundled as an asset by `pubspec.yaml`. It is **not** a
-  secret store. Only `BACKEND_URL` belongs there
-  (template: `feature/app/app.env.example`).
+- The app's env template (`.env.example` / `env.example`) is **not** a secret
+  store. Only `EXPO_PUBLIC_BACKEND_URL` belongs there.
 - Google/OAuth, IMD, AccuWeather, Groq and `TYPESAFE_API_KEY` credentials are
-  server-side only. Never add them to the Flutter `.env`.
+  server-side only. Never add them to the app env.
 - A user selecting Researcher mode is a UI preference, not an entitlement. It
   grants no Google/IAM access and no redistribution right.
 
@@ -28,7 +27,7 @@ scientific calculation, Jev/TypeSafe evaluation and authorization.
 | `mode` | Authoritative product mode. |
 | `farmer_mode` | Legacy boolean, kept for backward compatibility and **derived from** `mode` so the two can never disagree. |
 
-Resolution rules (implemented in `lib/core/models/app_mode.dart`):
+Resolution rules (implemented in `src/core/models/appMode.ts`):
 
 1. An explicit `mode` wins.
 2. An explicit but unknown value is **rejected**, never escalated. In strict
@@ -38,7 +37,7 @@ Resolution rules (implemented in `lib/core/models/app_mode.dart`):
    `everyone`.
 
 The app persists the persona as its canonical wire name and refuses to store an
-unrecognised value (`SettingsNotifier.updatePersona`).
+unrecognised value (`settingsStore.updatePersona`).
 
 ### Farm context
 
@@ -47,7 +46,7 @@ same source `/advisory` uses. `crop`, `growth_stage`, `soil` and `irrigation`
 are attached **only** in farmer mode, and only when non-blank. Private farm
 context is never sent on Everyone or Researcher requests. Chat and voice build
 their payload through one shared builder
-(`lib/core/models/request_context.dart`) so the two surfaces cannot drift.
+(`src/core/models/requestContext.ts`) so the two surfaces cannot drift.
 
 > Historical bug fixed here: both surfaces hardcoded `crop: "Wheat"` regardless
 > of the user's actual profile.
@@ -55,7 +54,7 @@ their payload through one shared builder
 ## Null semantics
 
 Absent, wrong-typed, blank, `NaN` and infinite values parse to `null`
-(`lib/core/models/json_values.dart`). Nothing coerces a missing measurement to
+(`src/core/models/jsonValues.ts`). Nothing coerces a missing measurement to
 `0`, because `0 °C`, `0 mm` and `0%` are claims the backend did not make.
 
 Two specific traps:
@@ -71,7 +70,7 @@ exactly; a naive string is read as UTC and the assumption is reportable via
 
 ## Provenance and freshness
 
-`WeatherProvenance` (`lib/core/models/data_provenance.dart`) records what the
+`WeatherProvenance` (`src/core/models/dataProvenance.ts`) records what the
 backend reported and claims nothing otherwise. Tolerated keys, at the top level
 or inside `meta`:
 
@@ -217,7 +216,7 @@ not a bundled city list.
 
 Proposed `/v2/...` WeatherNext contracts, capability/catalog/series/profile/
 ensemble/job endpoints, structured farmer window decisions from the backend, and
-licensed exports remain **unwired**: they are design targets in
-`feature/backend/weathernext_3_integration_plan.md`, not existing services. New
-screens must not be wired to them until the backend implements and versions
-them. The withdrawn Weather Lab auto-login/custom-map proposal stays withdrawn.
+licensed exports remain **unwired**: the backend's WeatherNext/Jev expansion plans
+are design targets in the backend repository, not existing services. New screens
+must not be wired to them until the backend implements and versions them. The
+withdrawn Weather Lab auto-login/custom-map proposal stays withdrawn.

@@ -1,0 +1,6 @@
+# Bun test runner config. The unit tests exercise pure TypeScript modules;
+# react-native ships Flow syntax that a node-side runner cannot parse, so the
+# runtime modules are mapped to lightweight test stubs (mirroring
+# vitest.config.ts). Keep both files in sync when adding aliased modules.
+[test]
+preload = ["./test/stubs/bunAliases.ts"]
