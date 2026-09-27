@@ -1,5 +1,6 @@
+import { useTranslation } from "../src/i18n/useTranslation";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TextInput } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, Alert } from "react-native";
 
 import { GlassCard } from "../src/ui/components/GlassCard";
 import { PrimaryButton } from "../src/ui/components/Buttons";
@@ -11,6 +12,7 @@ import { FARM_CROPS, GROWTH_STAGES, IRRIGATION_TYPES, SOIL_TYPES, withCurrentOpt
 import { useLocationStore } from "../src/features/location/locationStore";
 
 export default function FarmProfileScreen(): React.ReactElement {
+  const t = useTranslation();
   const stored = useFarmProfileStore((s) => s.profile);
   const [draft, setDraft] = useState<FarmProfile>(stored);
   const [saved, setSaved] = useState(false);
@@ -21,24 +23,28 @@ export default function FarmProfileScreen(): React.ReactElement {
 
   async function save(): Promise<void> {
     if (draft.location.trim() === "" || !(draft.farmSizeAcres > 0)) return;
-    await useFarmProfileStore.getState().save(draft);
-    setSaved(true);
+    try {
+      await useFarmProfileStore.getState().save(draft);
+      setSaved(true);
+    } catch (error) {
+      Alert.alert("Could not save farm", error instanceof Error ? error.message : "Please try again.");
+    }
   }
 
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
-      <Text style={styles.title}>Farm Profile</Text>
+      <Text style={styles.title}>{t("farmer.farm_profile")}</Text>
       <GlassCard style={{ gap: Spacing.lg }}>
-        <Field label="Location" value={draft.location} onChangeText={(location) => setDraft((d) => ({ ...d, location }))} />
+        <Field label={t("farmer.location")} value={draft.location} onChangeText={(location) => setDraft((d) => ({ ...d, location }))} />
         <Field
           label="Farm size (acres)"
           value={String(draft.farmSizeAcres)}
           keyboardType="numbers-and-punctuation"
           onChangeText={(v) => setDraft((d) => ({ ...d, farmSizeAcres: Number(v) || 0 }))}
         />
-        <PickerRow label="Crop" options={withCurrentOption(FARM_CROPS, draft.crop)} value={draft.crop} onSelect={(crop) => setDraft((d) => ({ ...d, crop }))} />
+        <PickerRow label={t("farmer.crop")} options={withCurrentOption(FARM_CROPS, draft.crop)} value={draft.crop} onSelect={(crop) => setDraft((d) => ({ ...d, crop }))} />
         <PickerRow label="Growth stage" options={withCurrentOption(GROWTH_STAGES, draft.growthStage)} value={draft.growthStage} onSelect={(growthStage) => setDraft((d) => ({ ...d, growthStage }))} />
-        <PickerRow label="Irrigation" options={withCurrentOption(IRRIGATION_TYPES, draft.irrigationType)} value={draft.irrigationType} onSelect={(irrigationType) => setDraft((d) => ({ ...d, irrigationType }))} />
+        <PickerRow label={t("farmer.irrigation")} options={withCurrentOption(IRRIGATION_TYPES, draft.irrigationType)} value={draft.irrigationType} onSelect={(irrigationType) => setDraft((d) => ({ ...d, irrigationType }))} />
         <PickerRow label="Soil" options={withCurrentOption(SOIL_TYPES, draft.soilType)} value={draft.soilType} onSelect={(soilType) => setDraft((d) => ({ ...d, soilType }))} />
       </GlassCard>
       <PrimaryButton label={saved ? "Saved ✓" : "Save changes"} onPress={save} variant={saved ? "white" : "accent"} />

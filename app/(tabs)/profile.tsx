@@ -1,3 +1,4 @@
+import { useTranslation } from "../../src/i18n/useTranslation";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Switch } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -18,16 +19,17 @@ const PERSONAS = [
 ] as const;
 
 export default function ProfileScreen(): React.ReactElement {
+  const t = useTranslation();
   const settings = useSettingsStore();
   const dev = useDeveloperOptionsStore();
   const [showDev, setShowDev] = useState(dev.enabled);
 
   return (
     <ScrollView contentContainerStyle={styles.scroll}>
-      <Text style={styles.title}>Settings</Text>
+      <Text style={styles.title}>{t("settings.title")}</Text>
 
       <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.section}>LANGUAGE</Text>
+        <Text style={styles.section}>{t("settings.section_language")}</Text>
         <View style={styles.pillWrap}>
           {SUPPORTED_LANGUAGES.map((code) => (
             <Pressable
@@ -44,7 +46,7 @@ export default function ProfileScreen(): React.ReactElement {
       </GlassCard>
 
       <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.section}>EXPERIENCE</Text>
+        <Text style={styles.section}>{t("settings.section_persona")}</Text>
         <View style={styles.pillWrap}>
           {PERSONAS.map((persona) => (
             <Pressable
@@ -71,9 +73,9 @@ export default function ProfileScreen(): React.ReactElement {
       </GlassCard>
 
       <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.section}>UNITS</Text>
+        <Text style={styles.section}>{t("settings.section_units")}</Text>
         <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Use Fahrenheit</Text>
+          <Text style={styles.switchLabel}>{t("settings.use_fahrenheit")}</Text>
           <Switch
             value={settings.units === TemperatureUnit.Fahrenheit}
             onValueChange={(v) => void settings.updateUnits(v ? TemperatureUnit.Fahrenheit : TemperatureUnit.Celsius)}
@@ -84,7 +86,7 @@ export default function ProfileScreen(): React.ReactElement {
       </GlassCard>
 
       <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.section}>VOICE</Text>
+        <Text style={styles.section}>{t("settings.section_voice")}</Text>
         <Text style={styles.note}>
           Speech speed {settings.ttsSpeed.toFixed(2)} · voice locale {settings.ttsVoiceLocale}
         </Text>
@@ -129,7 +131,7 @@ export default function ProfileScreen(): React.ReactElement {
         )}
       </GlassCard>
 
-      <Text style={styles.footer}>WeatherGPT · keys stay on the server</Text>
+      <Text style={styles.footer}>{t("settings.footer")}</Text>
       <Text style={styles.footer}>Mode: {appModeFromName(settings.userPersona) ?? "everyone (de-escalated)"} · language {settings.language}</Text>
     </ScrollView>
   );

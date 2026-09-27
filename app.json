@@ -7,23 +7,33 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0B1220",
     "scheme": "weathergpt",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.visionariesbvm.weathergpt"
     },
     "android": {
-      "package": "com.visionariesbvm.weathergpt",
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "RECORD_AUDIO"]
+      "package": "com.weathergpt.weathergpt_mobile",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
-      "output": "single",
-      "favicon": "./assets/favicon.png"
+      "output": "single"
     },
     "plugins": [
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font",
+      "expo-location",
+      "expo-speech-recognition"
     ],
     "experiments": {
       "typedRoutes": false

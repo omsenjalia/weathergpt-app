@@ -20,17 +20,24 @@
 
 ### ⚡ Method 1: Download a Built APK (Recommended)
 
-Every commit and pull request triggers **CI → Android Compile Check**, which generates the
-native Android project via `expo prebuild` and builds a debug APK:
+A **Nightly Release APK** workflow builds a standalone, signed APK every day at
+**00:00 IST (18:30 UTC)**, including days without new commits.
 
-1. Open **[GitHub Actions → Android Compile Check](https://github.com/omsenjalia/weathergpt-app/actions/workflows/android-compile.yml)**
-2. Select the latest successful run (green check ✓)
-3. Download the **`weathergpt-rn-debug-apk`** artifact, extract, and install `app-debug.apk`
-4. *(If prompted: enable "Install unknown apps" for your browser or file manager)*
+1. Open [Releases](https://github.com/omsenjalia/weathergpt-app/releases).
+2. Download **release.apk** directly to your Android phone; no extraction needed.
+3. Enable “Install unknown apps” for your browser if prompted, then install.
+
+The workflow must be merged onto the default branch and the original signing
+secrets configured before automatic releases start. See
+[Android release setup](docs/ANDROID_RELEASES.md).
+
+**Android Compile Check** still produces debug APK artifacts for PRs and pushes
+to main/develop. These are developer builds and require Metro; they are not
+standalone judge/release downloads.
 
 ### 🔧 Method 2: Build Locally (Android)
 
-Prerequisites: Node.js 20+, Bun (or npm), JDK 17, Android SDK/Studio.
+Prerequisites: Node.js 22.13+, Bun 1.4.2, JDK 17, Android SDK/Studio.
 
 ```bash
 git clone --recursive https://github.com/omsenjalia/weathergpt-app.git
@@ -39,8 +46,9 @@ bun install
 # Configure the backend URL (only config the app needs):
 cp .env.example .env          # edit EXPO_PUBLIC_BACKEND_URL if needed
 bunx expo prebuild -p android # generates the native android/ project
-cd android && ./gradlew assembleDebug
-# APK: android/app/build/outputs/apk/debug/app-debug.apk
+bun run android              # native build + install + Metro (device/emulator required)
+# Or compile only: cd android && ./gradlew assembleDebug
+# Debug APK: android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ### 💻 Method 3: Run the Dev Server (Web preview / Metro)
@@ -49,7 +57,7 @@ cd android && ./gradlew assembleDebug
 bun install
 bun run start          # Expo dev server (press w for web, a for Android)
 bun run typecheck      # tsc --noEmit, strict
-bun test               # vitest — 91 unit tests over the ported logic
+bun run test               # vitest — 124 unit tests over the ported logic
 ```
 
 ---
@@ -197,7 +205,7 @@ graph TB
 
 ```bash
 bun run typecheck   # strict TypeScript — zero errors required
-bun test            # vitest: parsers, provenance, atmosphere, advisory, voice, i18n
+bun run test            # vitest: parsers, provenance, atmosphere, advisory, voice, i18n
 bunx expo export --platform web   # static web build smoke test
 bunx expo prebuild -p android && (cd android && ./gradlew assembleDebug)  # native proof (CI does this per PR)
 ```
@@ -233,3 +241,9 @@ the bundled script to push both repositories atomically:
 
 Developed for the **Smart India Hackathon 2026** under the **Disaster Management** Theme
 (Problem Statement **SIH26068**). Released under the [MIT License](LICENSE).
+
+### React Native migration audit
+
+The audit and remediation notes are in [docs/REACT_NATIVE_AUDIT.md](docs/REACT_NATIVE_AUDIT.md).
+Use a native build for speech recognition; Expo Go does not include the custom
+recognition module. `bun run test` is the supported runner (Vitest), not `bun test`.

@@ -1,3 +1,4 @@
+import { useTranslation } from "../../src/i18n/useTranslation";
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -30,6 +31,7 @@ import {
 } from "../../src/features/research/researchStores";
 
 export default function LabScreen(): React.ReactElement {
+  const t = useTranslation();
   const location = useLocationStore((s) => s.location);
   const [metric, setMetric] = useState<HistoricalMetric>(HistoricalMetric.Rainfall);
   const [series, setSeries] = useState<AsyncSeries>({ kind: "loading" });
@@ -92,7 +94,7 @@ export default function LabScreen(): React.ReactElement {
       </GlassCard>
 
       <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.sectionTitle}>Compare locations</Text>
+        <Text style={styles.sectionTitle}>{t("settings.comparison")}</Text>
         {comparison.kind === "loading" && <Text style={styles.note}>Loading comparison…</Text>}
         {comparison.kind === "error" && <Text style={styles.errorText}>{comparison.message}</Text>}
         {comparison.kind === "data" && comparison.result.detail !== null && <Text style={styles.note}>{comparison.result.detail}</Text>}

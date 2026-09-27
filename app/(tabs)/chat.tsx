@@ -1,5 +1,6 @@
+import { useTranslation } from "../../src/i18n/useTranslation";
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 
@@ -9,27 +10,17 @@ import { AppColors } from "../../src/ui/appColors";
 import { Radius, Spacing } from "../../src/ui/theme";
 import { useChatStore, ChatMessage } from "../../src/features/chat/chatStore";
 import { useSettingsStore } from "../../src/features/settings/settingsStore";
-import { useVoiceStore } from "../../src/features/voice/voiceStore";
+import { useVoiceStore, VoiceStatus } from "../../src/features/voice/voiceStore";
 import { MarkdownUtils } from "../../src/core/utils/markdownUtils";
 import { voiceCardFromJson } from "../../src/features/voice/models/voiceCard";
 
 export default function ChatScreen(): React.ReactElement {
+  const t = useTranslation();
   const { messages, sending, error, send, retryLast, clear } = useChatStore();
-  const settings = useSettingsStore();
+  const voice = useVoiceStore();
+  useEffect(() => () => useVoiceStore.getState().cancel(), []);
   const [draft, setDraft] = useState("");
   const listRef = useRef<FlatList<ChatMessage>>(null);
-
-  useEffect(() => {
-    // Keep chat context in sync with settings/location/profile.
-    const voice = useVoiceStore.getState();
-    voice.setContext({
-      ...voice.context,
-      language: settings.language,
-      userPersona: settings.userPersona,
-      ttsVoiceLocale: settings.ttsVoiceLocale,
-      ttsSpeed: settings.ttsSpeed,
-    });
-  }, [settings.language, settings.userPersona, settings.ttsVoiceLocale, settings.ttsSpeed]);
 
   function submit(): void {
     const text = draft.trim();
@@ -42,8 +33,8 @@ export default function ChatScreen(): React.ReactElement {
     <KeyboardAvoidingView style={styles.root} behavior={Platform.select({ ios: "padding" })}>
       <View style={styles.header}>
         <MaterialCommunityIcons name="chat-outline" size={20} color={AppColors.accent} />
-        <Text style={styles.title}>WeatherGPT Chat</Text>
-        <Pressable onPress={clear} hitSlop={8}>
+        <Text style={styles.title}>{t("chat.title")}</Text>
+        <Pressable onPress={() => { clear(); voice.cancel(); }} hitSlop={8}>
           <MaterialCommunityIcons name="pencil-plus" size={18} color={AppColors.textTertiary} />
         </Pressable>
       </View>
@@ -51,8 +42,8 @@ export default function ChatScreen(): React.ReactElement {
       {messages.length === 0 ? (
         <View style={styles.empty}>
           <MaterialCommunityIcons name="weather-sunset" size={44} color={AppColors.accent} />
-          <Text style={styles.emptyTitle}>Ask me anything about the sky</Text>
-          <Text style={styles.emptyBody}>Forecasts, tables and advice — answered in your language.</Text>
+          <Text style={styles.emptyTitle}>{t("chat.welcome_title")}</Text>
+          <Text style={styles.emptyBody}>{t("chat.welcome_subtitle")}</Text>
         </View>
       ) : (
         <FlatList
@@ -67,7 +58,7 @@ export default function ChatScreen(): React.ReactElement {
 
       {sending && (
         <View style={styles.typing}>
-          <Text style={styles.typingText}>Thinking…</Text>
+          <Text style={styles.typingText}>{t("chat.thinking")}</Text>
         </View>
       )}
 
@@ -75,17 +66,28 @@ export default function ChatScreen(): React.ReactElement {
         <GlassCard style={styles.errorCard}>
           <Text style={styles.errorText}>{error}</Text>
           <Pressable onPress={() => void retryLast()}>
-            <Text style={styles.retry}>Retry</Text>
+            <Text style={styles.retry}>{t("chat.retry")}</Text>
           </Pressable>
         </GlassCard>
+      )}
+
+      {voice.status !== VoiceStatus.Idle && (
+        <ScrollView style={{ maxHeight: 220 }} contentContainerStyle={{ padding: 16, gap: 8 }}>
+          <Text style={styles.typingText} accessibilityLiveRegion="polite">
+            {voice.status === VoiceStatus.Listening ? "Listening… tap the microphone to finish." : voice.status === VoiceStatus.Processing ? "Processing voice question…" : voice.transcript}
+          </Text>
+          {voice.errorMessage && <Text style={styles.errorText}>{voice.errorMessage}</Text>}
+          {voice.response && <RichText content={`${voice.response.verdict}\n\n${voice.response.explanation}`} />}
+          <Pressable onPress={voice.cancel}><Text style={styles.retry}>Dismiss voice session</Text></Pressable>
+        </ScrollView>
       )}
 
       <View style={styles.inputRow}>
         <Pressable
           style={styles.mic}
           onPress={() => {
-            const voice = useVoiceStore.getState();
-            void voice.startListening();
+            if (voice.status === VoiceStatus.Listening) void voice.stopListening();
+            else void voice.startListening();
           }}
         >
           <MaterialCommunityIcons name="microphone" size={20} color={AppColors.accent} />
@@ -95,7 +97,7 @@ export default function ChatScreen(): React.ReactElement {
           onChangeText={setDraft}
           onSubmitEditing={submit}
           returnKeyType="send"
-          placeholder="Ask WeatherGPT anything…"
+          placeholder={t("chat.hint")}
           placeholderTextColor={AppColors.textTertiary}
           style={styles.input}
           multiline

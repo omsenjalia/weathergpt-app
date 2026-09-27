@@ -29,7 +29,8 @@ const LAB_TAB: TabDef = { href: "/(tabs)/lab", icon: "flask-outline", label: "La
 function tabsForMode(mode: AppMode): readonly TabDef[] {
   // Persona-aware tab set: Farmer gains Farm, Researcher gains Lab.
   const tabs = [...BASE_TABS];
-  tabs.splice(2, 0, mode === "farmer" ? FARM_TAB : LAB_TAB);
+  if (mode === "farmer") tabs.splice(2, 0, FARM_TAB);
+  if (mode === "researcher") tabs.splice(2, 0, LAB_TAB);
   return tabs;
 }
 

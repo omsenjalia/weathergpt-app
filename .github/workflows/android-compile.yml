@@ -21,6 +21,9 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   android-debug-apk:
     runs-on: ubuntu-latest
@@ -30,11 +33,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: '1.4.2'
 
       # setup-bun only caches the Bun binary, so cache the package store
       # explicitly: keyed on the lockfile, which rarely changes.

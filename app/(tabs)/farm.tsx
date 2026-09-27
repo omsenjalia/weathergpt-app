@@ -1,3 +1,4 @@
+import { useTranslation } from "../../src/i18n/useTranslation";
 import React, { useEffect } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -19,6 +20,7 @@ import { ActionWindowTab } from "../../src/features/farm/models/advisoryModels";
 import { useLocationStore } from "../../src/features/location/locationStore";
 
 export default function FarmScreen(): React.ReactElement {
+  const t = useTranslation();
   const settings = useSettingsStore();
   const profile = useFarmProfileStore((s) => s.profile);
   const completed = useFarmProfileStore((s) => s.completed);
@@ -27,10 +29,11 @@ export default function FarmScreen(): React.ReactElement {
   const generation = useActionWindowsStore((s) => s.generation);
 
   useEffect(() => {
+    if (!completed) { useActionWindowsStore.getState().invalidate(); return; }
     useActionWindowsStore.getState().setContext({ location, profile, mode: settings.userPersona });
     useActionWindowsStore.getState().selectTab(advisory.selectedTab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.lat, location.lon, profile.crop, profile.growthStage, profile.soilType, profile.irrigationType, settings.userPersona]);
+  }, [completed, location.lat, location.lon, profile.crop, profile.growthStage, profile.soilType, profile.irrigationType, settings.userPersona]);
 
   const unavailable = advisory.status === AdvisoryStatus.Unavailable || !actionWindowsHasData(advisory);
 
@@ -45,7 +48,7 @@ export default function FarmScreen(): React.ReactElement {
       </View>
 
       <GlassCard>
-        <Text style={styles.sectionTitle}>Farm profile</Text>
+        <Text style={styles.sectionTitle}>{t("settings.farm_profile")}</Text>
         {completed ? (
           <View style={{ gap: 4 }}>
             <Text style={styles.profileLine}>📍 {profile.location || location.name}</Text>
@@ -79,11 +82,11 @@ export default function FarmScreen(): React.ReactElement {
       ) : unavailable ? (
         <GlassCard strong style={styles.unavailableCard}>
           <MaterialCommunityIcons name="cloud-off-outline" size={30} color={AppColors.statusAmber} />
-          <Text style={styles.unavailableTitle}>Advisory unavailable</Text>
+          <Text style={styles.unavailableTitle}>{t("farmer.advisory_unavailable")}</Text>
           <Text style={styles.unavailableBody}>
             No verified action windows for this field right now. Nothing is shown rather than guessed — tap retry to try again.
           </Text>
-          <PrimaryButton label="Retry" onPress={() => void useActionWindowsStore.getState().refresh()} style={{ marginTop: Spacing.md, minWidth: 140 }} />
+          <PrimaryButton label={t("chat.retry")} onPress={() => void useActionWindowsStore.getState().refresh()} style={{ marginTop: Spacing.md, minWidth: 140 }} />
         </GlassCard>
       ) : (
         <GlassCard style={{ gap: Spacing.lg }}>

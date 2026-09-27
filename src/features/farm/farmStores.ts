@@ -6,9 +6,10 @@ import { create } from "zustand";
 import { ApiEndpoints } from "../../core/config/apiEndpoints";
 import { apiErrorMessage } from "../../core/errors/appErrors";
 import { jsonList, jsonMap, jsonString } from "../../core/models/jsonValues";
+import { GeocodingService } from "../../core/services/geocodingService";
 import { ApiClient } from "../../core/services/apiClient";
 import { loadJson, saveJson, StorageKeys } from "../../lib/persistence";
-import { AppLocation, DEFAULT_LOCATION } from "../location/locationStore";
+import { AppLocation, DEFAULT_LOCATION, useLocationStore } from "../location/locationStore";
 import {
   ActionWindowTab,
   AdvisorySource,
@@ -57,6 +58,14 @@ export const useFarmProfileStore = create<FarmProfileStore>((set, get) => ({
   },
 
   save: async (profile) => {
+    if (!profile.location.trim() || !Number.isFinite(profile.farmSizeAcres) || profile.farmSizeAcres <= 0) {
+      throw new Error("Enter a location and a positive farm size.");
+    }
+    const current = useLocationStore.getState().location;
+    const location = profile.location === current.name ? current : await GeocodingService.search(profile.location);
+    if (!location) throw new Error("Could not find this farm location. Check your connection or choose a nearby city.");
+    await useLocationStore.getState().select(location);
+    profile = { ...profile, location: location.name };
     set({ profile, completed: true });
     await Promise.all([
       saveJson(StorageKeys.farmProfile, farmProfileToMap(profile)),
@@ -154,7 +163,7 @@ function contextKeyOf(context: AdvisoryContext): string {
   // Including the UTC date stops a window cached yesterday being served as
   // today's or tomorrow's.
   const day = new Date().toISOString().slice(0, 10);
-  return `${context.location.coordKey()}|${context.profile.crop}|${context.profile.growthStage}|${context.profile.soilType}|${context.profile.irrigationType}|${day}`;
+  return `${context.mode}|${context.location.coordKey()}|${context.profile.crop}|${context.profile.growthStage}|${context.profile.soilType}|${context.profile.irrigationType}|${day}`;
 }
 
 /// Maps one `/advisory` payload onto the state for `tab`.
@@ -180,12 +189,13 @@ export function stateForTab(
   };
 
   const bestWindowOf = (window: Record<string, unknown> | null): string =>
-    jsonString(window?.["best_window"]) ?? "Good Conditions";
+    jsonString(window?.["best_window"]) ?? "";
 
   const today = windowAt(0);
-  const tomorrow = windowAt(1) ?? today;
+  const tomorrow = windowAt(1);
 
   const dayState = (target: ActionWindowTab, window: Record<string, unknown> | null): ActionWindowsState => {
+    if (window === null) return unavailableActionWindows(target, locationLabel);
     const decision = dayDecisionOrNone(window);
     const band = decision.choice ?? jsonString(window?.["suitability"]);
     return {
@@ -212,6 +222,7 @@ export function stateForTab(
     case ActionWindowTab.Tomorrow:
       return dayState(ActionWindowTab.Tomorrow, tomorrow);
     case ActionWindowTab.SevenDay:
+      if (windows.length === 0) return unavailableActionWindows(tab, locationLabel);
       // A week overview is legitimately an aggregate, so the backend's
       // overall verdict and mean confidence belong here.
       return {
@@ -245,7 +256,13 @@ export const useActionWindowsStore = create<ActionWindowsStore>((set, get) => ({
   cache: new Map(),
   cachedContextKey: "",
 
-  setContext: (context) => set({ context }),
+  setContext: (context) => {
+    if (contextKeyOf(context) !== contextKeyOf(get().context)) {
+      get().invalidate();
+      set({ state: unavailableActionWindows(get().state.selectedTab, context.location.name) });
+    }
+    set({ context });
+  },
 
   selectTab: (tab) => {
     const store = get();

@@ -11,7 +11,8 @@
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
     "types": [
-      "vitest/globals"
+      "vitest/globals",
+      "node"
     ],
     "paths": {
       "@/*": [

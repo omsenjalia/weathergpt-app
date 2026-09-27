@@ -20,10 +20,10 @@ repo's Freebuff preview) and compiles to native iOS/Android via
 | fl_chart | react-native-svg `LineChart` (`src/ui/components/`) |
 | gpt_markdown (GptMarkdown) | `RichText` renderer (`src/ui/components/RichText.tsx`) |
 | flutter_tts | expo-speech (voice store) |
-| speech_to_text (native channel) | capability-checked native module; typed fallback on web |
-| geolocator / permission_handler | browser Geolocation API behind the same behaviour contract |
-| webview_flutter (Windy embed) | `iframe` on web, WebView noted for native builds |
-| flutter_dotenv + --dart-define | `EXPO_PUBLIC_BACKEND_URL` (see `env.example`) |
+| speech_to_text (native channel) | expo-speech-recognition ~3.1.3; capability/permission checked, typed fallback |
+| geolocator / permission_handler | expo-location ~19.0.8 foreground permissions and GPS |
+| webview_flutter (Windy embed) | `iframe` on web, react-native-webview 13.15.0 on Android/iOS |
+| flutter_dotenv + --dart-define | `EXPO_PUBLIC_BACKEND_URL` (see `.env.example`) |
 | Material 3 + google_fonts | react-native-web + system font stack, same tokens |
 
 ## What was preserved exactly
@@ -81,7 +81,7 @@ test/                     vitest ports of the Dart fixture tests + stubs/
 ```bash
 bun install            # install
 bun run typecheck      # tsc -b --noEmit (strict)
-bun test               # vitest — 91 tests over the ported pure logic
+bun run test               # vitest — 124 tests over the ported pure logic
 bunx expo start --web  # dev server
 bunx expo export --platform web   # static web build (dist/)
 bunx expo prebuild     # generate native ios/android projects
@@ -94,3 +94,12 @@ were removed in the same change once the port passed typecheck, tests and the we
 export; the translation JSONs live on under `src/i18n/locales/`, and the sky-video
 attribution notes were retired with the assets (the gradient sky renders on every
 platform, video skies remain a documented native enhancement).
+
+## Post-migration audit (2026-09-26)
+
+See [`docs/REACT_NATIVE_AUDIT.md`](docs/REACT_NATIVE_AUDIT.md) for verified fixes,
+validation evidence and outstanding device/parity checks, and
+[`docs/ANDROID_RELEASES.md`](docs/ANDROID_RELEASES.md) for nightly signing setup.
+Android identity is restored to `com.weathergpt.weathergpt_mobile`. An upgrade
+requires the same signing certificate as the installed Flutter APK. Hive data is
+not automatically imported into AsyncStorage; users must repeat onboarding.

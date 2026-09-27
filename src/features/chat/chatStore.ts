@@ -44,6 +44,7 @@ interface ChatContext {
   userPersona: string;
   location: AppLocation;
   profile: FarmProfile;
+  profileCompleted?: boolean;
 }
 
 interface ChatStore {
@@ -76,7 +77,7 @@ export function buildChatPayload(
 ): Record<string, unknown> {
   const requestContext = buildAgentRequestContext({
     profilePersona: context.userPersona,
-    farm: {
+    farm: context.profileCompleted === false ? undefined : {
       crop: context.profile.crop,
       growthStage: context.profile.growthStage,
       soilType: context.profile.soilType,
@@ -101,7 +102,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   generation: 0,
   context: DEFAULT_CHAT_CONTEXT,
 
-  setContext: (context) => set({ context }),
+  setContext: (context) => {
+    if (JSON.stringify(context) !== JSON.stringify(get().context)) {
+      get().clear();
+      set({ context });
+    }
+  },
 
   send: async (text) => {
     const trimmed = text.trim();
@@ -127,9 +133,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   retryLast: async () => {
+    if (get().sending || !get().error) return;
     const messages = get().messages;
-    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    const lastUser = messages[messages.length - 1];
     if (!lastUser || lastUser.content.trim() === "") return;
+    set({ messages: messages.slice(0, -1) });
     await get().send(lastUser.content);
   },
 
