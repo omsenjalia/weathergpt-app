@@ -93,7 +93,18 @@ export interface MapState {
   lat: number;
   lon: number;
   zoom: number;
+  /// Windy's own layer menu (researcher control). Off by default.
+  showMenu?: boolean;
+  /// Location marker at the centre. On by default.
+  showMarker?: boolean;
 }
+
+/// Layers offered to everyone; researchers get the full catalog.
+export const MAP_BASIC_LAYERS: readonly MapLayer[] = [
+  MapLayer.Wind, MapLayer.Rain, MapLayer.Temp, MapLayer.Clouds, MapLayer.Radar, MapLayer.Pressure,
+];
+
+export const MAP_PRODUCTS: readonly MapProduct[] = [MapProduct.Ecmwf, MapProduct.Gfs, MapProduct.Icon, MapProduct.Nems];
 
 interface MapStore extends MapState {
   setLayer: (layer: MapLayer) => void;
@@ -102,6 +113,8 @@ interface MapStore extends MapState {
   setZoom: (zoom: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
+  toggleMenu: () => void;
+  toggleMarker: () => void;
 }
 
 function clampZoom(zoom: number): number {
@@ -114,6 +127,8 @@ export const useMapStore = create<MapStore>((set, get) => ({
   lat: 23.0225,
   lon: 72.5714,
   zoom: 6,
+  showMenu: false,
+  showMarker: true,
 
   setLayer: (layer) => set({ activeLayer: layer }),
   setProduct: (product) => set({ product }),
@@ -121,9 +136,18 @@ export const useMapStore = create<MapStore>((set, get) => ({
   setZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
   zoomIn: () => get().setZoom(get().zoom + 1),
   zoomOut: () => get().setZoom(get().zoom - 1),
+  toggleMenu: () => set({ showMenu: !get().showMenu }),
+  toggleMarker: () => set({ showMarker: !get().showMarker }),
 }));
 
 /// Builds the windy.com embed URL for the current map state.
 export function windyEmbedUrl(state: MapState): string {
-  return `https://embed.windy.com/embed2.html?lat=${state.lat}&lon=${state.lon}&detailLat=${state.lat}&detailLon=${state.lon}&zoom=${state.zoom}&product=${state.product}&level=surface&overlay=${state.activeLayer}&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
+  return `https://embed.windy.com/embed2.html?lat=${state.lat}&lon=${state.lon}&detailLat=${state.lat}&detailLon=${state.lon}&zoom=${state.zoom}&product=${state.product}&level=surface&overlay=${state.activeLayer}&menu=${state.showMenu === true ? "true" : ""}&message=true&marker=${state.showMarker === false ? "" : "true"}&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=default&metricTemp=default&radarRange=-1`;
+}
+
+/// Google DeepMind Weather Lab (WeatherNext) centred on the map position.
+/// It needs a Google sign-in, so the app opens it in the system browser.
+export function weatherLabUrl(state: Pick<MapState, "lat" | "lon" | "zoom">): string {
+  const zoom = (Math.min(Math.max(state.zoom, 3), 12) * 0.85).toFixed(2);
+  return `https://deepmind.google.com/science/weatherlab?cyclones_enabled=false&weather_enabled=true&weather_model=weathernext3&weather_layers=total_precipitation_1hr_mean&zoom=${zoom}&center=${state.lat},${state.lon}`;
 }

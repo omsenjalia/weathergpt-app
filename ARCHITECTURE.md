@@ -51,7 +51,7 @@ It translates multi-source meteorological telemetry into actionable, hyper-local
 ### Core Innovations
 
 - **Persona-Driven UI**:
-  - **Everyone**: Hero weather card, 48h hourly, 7-day forecast, AQI/UV, gradient skies (video parity planned)
+  - **Everyone**: Hero weather card, tappable hourly / 7-day / metric details, AQI/UV, looping video skies with live particles, voice-first assistant (Bhashini speech)
   - **Farmer (Krishi)**: TypeSafe System One crop advisories, spray/irrigation windows, soil moisture
   - **Researcher**: Historical archives, anomaly charts (react-native-svg LineChart), multi-city comparison
 - **TypeSafe System One (Jev)**: Server-side calibrated decisions for farm operations with confidence badges (`System One · 88% confident`)
@@ -137,17 +137,23 @@ graph TB
 | HTTP | fetch (global) | — | `ApiClient` wrapper with timeouts + request log |
 | Persistence | @react-native-async-storage/async-storage | 2.2.0 | Key-value store replacing Hive |
 | i18n | custom engine (`src/i18n`) | — | Same 9-language JSON bundles, eager-loaded |
-| TTS | expo-speech | ~14.0.8 | Speech synthesis |
-| STT | expo-speech-recognition | ~3.1.3 | SDK 54 native/web recognition, runtime permissions and typed fallback |
-| Charts | react-native-svg | 15.12 | `LineChart` replacing fl_chart |
+| TTS (primary) | Bhashini via backend `/v2/speech/tts` + expo-audio | ~1.1.1 | Indic neural voices (female/male); WAV played with expo-audio |
+| TTS (fallback) | expo-speech | ~14.0.8 | On-device synthesis when Bhashini is unconfigured or fails |
+| STT | expo-speech-recognition | ~3.1.3 | Live interim transcript; persists a 16 kHz WAV (Android 13+/iOS) that Bhashini ASR (`/v2/speech/asr`) re-transcribes |
+| Files | expo-file-system | ~19.0.24 | Read recorded WAV / write TTS audio to cache |
+| Video sky | expo-video | ~3.0.16 | Looping bundled sky clips (`assets/sky/*.mp4`, 720p, ~5 MB total) |
+| Haptics | expo-haptics | ~15.0.8 | Selection / light / success feedback on native |
+| Typeface | @expo-google-fonts/manrope | ^0.4 | Manrope 300–800, tabular numerals for data |
+| Navigation theme | @react-navigation/native | ^7.4 | Transparent dark theme so the sky shows through every route |
+| Charts | react-native-svg | 15.12 | Responsive multi-series `LineChart`, `DeviationBars`, sun arc, sky glow |
 | GPS | expo-location | ~19.0.8 | Foreground permission + GPS with stale-result guard |
 | GIS | react-native-webview / web iframe | 13.15.0 | Windy.com embed with selected product |
 | Font runtime | expo-font | ~14.0.12 | Native vector-icon fonts |
 | System UI | expo-system-ui | ~6.0.9 | Native dark-mode support |
 | Gradients | expo-linear-gradient | ~15.0.8 | Atmosphere sky canvas |
-| Markdown | custom `RichText` renderer | — | Headings/lists/quotes/links; widget fences stripped |
+| Markdown | custom `RichText` + pure `markdown.ts` parser | — | Headings, bullet/numbered lists, quotes, links, code, pipe tables; `widget:` and `"widget_type"` JSON fences dropped |
 | Icons | @expo/vector-icons (MaterialCommunityIcons) | ^15.1 | Iconography |
-| Tests | vitest | ^5.0 | 124 unit tests, including async/native-adapter/HTTP/release regressions |
+| Tests | vitest | ^5.0 | 148 unit tests: parsers, stores, generation guards, formatting, markdown, Bhashini speech paths, i18n completeness, release config |
 | Web runtime | react-native-web + @expo/metro-runtime | 0.21 / ~6.1 | Browser preview |
 | Animation | react-native-reanimated + react-native-worklets (direct dependencies) | ~4.1 / worklets pinned `0.5.1` via `package.json` `overrides` | No direct app usage; bun override pins worklets to the Expo SDK 54-blessed `0.5.1` (the npm `latest` 0.13.x targets RN ≥0.86 and fails reanimated's version assertion on RN 0.81) |
 
@@ -163,24 +169,22 @@ graph TB
 | HTTP | httpx | Telemetry ingestion |
 | Validation | Pydantic v2 | Typed contracts |
 
-### 3.3 Design Tokens
+### 3.3 Design System (`src/ui`)
 
-| Token | Value | Usage |
+Semantic tokens live in `src/ui/theme/tokens.ts`; screens import only from `src/ui` (the barrel), never raw hex.
+
+| Token group | Values | Usage |
 | :--- | :--- | :--- |
-| bgPrimary | #0B1220 | Base background |
-| bgElevated | #101A2C | Modals, bottom bar |
-| surfaceCard | #152036 | Glassmorphic card |
-| surfaceCardAlt | #1A2740 | Nested card |
-| accent | #2DD4BF Teal-400 | Primary actions |
-| accentSoft | #5EEAD4 Teal-300 | Glow rims |
-| sky / skyDeep | #38BDF8 / #0EA5E9 | Daytime highlights |
-| farmerGreen | #34D399 Emerald | Farmer persona |
-| researcherBlue | #60A5FA Blue | Researcher persona |
-| statusRed | #F87171 Rose | Critical warnings |
-| statusAmber | #FBBF24 Amber | Cautions |
-| borderSubtle | #243149 | Card stroke |
-| textPrimary | #F8FAFC Slate-50 | Hero values |
-| textSecondary | #94A3B8 Slate-400 | Subtitles |
+| Canvas | canvas #0A1120, canvasDeep #060B16 | App background under the sky |
+| Surfaces | surface rgba(9,15,30,.42), surfaceStrong .62, surfaceInset white 6% | Translucent cards over the live sky; one hairline, no drop shadows |
+| Text | text #F8FAFC, secondary 72%, tertiary 50% | Hierarchy by opacity, not hue |
+| Accent | teal #2DD4BF (accentText #5EEAD4) | The single accent: primary actions, selection, voice orb |
+| Status | good #4ADE80, caution #FBBF24, danger #F87171, info #60A5FA | Semantic only (advisory bands, errors) |
+| Personas | farmer #4ADE80, researcher #60A5FA | Persona chips/icons |
+| Type scale | display 96 light, largeTitle 30, title 22, headline 17, body 15, callout 14, footnote 12, caption 11, metric 28, numeric 15 (tabular) | Manrope |
+| Spacing / radius | 4-pt grid (2–48); radius 6–26 + pill | Consistent gutters (20) and max content width (640) |
+
+Primitives: `AppText`, `Icon`, `Touchable` (press scale/dim + haptics), `Card`/`CardHeader`, `Button`/`IconButton` (44 pt targets), `SegmentedControl`, `Chip`/`ChipGroup`, `SwitchRow`, `ListRow`, `TextField`, `Skeleton`, `StateView`, `InlineBanner`, `Screen`/`Section`, `Sheet` (bottom sheet), `VoiceOrb`. Shell: `SkyBackground` (+ `SkyVideo`, `SkyParticles`), floating `TabBar` with a centre voice button.
 
 ---
 
@@ -188,72 +192,45 @@ graph TB
 
 ```
 weathergpt-app/
-├── app/                                   # expo-router routes (React Native app)
-│   ├── _layout.tsx                        # Store hydration, atmosphere background, clock ticker
+├── app/                                   # expo-router routes
+│   ├── _layout.tsx                        # Fonts + store hydration, nav theme, live sky (video + particles)
 │   ├── index.tsx                          # Onboarding guard redirect
-│   ├── onboarding/index.tsx               # Splash → language → persona → farm choice/form
+│   ├── onboarding/index.tsx               # Welcome → language → persona → farm (talk / type / skip)
 │   ├── (tabs)/
-│   │   ├── _layout.tsx                    # Persona-aware NavigationShell (Farm/Lab tab)
-│   │   ├── home.tsx                       # Hero card, metric chips, hourly + 7-day segments
-│   │   ├── chat.tsx                       # Markdown chat, voice card, TTS, retry
-│   │   ├── explore.tsx                    # Windy embed iframe, layer picker, saved places
-│   │   ├── farm.tsx                       # Farm hub + action windows (unavailable state, System One badge)
-│   │   ├── lab.tsx                        # Historical archive, comparison, anomaly trends (LineChart)
-│   │   └── profile.tsx                    # Language, persona, units, voice, developer toggle
-│   ├── farm-profile.tsx                   # Farm profile editor (wire-value catalogs)
-│   └── debug.tsx                          # 5-tab debug suite (snapshot/sources/providers/requests/health)
+│   │   ├── _layout.tsx                    # expo-router Tabs + floating TabBar (persona tabs, centre mic)
+│   │   ├── home.tsx                       # Hero, voice card, hourly, 7-day, metric tiles, detail sheets
+│   │   ├── chat.tsx                       # Markdown chat, dictation composer, answers read aloud
+│   │   ├── explore.tsx                    # Full-screen Windy map, layers/models, zoom/locate, Weather Lab link
+│   │   ├── farm.tsx                       # Farm profile summary + action windows (suitability tracks)
+│   │   ├── lab.tsx                        # Historical archive, anomaly bars, multi-location comparison
+│   │   └── profile.tsx                    # Settings: persona, language, units, voice picker, developer
+│   ├── voice.tsx                          # Full-screen voice assistant (listen → answer → read aloud)
+│   ├── locations.tsx                      # Location picker: search, GPS, saved, popular places
+│   ├── farm-profile.tsx                   # Farm profile editor (form or voice)
+│   ├── debug.tsx                          # 5-tab debug suite
+│   └── +not-found.tsx
+├── assets/sky/                            # 6 looping sky clips (day/night/rain/sunrise/sunset/thunder) + ATTRIBUTION
 ├── src/
-│   ├── core/
-│   │   ├── config/                        # backendConfig (EXPO_PUBLIC_BACKEND_URL), apiEndpoints
-│   │   ├── errors/appErrors.ts            # NetworkError/ServerError/ValidationError
-│   │   ├── models/
-│   │   │   ├── jsonValues.ts              # Safe coercers — null semantics (absent/NaN/blank → null)
-│   │   │   ├── appMode.ts                 # everyone|farmer|researcher, reject-or-de-escalate
-│   │   │   ├── dataProvenance.ts          # WeatherProvenance, FallbackReason (unconfigured ≠ degraded)
-│   │   │   ├── fieldSources.ts            # Per-field attribution, TemperatureSpread, PrecipInterval
-│   │   │   └── requestContext.ts          # Shared /chat + /voice payload builder
-│   │   ├── services/
-│   │   │   ├── apiClient.ts               # fetch client: 60s timeout, Accept-Language, error mapping
-│   │   │   ├── requestLog.ts              # Ring buffer 60 entries (zustand)
-│   │   │   └── geocodingService.ts        # Open-Meteo geocoding + BigDataCloud reverse
-│   │   ├── theme/appColors.ts             # Design tokens (bgPrimary, accent teal, glass fills)
-│   │   └── utils/markdownUtils.ts         # forSpeech() TTS cleanup, spokenSummary()
+│   ├── core/                              # config (apiEndpoints incl. /v2/speech/*), errors, models, services, utils
 │   ├── features/
-│   │   ├── weather/
-│   │   │   ├── models/                    # weather.ts, weatherParser (legacy), weatherV2Parser
-│   │   │   ├── theme/atmosphereTheme.ts   # 11 periods × 12 conditions, palette engine
-│   │   │   └── weatherStore.ts            # /v2 → legacy fallback, generation guard, atmospherePalette
-│   │   ├── farm/                          # farmOptions, farmProfile, advisoryModels, farmVoiceParser, farmStores
-│   │   ├── chat/chatStore.ts              # History, /chat payload, generation guard
-│   │   ├── voice/                         # voiceCard model, response mapper, voiceStore (STT+TTS)
-│   │   ├── settings/                      # settingsStore, developerOptionsStore, ttsVoiceOption
-│   │   ├── location/locationStore.ts      # One-time GPS prompt contract, reverse geocode
-│   │   ├── explore/exploreStores.ts       # Saved locations, Windy map state/URL
-│   │   ├── research/researchStores.ts     # /historical + /comparison fetchers, anomaly stats
-│   │   └── onboarding/onboardingStore.ts  # Language/persona, TTS locale sync
-│   ├── i18n/                              # 9 locale JSONs (en hi gu mr ta te kn ml bn) + typed translator
-│   ├── ui/                                # appColors re-export, theme, components/ (GlassCard,
-│   │                                      #  buttons, chips, AtmosphereBackground, NavigationShell,
-│   │                                      #  LineChart, TimeWindowBar, RichText, ApiErrorView)
-│   └── lib/                               # persistence (AsyncStorage), hydration helpers
-├── test/                                  # vitest ports of the Dart fixture tests + stubs/
-├── .github/workflows/
-│   ├── ci-test.yml                        # bun install → tsc strict → vitest (the CI gate)
-│   ├── nightly-release.yml                # 00:00 IST daily: checks → prebuild → signed standalone APK → GitHub Release
-│   └── android-compile.yml                # expo prebuild -p android → gradlew assembleDebug → APK artifact
-├── app.config.js                          # nightly APP_VERSION / ANDROID_VERSION_CODE validation
-├── app.json / metro.config.js / babel.config.js / tsconfig.json / vitest.config.ts
-├── .env.example                           # EXPO_PUBLIC_BACKEND_URL template (non-secret)
-├── FLUTTER_TO_REACT_NATIVE_MIGRATION.md   # Full before/after mapping table
-├── backend/                               # Submodule omsenjalia/weathergpt (FastAPI)
-├── backend-integration/                   # TypeSafe Jev bundle + patches
-├── docs/
-│   ├── app_data_contracts.md              # Mobile data contracts, null semantics
-│   ├── ANDROID_RELEASES.md                # signing, identity, activation, device checklist
-│   ├── REACT_NATIVE_AUDIT.md               # findings, verification evidence, limitations
-│   └── web_app_api_contract.md            # Backend endpoint audit
-├── scripts/configure-android-release.cjs  # fail-closed release signing transformer
-└── scripts/push-all.sh                    # Submodule-aware push
+│   │   ├── app/bootstrap.ts               # useAppReady (fonts + hydration + speech probe), context sync, useSkyScene
+│   │   ├── weather/                       # models, parsers, atmosphereTheme, weatherStore (skyScene), format.ts,
+│   │   │                                  #  components/ (CurrentConditions, AskCard, Hourly/DailyForecast,
+│   │   │                                  #  MetricTiles, DetailSheets, HomeSkeleton)
+│   │   ├── voice/                         # voiceStore (ask + dictation), speechService (Bhashini TTS/ASR),
+│   │   │                                  #  voiceCard, response mapper
+│   │   ├── chat/                          # chatStore; components/ (MessageItem, InsightCard, Composer)
+│   │   ├── farm/                          # models, farmStores; components/ (FarmProfileForm, FarmVoiceFlow,
+│   │   │                                  #  SuitabilityTrack)
+│   │   ├── location/                      # locationStore; components/LocationPromptBar
+│   │   └── settings/, explore/, research/, onboarding/
+│   ├── i18n/                              # 9 locale JSONs (312 keys each, fully translated) + translator
+│   ├── ui/                                # Design system: theme/tokens, primitives/, shell/, content/, charts/
+│   └── lib/persistence.ts                 # AsyncStorage JSON helpers + StorageKeys
+├── test/                                  # vitest suites + stubs/ (RN, AsyncStorage, speech, audio, file-system)
+├── .github/workflows/                     # ci-test (gate), nightly-release, android-compile
+├── backend/                               # Submodule omsenjalia/weathergpt (FastAPI; /v2/speech/* Bhashini proxy)
+└── docs/, scripts/, app.json, app.config.js, metro/babel/tsconfig/vitest configs
 ```
 
 ---
@@ -293,6 +270,9 @@ CI falls back to debug keys if secrets missing, never breaks build.
 | /v2/weather/health | GET | Debug | Health probe |
 | /v2/weather/catalog | GET | Future | Catalog |
 | /v2/weather/series | GET | Future | Time series |
+| /v2/speech/health | GET | Mobile (startup probe) | {configured, pipeline_id, languages, tasks} — no secrets |
+| /v2/speech/tts | POST | Mobile voice | {text, language, gender} → {audio_base64 (WAV), sample_rate, chunks, provider: "bhashini"}; 503 speech_unavailable / 502 speech_upstream_error |
+| /v2/speech/asr | POST | Mobile voice | {audio_base64 (16 kHz WAV), language, audio_format, sampling_rate?} → {transcript} |
 | /advisory | GET | Farmer | Day-by-day suitability, hourly buckets (irrigation/spraying/field_work), TypeSafe decisions |
 | /historical | GET | Researcher | {metric, points: [{year, value}]} |
 | /comparison | GET | Researcher | {metric, locations: [{name, points}]} locations=name,lat,lon;... from saved_locations |
@@ -346,7 +326,7 @@ sequenceDiagram
 ```mermaid
 graph TD
     VIEWS["Screens - Home, Chat, ActionWindows, Debug"]
-    WIDGETS["Components - HeroCard, VideoBackground, TimeWindowBar"]
+    WIDGETS["Components - CurrentConditions, SkyVideo, DetailSheets, SuitabilityTrack, VoiceOrb"]
     NOTIFIERS["Providers - weatherProvider, chatProvider, actionWindowsProvider, settingsProvider"]
     CONTROLLERS["Controllers - VoiceProvider, MapProvider, Historical"]
     PARSERS["Parsers - WeatherParser, WeatherV2Parser, SafeCoercers"]
@@ -368,15 +348,16 @@ graph TD
 
 ### State Management (Zustand 5 — `src/features/**/[store].ts`)
 
-- **weatherStore**: fetches on context change (location, mode, dev options). Tries `/v2/weather` primary, falls back to `/weather` legacy unless `disableV2Fallback`. Records `lastRequest` (endpoint, query, usedLegacyFallback, v2Error). No weather cache — on error exposes the message → `ApiErrorView`. Also hosts `atmospherePalette(now, snapshot, dev)` used app-wide.
+- **weatherStore**: fetches on context change (location, mode, request-affecting dev options). Tries `/v2/weather` primary, falls back to `/weather` legacy unless `disableV2Fallback`. Records `lastRequest` and `updatedAt`. A refresh of the same request (`snapshotKey`) keeps the current snapshot visible and reports failures inline; a new location/mode clears it. Also hosts `skyScene(now, snapshot, dev)` → {period, sky, palette} used by the app-wide sky.
 - **chatStore**: message history, sending flag, intent meta, generation guard; root synchronizes location/mode/language/completed farm context; changing context resets the conversation, and retry replaces the failed user turn
 - **actionWindowsStore** (`farmStores.ts`): farm suitability — keyed by contextKey = `mode|lat,lon|crop|stage|soil|irrig|UTCdate`, generation guard, per-tab cache, explicit unavailable state
-- **settingsStore**: language, persona (validated, unknown values rejected), units, per-language TTS voice picks (`ttsVoices` map) — persisted to AsyncStorage
+- **settingsStore**: language, persona (validated, unknown values rejected), units, TTS speed, Bhashini voice (`ttsGender` female/male), per-language device voice picks (`ttsVoices`) — persisted to AsyncStorage
 - **developerOptionsStore**: DevSourcePin (auto/weathernext/open_meteo/accuweather/imd), wnModel, hourly 1–168, forecast 1–15, supplement toggle, disable-v2-fallback, log-requests
 - **farmProfileStore** (`farmStores.ts`): FarmProfile + explicit-saved completion flag (pre-flag saves count as completed). Saves validate farm size and resolve the place into active coordinates before saving; unsaved profiles are not sent as real farm context
 - **onboardingStore**: language/persona selection; `completeOnboarding()` writes language + TTS locale + persona + completion flag, then re-hydrates `settingsStore` so the first home fetch already uses the chosen mode
-- **voiceStore**: installed STT adapter (`expo-speech-recognition`, result/error/end events) + TTS (`expo-speech`) + generation guard on cancel/context changes; chat displays voice-session state/results; `speak()` cleans text via `MarkdownUtils.forSpeech` and applies the saved locale/rate
-- **mapStore / savedLocationsStore** (`exploreStores.ts`): Windy layer/zoom state + embed URL builder, saved locations
+- **voiceStore**: two modes — `startListening` (full assistant turn → /chat → mapped answer) and `startDictation(onText)` (chat composer, farm voice onboarding). The device recognizer gives the live transcript and, when Bhashini is available, persists a WAV that `/v2/speech/asr` re-transcribes (device transcript is the fallback). `speak()` uses Bhashini TTS with the saved language/gender/rate, falling back to `expo-speech`; a Bhashini failure backs off for 5 minutes. Generation guard on cancel/context changes.
+- **speechService** (`features/voice/speechService.ts`): startup `/v2/speech/health` probe, TTS/ASR calls, WAV playback via expo-audio (cache file on native, data URI on web), small audio cache
+- **mapStore / savedLocationsStore** (`exploreStores.ts`): Windy layer/product/zoom, researcher menu/marker toggles, embed URL + Weather Lab URL builders, saved locations
 - **researchStores**: `/historical` + `/comparison` fetchers, `ArchiveStatus` (available/empty/unsupported), anomaly display statistics
 
 ### Migration correctness boundaries (2026-09-26)
@@ -434,7 +415,7 @@ sequenceDiagram
     end
 
     App->>App: Evaluate SkyCondition 12 + SolarPeriod 11 via atmosphere_theme
-    App->>App: Render HeroCard + VideoBackground
+    App->>App: Render CurrentConditions over SkyVideo
 ```
 
 **Generation Guarding**: Each request increments a generation ID; stale responses are discarded. Used in `chatStore`, `voiceStore`, `actionWindowsStore` and `weatherStore`.
@@ -614,10 +595,11 @@ When voice query initiated, backend may return:
 | Malayalam | ml | മലയാളം | ml-IN | ml_IN | ml.json |
 
 - **Storage**: `src/i18n/locales/<iso>.json` (same bundles the Flutter app shipped in `assets/translations/`), eager-loaded by the typed i18n engine
-- **UI binding**: `useTranslation` re-renders matched translated labels when language changes. Some dynamic/new UI labels still lack translations; nine bundles do not imply full UI translation parity.
+- **UI binding**: `useTranslation` re-renders labels when the language changes. All user-facing screens use translation keys (developer-only Debug/Developer copy stays English).
+- **Voice**: Bhashini (MeitY ULCA pipeline; server-side credentials `BHASHINI_USER_ID` / `BHASHINI_ULCA_API_KEY`) provides TTS and ASR for all 9 languages; on-device engines are the fallback. The onboarding farm voice flow speaks and listens in the language being chosen.
 - **Header**: `ApiClient` attaches `Accept-Language: <iso>` from the settings store
 - **Speech Cleanup**: `MarkdownUtils.forSpeech()` strips markdown, emojis, URLs, widget blocks before TTS
-- **Keyset guarantee**: the vitest i18n test asserts every locale resolves the full 287-key English set without throwing (port of `localization_keyset_test.dart`)
+- **Keyset guarantee**: the vitest i18n tests assert every locale resolves the full English key set (312 keys) and that every locale translates every key
 
 ---
 
@@ -693,6 +675,7 @@ Enable via **Settings → Developer → Enable developer options → Debug & sta
 - Forecast days slider: 1–15 days
 - Supplement toggle: Disable Open-Meteo supplementation to inspect raw primary
 - wnModel pin: Non-default WeatherNext model
+- Video sky: `Disable video sky` falls back to the gradient-only background (forced sky period/condition apply only in developer mode)
 - Provenance display: `Show provenance bar on Home` restores the source/run/freshness chips on the home screen; `Per-field source badges` toggles the "via …" pills. Both apply only with developer mode on — provider names never render for regular users, and the Debug screen stays the canonical attribution surface.
 
 ---

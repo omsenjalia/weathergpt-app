@@ -1,8 +1,6 @@
-/// Researcher stores — ports of
+/// Researcher data — ports of
 /// `lib/features/researcher/providers/` (historical data, comparison,
-/// anomaly trends, chart points).
-
-import { create } from "zustand";
+/// anomaly statistics, chart points).
 
 import { ApiEndpoints } from "../../core/config/apiEndpoints";
 import { jsonDouble, jsonList, jsonMap, jsonString } from "../../core/models/jsonValues";
@@ -277,24 +275,6 @@ export async function fetchComparison(saved: SavedLocation[]): Promise<Compariso
   });
   return comparisonResultFromJson(data);
 }
-
-// ---------------------------------------------------------------------------
-// Anomaly trends (metric selector)
-
-export enum TrendMetric {
-  Temperature = "temperature",
-  Rainfall = "rainfall",
-}
-
-interface TrendStore {
-  metric: TrendMetric;
-  select: (metric: TrendMetric) => void;
-}
-
-export const useAnomalyTrendsStore = create<TrendStore>((set) => ({
-  metric: TrendMetric.Temperature,
-  select: (metric) => set({ metric }),
-}));
 
 // ---------------------------------------------------------------------------
 // Async result containers

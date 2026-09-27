@@ -1,320 +1,327 @@
-import { useTranslation } from "../../src/i18n/useTranslation";
 import React, { useState } from "react";
-import { Alert, View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { GlassCard } from "../../src/ui/components/GlassCard";
-import { PrimaryButton, OutlinedPillButton } from "../../src/ui/components/Buttons";
-import { AppColors } from "../../src/ui/appColors";
-import { Radius, Spacing, TextStyles } from "../../src/ui/theme";
-import { SUPPORTED_LANGUAGES, LANGUAGE_META, LanguageCode } from "../../src/i18n";
+import { AppText, Button, Colors, Icon, IconButton, IconName, Layout, Radius, Space, Touchable, textStyles } from "../../src/ui";
+import { createTranslator, LANGUAGE_META, LanguageCode, SUPPORTED_LANGUAGES } from "../../src/i18n";
 import { useOnboardingStore } from "../../src/features/onboarding/onboardingStore";
-import { useSettingsStore } from "../../src/features/settings/settingsStore";
-import { FARM_CROPS, GROWTH_STAGES, IRRIGATION_TYPES, SOIL_TYPES } from "../../src/features/farm/models/farmOptions";
-import { FarmProfile } from "../../src/features/farm/models/farmProfile";
-import { useFarmProfileStore } from "../../src/features/farm/farmStores";
 import { useLocationStore } from "../../src/features/location/locationStore";
-import { GeocodingService } from "../../src/core/services/geocodingService";
+import { DEFAULT_FARM_PROFILE } from "../../src/features/farm/models/farmProfile";
+import { FarmProfileForm } from "../../src/features/farm/components/FarmProfileForm";
+import { FarmVoiceFlow } from "../../src/features/farm/components/FarmVoiceFlow";
 
-type Step = "splash" | "language" | "persona" | "farmChoice" | "farmDetails";
+type Step = "welcome" | "language" | "persona" | "farm";
 
-const PERSONAS: Array<{ id: string; label: string; description: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }> = [
-  { id: "everyone", label: "Everyone", description: "Current weather, forecasts and everyday information.", icon: "account-outline" },
-  { id: "farmer", label: "Farmer", description: "Crop-specific advice, alerts and action windows.", icon: "sprout" },
-  { id: "researcher", label: "Researcher", description: "Historical data, analysis and advanced insights.", icon: "flask-outline" },
+const PERSONAS: ReadonlyArray<{ id: "everyone" | "farmer" | "researcher"; icon: IconName; color: string }> = [
+  { id: "everyone", icon: "account-outline", color: Colors.accent },
+  { id: "farmer", icon: "sprout", color: Colors.farmer },
+  { id: "researcher", icon: "flask-outline", color: Colors.researcher },
 ];
 
 export default function OnboardingScreen(): React.ReactElement {
-  const [step, setStep] = useState<Step>("splash");
-  const [farmDraft, setFarmDraft] = useState<FarmProfile>({
-    location: "",
-    crop: "Wheat",
-    growthStage: "Flowering",
-    farmSizeAcres: 4,
-    irrigationType: "Borewell",
-    soilType: "Loamy",
-  });
+  const insets = useSafeAreaInsets();
+  const [step, setStep] = useState<Step>("welcome");
+  const [finishing, setFinishing] = useState(false);
+  const [farmMode, setFarmMode] = useState<"choose" | "voice" | "form">("choose");
+  const language = useOnboardingStore((s) => s.selectedLanguage);
+  const persona = useOnboardingStore((s) => s.selectedPersona);
+  // Render in the language being chosen, before settings are persisted.
+  const t = createTranslator(language);
 
-  const onboarding = useOnboardingStore();
-  const t = useTranslation(onboarding.selectedLanguage);
-  const settings = useSettingsStore;
+  const steps: Step[] = persona === "farmer" ? ["welcome", "language", "persona", "farm"] : ["welcome", "language", "persona"];
+  const index = steps.indexOf(step);
 
-  async function finish(): Promise<void> {
-    await onboarding.completeOnboarding();
+  const finish = async () => {
+    setFinishing(true);
+    await useOnboardingStore.getState().completeOnboarding();
     void useLocationStore.getState().maybeAutoLocate();
-    router.replace("/(tabs)");
-  }
+    router.replace("/home");
+  };
 
-  function skipFarm(): Promise<void> {
-    return finish();
-  }
+  const next = () => {
+    if (step === "persona" && persona !== "farmer") void finish();
+    else setStep(steps[index + 1]!);
+  };
 
-  async function saveFarm(): Promise<void> {
-    if (farmDraft.location.trim() === "" || !(farmDraft.farmSizeAcres > 0)) return;
-    try {
-      await useFarmProfileStore.getState().save(farmDraft);
-      await finish();
-    } catch (error) {
-      Alert.alert("Could not save farm", error instanceof Error ? error.message : "Please try again.");
-    }
-  }
-
-  async function useGps(): Promise<void> {
-    const loc = await useLocationStore.getState().selectFromGps();
-    if (loc !== null) setFarmDraft((d) => ({ ...d, location: loc.name }));
-  }
-
-  function searchPlace(query: string): void {
-    // Resolve only on Save: never overwrite the user's newer keystrokes.
-    setFarmDraft((d) => ({ ...d, location: query }));
-  }
-
-  if (step === "splash") {
+  if (step === "welcome") {
     return (
-      <View style={styles.center}>
-        <MaterialCommunityIcons name="weather-partly-snowy-rainy" size={72} color={AppColors.accent} />
-        <Text style={styles.appName}>{t("common.weather_gpt")}</Text>
-        <Text style={styles.tagline}>{t("onboarding.splash_tagline")}</Text>
-        <Text style={styles.footer}>Powered by real data.{"\n"}Built for India.</Text>
-        <PrimaryButton label={t("onboarding.continue")} onPress={() => setStep("language")} style={{ marginTop: Spacing.xxl, minWidth: 220 }} />
+      <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + Space.xl }]}>
+        <View style={styles.welcome}>
+          <View style={styles.logo}>
+            <Icon name="weather-partly-cloudy" size={44} color={Colors.onAccent} />
+          </View>
+          <AppText variant="largeTitle" align="center" style={[styles.brand, textStyles.shadow]}>
+            {t("common.weather_gpt")}
+          </AppText>
+          <AppText variant="headline" tone="secondary" align="center" style={textStyles.shadow}>
+            {t("onboarding.splash_tagline")}
+          </AppText>
+        </View>
+        <View style={styles.footer}>
+          <Button label={t("onboarding.continue")} size="lg" fullWidth onPress={next} />
+          <AppText variant="footnote" tone="tertiary" align="center">
+            {t("onboarding.splash_footer")}
+          </AppText>
+        </View>
       </View>
     );
   }
 
-  if (step === "language") {
-    return (
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.heading}>{t("onboarding.choose_language")}</Text>
-        <Text style={styles.hint}>{t("onboarding.language_hint")}</Text>
-        <View style={styles.wrap}>
-          {SUPPORTED_LANGUAGES.map((code: LanguageCode) => {
-            const meta = LANGUAGE_META[code];
-            const selected = onboarding.selectedLanguage === code;
-            return (
-              <OutlinedPillButton
-                key={code}
-                label={`${meta.native}  ·  ${meta.english}`}
-                selected={selected}
-                onPress={() => onboarding.selectLanguage(code)}
-                style={{ minWidth: "48%", flexGrow: 1 }}
-              />
-            );
-          })}
-        </View>
-        <PrimaryButton label={t("onboarding.continue")} onPress={() => setStep("persona")} style={{ marginTop: Spacing.xl }} />
-      </ScrollView>
-    );
-  }
+  return (
+    <View style={[styles.root, { paddingTop: insets.top + Space.sm }]}>
+      <View style={styles.topBar}>
+        <IconButton icon="chevron-left" variant="filled" accessibilityLabel={t("onboarding.back")} onPress={() => {
+            if (step === "farm" && farmMode !== "choose") setFarmMode("choose");
+            else setStep(steps[Math.max(0, index - 1)]!);
+          }} />
+        <Progress current={index} total={steps.length - 1} />
+        <View style={styles.topSpacer} />
+      </View>
 
-  if (step === "persona") {
-    return (
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.heading}>{t("onboarding.focus_headline")}</Text>
-        <Text style={styles.hint}>{t("onboarding.focus_hint")}</Text>
-        <View style={styles.wrap}>
-          {PERSONAS.map((persona) => {
-            const selected = onboarding.selectedPersona === persona.id;
-            return (
-              <Pressable key={persona.id} onPress={() => onboarding.selectPersona(persona.id)}>
-                <GlassCard strong style={[styles.personaCard, selected && { borderColor: AppColors.accent }]}>
-                  <MaterialCommunityIcons name={persona.icon} size={26} color={selected ? AppColors.accent : AppColors.textSecondary} />
-                  <Text style={styles.personaTitle}>{persona.label}</Text>
-                  <Text style={styles.personaBody}>{persona.description}</Text>
-                </GlassCard>
-              </Pressable>
-            );
-          })}
-        </View>
-        {onboarding.selectedPersona === "farmer" ? (
-          <PrimaryButton label={t("onboarding.continue")} onPress={() => setStep("farmChoice")} style={{ marginTop: Spacing.lg }} />
-        ) : (
-          <PrimaryButton label={t("onboarding.continue")} onPress={skipFarm} style={{ marginTop: Spacing.lg }} />
+      <ScrollView style={styles.flex} contentContainerStyle={[styles.content, { paddingBottom: step === "farm" ? insets.bottom + Space.xxxl : Space.xl }]} keyboardShouldPersistTaps="handled">
+        {step === "language" && (
+          <>
+            <Heading title={t("onboarding.choose_language")} hint={t("onboarding.language_hint")} />
+            <View style={styles.grid}>
+              {SUPPORTED_LANGUAGES.map((code: LanguageCode) => (
+                <OptionCard
+                  key={code}
+                  selected={language === code}
+                  title={LANGUAGE_META[code].native}
+                  subtitle={LANGUAGE_META[code].english}
+                  onPress={() => useOnboardingStore.getState().selectLanguage(code)}
+                  half
+                />
+              ))}
+            </View>
+          </>
         )}
-        <Pressable onPress={skipFarm}>
-          <Text style={styles.skip}>{t("onboarding.skip_for_now")}</Text>
-        </Pressable>
+
+        {step === "persona" && (
+          <>
+            <Heading title={t("onboarding.focus_headline")} hint={t("onboarding.focus_hint")} />
+            <View style={styles.list}>
+              {PERSONAS.map((p) => (
+                <OptionCard
+                  key={p.id}
+                  selected={persona === p.id}
+                  icon={p.icon}
+                  iconColor={p.color}
+                  title={t(`persona.${p.id}`)}
+                  subtitle={t(`persona.${p.id}_description`)}
+                  onPress={() => useOnboardingStore.getState().selectPersona(p.id)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+
+        {step === "farm" && farmMode === "choose" && (
+          <>
+            <Heading title={t("onboarding.farm_choice_title")} hint={t("onboarding.farm_choice_subtitle")} />
+            <View style={styles.list}>
+              <OptionCard action selected={false} icon="microphone" iconColor={Colors.accent} title={t("onboarding.farm_choice_talk")} subtitle={t("onboarding.farm_choice_talk_desc")} onPress={() => setFarmMode("voice")} />
+              <OptionCard action selected={false} icon="keyboard-outline" iconColor={Colors.farmer} title={t("onboarding.farm_choice_type")} subtitle={t("onboarding.farm_choice_type_desc")} onPress={() => setFarmMode("form")} />
+            </View>
+            <Button label={t("onboarding.skip_for_now")} variant="ghost" onPress={() => void finish()} />
+          </>
+        )}
+
+        {step === "farm" && farmMode === "voice" && (
+          <FarmVoiceFlow language={language} onSaved={() => void finish()} onTypeInstead={() => setFarmMode("form")} />
+        )}
+
+        {step === "farm" && farmMode === "form" && (
+          <>
+            <Heading title={t("onboarding.farm_headline")} hint={t("onboarding.farm_hint")} />
+            <FarmProfileForm
+              initial={{ ...DEFAULT_FARM_PROFILE, location: "", farmSizeAcres: 0 }}
+              submitLabel={t("onboarding.continue")}
+              onSaved={() => void finish()}
+              secondaryAction={<Button label={t("onboarding.skip_for_now")} variant="ghost" onPress={() => void finish()} />}
+            />
+          </>
+        )}
       </ScrollView>
-    );
-  }
 
-  if (step === "farmChoice") {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.heading}>{t("onboarding.farm_choice_title")}</Text>
-        <Text style={styles.hint}>{t("onboarding.farm_hint")}</Text>
-        <PrimaryButton label={t("onboarding.farm_choice_type")} onPress={() => setStep("farmDetails")} style={{ minWidth: 240, marginTop: Spacing.lg }} />
-        <Text style={styles.hintSmall}>
-          (Voice onboarding needs the native speech module — unavailable in this build.)
-        </Text>
-        <Pressable onPress={skipFarm}>
-          <Text style={styles.skip}>{t("onboarding.skip_for_now")}</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  return (
-    <ScrollView contentContainerStyle={styles.scroll}>
-      <Text style={styles.heading}>{t("onboarding.farm_choice_title")}</Text>
-      <Text style={styles.hint}>{t("farmer.profile_complete_hint")}</Text>
-      <GlassCard style={{ gap: Spacing.md, marginTop: Spacing.lg }}>
-        <Field label="Location (village or city)" value={farmDraft.location} onChangeText={searchPlace} />
-        <Field label="Farm size (acres)" value={String(farmDraft.farmSizeAcres)} keyboardType="numbers-and-punctuation" onChangeText={(v) => setFarmDraft((d) => ({ ...d, farmSizeAcres: Number(v) || 0 }))} />
-        <PickerRow
-          label={t("farmer.crop")}
-          options={[...FARM_CROPS]}
-          value={farmDraft.crop}
-          onSelect={(crop) => setFarmDraft((d) => ({ ...d, crop }))}
-        />
-        <PickerRow
-          label="Growth stage"
-          options={[...GROWTH_STAGES]}
-          value={farmDraft.growthStage}
-          onSelect={(growthStage) => setFarmDraft((d) => ({ ...d, growthStage }))}
-        />
-        <PickerRow
-          label={t("farmer.irrigation")}
-          options={[...IRRIGATION_TYPES]}
-          value={farmDraft.irrigationType}
-          onSelect={(irrigationType) => setFarmDraft((d) => ({ ...d, irrigationType }))}
-        />
-        <PickerRow
-          label="Soil"
-          options={[...SOIL_TYPES]}
-          value={farmDraft.soilType}
-          onSelect={(soilType) => setFarmDraft((d) => ({ ...d, soilType }))}
-        />
-      </GlassCard>
-      <PrimaryButton label="Save and continue" onPress={saveFarm} style={{ marginTop: Spacing.lg }} />
-      <Pressable onPress={skipFarm}>
-        <Text style={styles.skip}>{t("onboarding.skip_for_now")}</Text>
-      </Pressable>
-    </ScrollView>
-  );
-}
-
-function Field(props: { label: string; value: string; onChangeText: (v: string) => void; keyboardType?: "default" | "numbers-and-punctuation" }): React.ReactElement {
-  const [focused, setFocused] = useState(false);
-  return (
-    <View style={{ gap: 4 }}>
-      <Text style={styles.fieldLabel}>{props.label}</Text>
-      <TextInput
-        value={props.value}
-        onChangeText={props.onChangeText}
-        keyboardType={props.keyboardType}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={[styles.input, focused && { borderColor: AppColors.accent }]}
-        placeholderTextColor={AppColors.textTertiary}
-      />
+      {step !== "farm" && (
+        <View style={[styles.footer, styles.pinned, { paddingBottom: insets.bottom + Space.lg }]}>
+          <Button label={t("onboarding.continue")} size="lg" fullWidth loading={finishing} onPress={next} />
+        </View>
+      )}
     </View>
   );
 }
 
-import { TextInput } from "react-native";
-
-function PickerRow(props: { label: string; options: string[]; value: string; onSelect: (v: string) => void }): React.ReactElement {
+function Heading({ title, hint }: { title: string; hint: string }): React.ReactElement {
   return (
-    <View style={{ gap: 6 }}>
-      <Text style={styles.fieldLabel}>{props.label}</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm }}>
-        {props.options.map((option) => (
-          <OutlinedPillButton
-            key={option}
-            label={option}
-            selected={props.value === option}
-            onPress={() => props.onSelect(option)}
-            style={{ paddingVertical: 6, paddingHorizontal: 12 }}
-          />
-        ))}
-      </View>
+    <View style={styles.heading}>
+      <AppText variant="largeTitle" accessibilityRole="header">
+        {title}
+      </AppText>
+      <AppText variant="body" tone="secondary">
+        {hint}
+      </AppText>
     </View>
+  );
+}
+
+function Progress({ current, total }: { current: number; total: number }): React.ReactElement {
+  return (
+    <View style={styles.progress} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: total, now: current }}>
+      {Array.from({ length: total }, (_, i) => (
+        <View key={i} style={[styles.progressDot, i < current && styles.progressDone]} />
+      ))}
+    </View>
+  );
+}
+
+interface OptionCardProps {
+  selected: boolean;
+  title: string;
+  subtitle?: string;
+  icon?: IconName;
+  iconColor?: string;
+  onPress: () => void;
+  half?: boolean;
+  /// Navigational choice: shows a chevron instead of a radio circle.
+  action?: boolean;
+}
+
+function OptionCard({ selected, title, subtitle, icon, iconColor = Colors.accent, onPress, half = false, action = false }: OptionCardProps): React.ReactElement {
+  return (
+    <Touchable
+      haptics="selection"
+      accessibilityRole={action ? "button" : "radio"}
+      accessibilityState={action ? undefined : { checked: selected }}
+      accessibilityLabel={subtitle ? `${title}, ${subtitle}` : title}
+      onPress={onPress}
+      style={[styles.option, half && styles.half, selected && styles.optionSelected]}
+    >
+      {icon !== undefined && (
+        <View style={[styles.optionIcon, { backgroundColor: `${iconColor}22` }]}>
+          <Icon name={icon} size={22} color={iconColor} />
+        </View>
+      )}
+      <View style={styles.flex}>
+        <AppText variant="headline" numberOfLines={1}>
+          {title}
+        </AppText>
+        {subtitle !== undefined && (
+          <AppText variant="footnote" tone="secondary" numberOfLines={2}>
+            {subtitle}
+          </AppText>
+        )}
+      </View>
+      <Icon name={action ? "chevron-right" : selected ? "check-circle" : "circle-outline"} size={22} color={selected ? Colors.accent : Colors.textTertiary} />
+    </Touchable>
   );
 }
 
 const styles = StyleSheet.create({
-  center: {
+  root: {
+    flex: 1,
+  },
+  flex: {
+    flex: 1,
+  },
+  welcome: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: Spacing.xl,
-    gap: Spacing.sm,
+    paddingHorizontal: Layout.gutter,
+    gap: Space.md,
   },
-  scroll: {
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxl * 2,
-    gap: Spacing.sm,
+  logo: {
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    backgroundColor: Colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: Space.md,
   },
-  wrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.md,
-    marginTop: Spacing.md,
-  },
-  appName: {
-    fontSize: 34,
-    fontWeight: "800",
-    color: AppColors.textPrimary,
-    letterSpacing: -0.5,
-  },
-  tagline: {
-    ...TextStyles.body,
-    fontSize: 15,
+  brand: {
+    fontSize: 40,
+    lineHeight: 46,
   },
   footer: {
-    ...TextStyles.tiny,
-    textAlign: "center",
-    lineHeight: 16,
+    paddingHorizontal: Layout.gutter,
+    gap: Space.md,
+    width: "100%",
+    maxWidth: Layout.maxContentWidth,
+    alignSelf: "center",
+  },
+  pinned: {
+    paddingTop: Space.md,
+  },
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: Layout.gutter,
+    gap: Space.md,
+  },
+  topSpacer: {
+    width: 40,
+  },
+  progress: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
+  },
+  progressDot: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.hairlineStrong,
+  },
+  progressDone: {
+    backgroundColor: Colors.accent,
+  },
+  content: {
+    paddingHorizontal: Layout.gutter,
+    paddingTop: Space.xl,
+    gap: Space.xl,
+    width: "100%",
+    maxWidth: Layout.maxContentWidth,
+    alignSelf: "center",
   },
   heading: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: AppColors.textPrimary,
+    gap: Space.sm,
   },
-  hint: {
-    ...TextStyles.body,
-    marginTop: 2,
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Space.md,
   },
-  hintSmall: {
-    ...TextStyles.tiny,
-    textAlign: "center",
-    marginTop: Spacing.md,
+  list: {
+    gap: Space.md,
   },
-  personaCard: {
-    width: 260,
-    gap: Spacing.xs + 2,
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Space.md,
+    minHeight: 64,
+    padding: Space.lg,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.surface,
   },
-  personaTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: AppColors.textPrimary,
+  half: {
+    flexBasis: "46%",
+    flexGrow: 1,
   },
-  personaBody: {
-    ...TextStyles.small,
-    lineHeight: 17,
+  optionSelected: {
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accentSoft,
   },
-  skip: {
-    ...TextStyles.small,
-    textAlign: "center",
-    marginTop: Spacing.lg,
-    textDecorationLine: "underline",
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-    color: AppColors.textTertiary,
-    textTransform: "uppercase",
-  },
-  input: {
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: AppColors.borderSubtle,
-    backgroundColor: AppColors.glassFill,
-    color: AppColors.textPrimary,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 10,
-    fontSize: 14,
+  optionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -76,6 +76,12 @@ export function buildWeatherQuery(opts: {
 
 interface WeatherStore extends WeatherStatus {
   generation: number;
+  /// Request identity of the snapshot on screen. A refresh with the same key
+  /// keeps the current snapshot visible; a new location/mode/pin clears it so
+  /// one place's weather is never shown under another place's name.
+  snapshotKey: string;
+  /// When the app received the snapshot on screen (device clock).
+  updatedAt: Date | null;
   locationRef: AppLocation;
   modeRef: AppMode;
   devRef: DeveloperOptions;
@@ -90,6 +96,8 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
   error: null,
   lastRequest: null,
   generation: 0,
+  snapshotKey: "",
+  updatedAt: null,
   locationRef: DEFAULT_LOCATION,
   modeRef: "everyone",
   devRef: DEFAULT_DEVELOPER_OPTIONS,
@@ -98,13 +106,19 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
 
   fetchWeather: async (location, mode, dev) => {
     const generation = get().generation + 1;
-    set({ generation, loading: true, error: null, snapshot: null, lastRequest: null });
+    const query = buildWeatherQuery({ lat: location.lat, lon: location.lon, mode, dev });
+    const requestKey = JSON.stringify(query);
+    const isRefresh = get().snapshot !== null && get().snapshotKey === requestKey;
+    set({
+      generation,
+      loading: true,
+      error: null,
+      ...(isRefresh ? {} : { snapshot: null, snapshotKey: "", lastRequest: null }),
+    });
     // Keep the ring buffer alive from app start so the Debug screen shows the
     // requests that happened before it was first opened.
     useRequestLogStore.getState().setEnabled(!dev.enabled || dev.logRequests);
     const cityName = location.name.split(",")[0]!.trim();
-
-    const query = buildWeatherQuery({ lat: location.lat, lon: location.lon, mode, dev });
 
     let v2Error: string | null = null;
     try {
@@ -121,6 +135,8 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
       set({
         loading: false,
         snapshot: parseWeatherSnapshotV2(data, { cityName }),
+        snapshotKey: requestKey,
+        updatedAt: new Date(),
         lastRequest: { endpoint: ApiEndpoints.v2Weather, query, usedLegacyFallback: false },
       });
       return;
@@ -157,6 +173,8 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
       set({
         loading: false,
         snapshot: parseWeatherSnapshot(data, { cityName }),
+        snapshotKey: requestKey,
+        updatedAt: new Date(),
         lastRequest: { endpoint: ApiEndpoints.weather, query: legacyQuery, usedLegacyFallback: true, v2Error },
       });
     } catch (error) {
@@ -169,19 +187,23 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
     }
   },
 
-  clear: () => set((s) => ({ generation: s.generation + 1, snapshot: null, error: null, lastRequest: null, loading: false })),
+  clear: () => set((s) => ({ generation: s.generation + 1, snapshot: null, snapshotKey: "", updatedAt: null, error: null, lastRequest: null, loading: false })),
 }));
 
-/// Computes the app-wide sky palette from wall-clock time and the live
-/// snapshot — port of `atmosphere_provider.dart` (`atmospherePaletteProvider`).
-export function atmospherePalette(
+export interface SkyScene {
+  period: SkyPeriod;
+  sky: SkyCondition;
+  palette: AtmospherePalette;
+}
+
+/// Resolves the live sky — solar period at the location, weather condition
+/// and the derived palette — from wall-clock time and the snapshot. Port of
+/// `atmosphere_provider.dart`. Developer overrides win when set.
+export function skyScene(
   now: Date,
   snapshot: WeatherSnapshot | null,
   dev?: { forcePeriod: SkyPeriod | null; forceSky: SkyCondition | null },
-): AtmospherePalette {
-  if (dev?.forcePeriod !== undefined && dev.forcePeriod !== null && dev.forceSky !== undefined && dev.forceSky !== null) {
-    return paletteFor(dev.forcePeriod, dev.forceSky);
-  }
+): SkyScene {
   const offset = snapshot?.utcOffsetSeconds;
   const localClock = (instant: Date): Date => {
     if (offset == null) return instant;
@@ -192,19 +214,18 @@ export function atmospherePalette(
     const parsed = parseWeatherTime(raw);
     if (!parsed) return null;
     // Naive solar timestamps already represent location-local wall time.
-    return raw && /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw) ? localClock(parsed) : parsed;
+    return raw && /(?:Z|[+-]d{2}:?d{2})$/i.test(raw) ? localClock(parsed) : parsed;
   };
-  const sunrise = solarClock(snapshot?.sunrise);
-  const sunset = solarClock(snapshot?.sunset);
-  const sky =
-    dev?.forceSky !== undefined && dev.forceSky !== null
-      ? dev.forceSky
-      : snapshot === null
-        ? SkyCondition.Clear
-        : conditionFromWeather(snapshot);
-  const period =
-    dev?.forcePeriod !== undefined && dev.forcePeriod !== null
-      ? dev.forcePeriod
-      : periodFromLocalTime(localClock(now), sunrise, sunset);
-  return paletteFor(period, sky);
+  const sky = dev?.forceSky ?? (snapshot === null ? SkyCondition.Clear : conditionFromWeather(snapshot));
+  const period = dev?.forcePeriod ?? periodFromLocalTime(localClock(now), solarClock(snapshot?.sunrise), solarClock(snapshot?.sunset));
+  return { period, sky, palette: paletteFor(period, sky) };
+}
+
+/// App-wide sky palette (see `skyScene`).
+export function atmospherePalette(
+  now: Date,
+  snapshot: WeatherSnapshot | null,
+  dev?: { forcePeriod: SkyPeriod | null; forceSky: SkyCondition | null },
+): AtmospherePalette {
+  return skyScene(now, snapshot, dev).palette;
 }

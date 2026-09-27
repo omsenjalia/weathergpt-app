@@ -1,255 +1,221 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import React, { useState } from "react";
+import { StyleSheet, View } from "react-native";
 
-import { GlassCard } from "../src/ui/components/GlassCard";
-import { AppColors } from "../src/ui/appColors";
-import { Radius, Spacing } from "../src/ui/theme";
+import { AppText, Button, Card, Colors, Divider, Screen, SegmentedControl, Space, StateView } from "../src/ui";
 import { useWeatherStore } from "../src/features/weather/weatherStore";
-import { useRequestLogStore, requestLogOk, requestQueryString } from "../src/core/services/requestLog";
+import { requestLogOk, requestQueryString, useRequestLogStore } from "../src/core/services/requestLog";
 import { ApiEndpoints } from "../src/core/config/apiEndpoints";
 import { ApiClient } from "../src/core/services/apiClient";
 import { realFailures, skippedUnconfigured, weatherNextFailed } from "../src/core/models/dataProvenance";
-import { fieldSourcesContributors, fieldSourcesProviderFor } from "../src/core/models/fieldSources";
+import { fieldSourcesContributors } from "../src/core/models/fieldSources";
 
 type Tab = "snapshot" | "sources" | "providers" | "requests" | "health";
 
+/// Developer diagnostics: what was requested, which provider answered each
+/// field, provider failures, the request log and a backend health probe.
 export default function DebugScreen(): React.ReactElement {
   const [tab, setTab] = useState<Tab>("snapshot");
   const snapshot = useWeatherStore((s) => s.snapshot);
   const lastRequest = useWeatherStore((s) => s.lastRequest);
-  const v2Error = useWeatherStore((s) => s.error);
+  const lastError = useWeatherStore((s) => s.error);
   const entries = useRequestLogStore((s) => s.entries);
-  const clearLog = useRequestLogStore((s) => s.clear);
-  const [health, setHealth] = useState<string>("probe not run");
+  const [health, setHealth] = useState<string | null>(null);
+  const [probing, setProbing] = useState(false);
 
-  async function probeHealth(): Promise<void> {
-    setHealth("probing…");
+  const probe = async () => {
+    setProbing(true);
     try {
       const data = await ApiClient.get(ApiEndpoints.v2WeatherHealth);
-      setHealth(JSON.stringify(data).slice(0, 400));
+      setHealth(JSON.stringify(data, null, 2).slice(0, 2000));
     } catch (error) {
       setHealth(`probe failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setProbing(false);
     }
-  }
+  };
 
-  const tabs: Array<{ id: Tab; label: string }> = [
-    { id: "snapshot", label: "Snapshot" },
-    { id: "sources", label: "Sources" },
-    { id: "providers", label: "Providers" },
-    { id: "requests", label: "Requests" },
-    { id: "health", label: "Health" },
-  ];
+  const noSnapshot = <StateView compact icon="database-off-outline" title="No snapshot loaded" body="Open Home to fetch weather first." />;
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll}>
-      <Text style={styles.title}>Debug & state</Text>
-      <View style={styles.tabs}>
-        {tabs.map((t) => (
-          <Pressable key={t.id} onPress={() => setTab(t.id)} style={[styles.tab, tab === t.id && styles.tabActive]}>
-            <Text style={[styles.tabLabel, tab === t.id && { color: AppColors.bgPrimary }]}>{t.label}</Text>
-          </Pressable>
-        ))}
-      </View>
+    <Screen back title="Debug & state">
+      <SegmentedControl
+        value={tab}
+        onChange={setTab}
+        segments={[
+          { value: "snapshot", label: "Snapshot" },
+          { value: "sources", label: "Sources" },
+          { value: "providers", label: "Providers" },
+          { value: "requests", label: "Log" },
+          { value: "health", label: "Health" },
+        ]}
+      />
 
       {tab === "snapshot" && (
-        <GlassCard style={{ gap: Spacing.sm }}>
-          <Row label="Endpoint" value={lastRequest?.endpoint ?? "—"} />
-          <Row label="Query" value={lastRequest ? requestQueryString(lastRequest.query) : "—"} />
-          <Row label="Legacy fallback" value={lastRequest?.usedLegacyFallback ? "yes" : "no"} />
-          <Row label="City" value={snapshot?.cityName ?? "—"} />
-          <Row label="Condition" value={snapshot?.condition ?? "—"} />
-          <Row label="WMO code" value={snapshot?.weatherCode === null || snapshot?.weatherCode === undefined ? "not reported" : String(snapshot.weatherCode)} />
-          <Row label="Hourly points" value={snapshot ? String(snapshot.hourly.length) : "—"} />
-          <Row label="Forecast days" value={snapshot ? String(snapshot.forecast.length) : "—"} />
-          <Row label="Degraded" value={snapshot?.degraded === null || snapshot?.degraded === undefined ? "not reported" : snapshot.degraded ? "yes" : "no"} />
-          {v2Error !== null && <Row label="Last error" value={v2Error} />}
-        </GlassCard>
+        <Card>
+          <Rows
+            rows={[
+              ["Endpoint", lastRequest?.endpoint ?? "—"],
+              ["Query", lastRequest ? requestQueryString(lastRequest.query) : "—"],
+              ["Legacy fallback", lastRequest?.usedLegacyFallback ? "yes" : "no"],
+              ["City", snapshot?.cityName ?? "—"],
+              ["Condition", snapshot?.condition ?? "—"],
+              ["WMO code", snapshot?.weatherCode == null ? "not reported" : String(snapshot.weatherCode)],
+              ["Hourly points", snapshot ? String(snapshot.hourly.length) : "—"],
+              ["Forecast days", snapshot ? String(snapshot.forecast.length) : "—"],
+              ["UTC offset", snapshot?.utcOffsetSeconds == null ? "not reported" : `${snapshot.utcOffsetSeconds}s`],
+              ["Degraded", snapshot?.degraded == null ? "not reported" : snapshot.degraded ? "yes" : "no"],
+              ...(lastError !== null ? [["Last error", lastError] as [string, string]] : []),
+            ]}
+          />
+        </Card>
       )}
 
-      {tab === "sources" && snapshot !== null && (
-        <GlassCard style={{ gap: Spacing.sm }}>
-          <Row label="Selected source" value={snapshot.provenance.selectedSource ?? snapshot.provenance.source ?? "not reported"} />
-          <Row label="Requested source" value={snapshot.provenance.requestedSource ?? "—"} />
-          <Row label="Run" value={snapshot.provenance.runId ?? "—"} />
-          <Row label="Issued at" value={snapshot.provenance.issuedAtUtc?.toISOString() ?? "—"} />
-          <Row label="Retrieved at" value={snapshot.provenance.retrievedAtUtc?.toISOString() ?? "—"} />
-          <Row label="Contributors" value={fieldSourcesContributors(snapshot.fieldSources).join(", ") || "—"} />
-          {Object.entries(snapshot.fieldSources.sources).slice(0, 14).map(([field, provider]) => (
-            <Row key={field} label={field} value={provider === null || provider === undefined ? "explicitly missing" : provider} />
-          ))}
-          {snapshot.fieldSources.supplementFilled.length > 0 && (
-            <Row label="Supplemented" value={snapshot.fieldSources.supplementFilled.join(", ")} />
+      {tab === "sources" && (
+        <Card>
+          {snapshot === null ? (
+            noSnapshot
+          ) : (
+            <Rows
+              rows={[
+                ["Selected source", snapshot.provenance.selectedSource ?? snapshot.provenance.source ?? "not reported"],
+                ["Requested source", snapshot.provenance.requestedSource ?? "—"],
+                ["Run", snapshot.provenance.runId ?? "—"],
+                ["Issued at", snapshot.provenance.issuedAtUtc?.toISOString() ?? "—"],
+                ["Retrieved at", snapshot.provenance.retrievedAtUtc?.toISOString() ?? "—"],
+                ["Contributors", fieldSourcesContributors(snapshot.fieldSources).join(", ") || "—"],
+                ...Object.entries(snapshot.fieldSources.sources).map(([field, provider]) => [field, provider ?? "explicitly missing"] as [string, string]),
+                ...(snapshot.fieldSources.supplementFilled.length > 0 ? [["Supplemented", snapshot.fieldSources.supplementFilled.join(", ")] as [string, string]] : []),
+              ]}
+            />
           )}
-        </GlassCard>
+        </Card>
       )}
 
-      {tab === "providers" && snapshot !== null && (
-        <GlassCard style={{ gap: Spacing.sm }}>
-          <Row label="Tried providers" value={snapshot.provenance.triedProviders.join(", ") || "—"} />
-          <Row label="Real failures" value={realFailures(snapshot.provenance).map((r) => `${r.provider}: ${r.reason}`).join("; ") || "none"} />
-          <Row label="Skipped (unconfigured)" value={skippedUnconfigured(snapshot.provenance).map((r) => r.provider).join(", ") || "none"} />
-          <Row label="Missing fields" value={snapshot.provenance.missingFields.join(", ") || "none"} />
-          <Row label="Policy version" value={snapshot.provenance.selectionPolicyVersion ?? "—"} />
-          <Row label="Freshness" value={snapshot.provenance.freshnessStatus ?? "—"} />
-          <Row label="WeatherNext failed" value={snapshot.provenance.fallbackReasons.length > 0 ? String(weatherNextFailed(snapshot.provenance)) : "—"} />
-        </GlassCard>
+      {tab === "providers" && (
+        <Card>
+          {snapshot === null ? (
+            noSnapshot
+          ) : (
+            <Rows
+              rows={[
+                ["Tried providers", snapshot.provenance.triedProviders.join(", ") || "—"],
+                ["Real failures", realFailures(snapshot.provenance).map((r) => `${r.provider}: ${r.reason}`).join("; ") || "none"],
+                ["Skipped (unconfigured)", skippedUnconfigured(snapshot.provenance).map((r) => r.provider).join(", ") || "none"],
+                ["Missing fields", snapshot.provenance.missingFields.join(", ") || "none"],
+                ["Policy version", snapshot.provenance.selectionPolicyVersion ?? "—"],
+                ["Freshness", snapshot.provenance.freshnessStatus ?? "—"],
+                ["WeatherNext failed", snapshot.provenance.fallbackReasons.length > 0 ? String(weatherNextFailed(snapshot.provenance)) : "—"],
+              ]}
+            />
+          )}
+        </Card>
       )}
 
       {tab === "requests" && (
-        <GlassCard style={{ gap: Spacing.sm }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={styles.sectionTitle}>Last {entries.length} requests</Text>
-            <Pressable onPress={clearLog}>
-              <Text style={styles.clear}>Clear</Text>
-            </Pressable>
+        <Card style={styles.gap}>
+          <View style={styles.logHeader}>
+            <AppText variant="headline" style={styles.flex}>
+              {entries.length} requests
+            </AppText>
+            <Button label="Clear" variant="danger" onPress={() => useRequestLogStore.getState().clear()} disabled={entries.length === 0} />
           </View>
-          {entries.map((entry) => (
-            <View key={entry.id} style={styles.logRow}>
-              <Text style={[styles.logStatus, { color: requestLogOk(entry) ? AppColors.statusGreenText : AppColors.statusRed }]}>
-                {entry.statusCode ?? "ERR"}
-              </Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.logPath} numberOfLines={1}>
-                  {entry.method} {entry.path}
-                </Text>
-                {entry.summary !== null && entry.summary !== undefined && <Text style={styles.logSummary}>{entry.summary}</Text>}
-                {entry.error !== null && entry.error !== undefined && <Text style={styles.logError}>{entry.error}</Text>}
+          {entries.length === 0 && <StateView compact icon="format-list-bulleted" title="No requests yet" />}
+          {entries.map((entry, i) => (
+            <View key={entry.id}>
+              {i > 0 && <Divider />}
+              <View style={styles.logRow}>
+                <AppText variant="mono" color={requestLogOk(entry) ? Colors.good : Colors.danger} style={styles.status}>
+                  {entry.statusCode ?? "ERR"}
+                </AppText>
+                <View style={styles.flex}>
+                  <AppText variant="mono" numberOfLines={2}>
+                    {entry.method} {entry.path}
+                  </AppText>
+                  {entry.summary != null && (
+                    <AppText variant="caption" tone="tertiary">
+                      {entry.summary}
+                    </AppText>
+                  )}
+                  {entry.error != null && (
+                    <AppText variant="caption" tone="danger">
+                      {entry.error}
+                    </AppText>
+                  )}
+                </View>
+                <AppText variant="caption" tone="tertiary">
+                  {entry.durationMs ?? "?"} ms
+                </AppText>
               </View>
-              <Text style={styles.logMs}>{entry.durationMs ?? "?"} ms</Text>
             </View>
           ))}
-        </GlassCard>
+        </Card>
       )}
 
       {tab === "health" && (
-        <GlassCard style={{ gap: Spacing.md }}>
-          <Text style={styles.sectionTitle}>Backend /v2/weather/health</Text>
-          <PrimaryButtonFlat label="Probe now" onPress={() => void probeHealth()} />
-          <Text style={styles.healthText}>{health}</Text>
-        </GlassCard>
+        <Card style={styles.gap}>
+          <AppText variant="headline">{ApiEndpoints.v2WeatherHealth}</AppText>
+          <Button label="Probe now" icon="heart-pulse" loading={probing} onPress={() => void probe()} />
+          {health !== null && (
+            <AppText variant="mono" tone="secondary" selectable>
+              {health}
+            </AppText>
+          )}
+        </Card>
       )}
-    </ScrollView>
+    </Screen>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }): React.ReactElement {
+function Rows({ rows }: { rows: Array<[string, string]> }): React.ReactElement {
   return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
+    <View>
+      {rows.map(([label, value], i) => (
+        <View key={`${label}-${i}`}>
+          {i > 0 && <Divider />}
+          <View style={styles.row}>
+            <AppText variant="footnote" tone="tertiary" style={styles.rowLabel}>
+              {label}
+            </AppText>
+            <AppText variant="footnote" style={styles.rowValue} selectable>
+              {value}
+            </AppText>
+          </View>
+        </View>
+      ))}
     </View>
   );
 }
 
-function PrimaryButtonFlat({ label, onPress }: { label: string; onPress: () => void }): React.ReactElement {
-  return (
-    <Pressable onPress={onPress} style={styles.probe}>
-      <Text style={styles.probeLabel}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
-  scroll: {
-    padding: Spacing.lg,
-    paddingBottom: 80,
-    gap: Spacing.md,
+  flex: {
+    flex: 1,
   },
-  title: {
-    color: AppColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  tabs: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.sm,
-  },
-  tab: {
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: AppColors.glassBorderStrong,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-  },
-  tabActive: {
-    backgroundColor: AppColors.accent,
-    borderColor: AppColors.accent,
-  },
-  tabLabel: {
-    color: AppColors.textSecondary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  sectionTitle: {
-    color: AppColors.textPrimary,
-    fontSize: 13.5,
-    fontWeight: "700",
+  gap: {
+    gap: Space.md,
   },
   row: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: Spacing.md,
+    gap: Space.md,
+    paddingVertical: Space.sm,
   },
   rowLabel: {
-    color: AppColors.textTertiary,
-    fontSize: 11.5,
-    flexShrink: 1,
+    flex: 2,
   },
   rowValue: {
-    color: AppColors.textPrimary,
-    fontSize: 11.5,
-    fontWeight: "600",
-    flexShrink: 2,
+    flex: 3,
     textAlign: "right",
+  },
+  logHeader: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   logRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-    paddingVertical: 5,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: AppColors.borderSubtle,
+    alignItems: "flex-start",
+    gap: Space.sm,
+    paddingVertical: Space.sm,
   },
-  logStatus: {
-    fontWeight: "800",
-    fontSize: 11,
-    width: 34,
-  },
-  logPath: {
-    color: AppColors.textPrimary,
-    fontSize: 11.5,
-    fontWeight: "600",
-  },
-  logSummary: {
-    color: AppColors.textTertiary,
-    fontSize: 10,
-  },
-  logError: {
-    color: AppColors.statusRed,
-    fontSize: 10,
-  },
-  logMs: {
-    color: AppColors.textTertiary,
-    fontSize: 10,
-  },
-  clear: {
-    color: AppColors.statusRed,
-    fontSize: 12,
-  },
-  probe: {
-    backgroundColor: AppColors.accent,
-    borderRadius: Radius.pill,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  probeLabel: {
-    color: AppColors.bgPrimary,
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  healthText: {
-    color: AppColors.textSecondary,
-    fontSize: 11.5,
+  status: {
+    width: 36,
   },
 });

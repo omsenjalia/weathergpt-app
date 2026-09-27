@@ -1,204 +1,242 @@
-import { useTranslation } from "../../src/i18n/useTranslation";
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import React from "react";
+import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import Constants from "expo-constants";
 
-import { GlassCard } from "../../src/ui/components/GlassCard";
-import { AppColors } from "../../src/ui/appColors";
-import { Radius, Spacing } from "../../src/ui/theme";
+import { AppText, Button, Card, ChipGroup, Colors, Divider, Icon, IconName, ListRow, Radius, Screen, Section, SegmentedControl, Space, SwitchRow, Touchable } from "../../src/ui";
+import { useTranslation } from "../../src/i18n/useTranslation";
+import { LANGUAGE_META, LanguageCode, SUPPORTED_LANGUAGES } from "../../src/i18n";
 import { TemperatureUnit, useSettingsStore } from "../../src/features/settings/settingsStore";
-import { useDeveloperOptionsStore, DevSourcePin, DEV_SOURCE_PIN_LABEL } from "../../src/features/settings/developerOptionsStore";
-import { SUPPORTED_LANGUAGES, LANGUAGE_META } from "../../src/i18n";
-import { appModeFromName } from "../../src/core/models/appMode";
+import { DEV_SOURCE_PIN_LABEL, DevSourcePin, useDeveloperOptionsStore } from "../../src/features/settings/developerOptionsStore";
+import { useSavedLocationsStore } from "../../src/features/explore/exploreStores";
+import { useVoiceStore, VoiceStatus } from "../../src/features/voice/voiceStore";
+import { SpeechService } from "../../src/features/voice/speechService";
 
-const PERSONAS = [
-  { id: "everyone", label: "Everyone", icon: "account-outline" },
-  { id: "farmer", label: "Farmer", icon: "sprout" },
-  { id: "researcher", label: "Researcher", icon: "flask-outline" },
-] as const;
+const PERSONAS: ReadonlyArray<{ id: "everyone" | "farmer" | "researcher"; icon: IconName; color: string }> = [
+  { id: "everyone", icon: "account-outline", color: Colors.accent },
+  { id: "farmer", icon: "sprout", color: Colors.farmer },
+  { id: "researcher", icon: "flask-outline", color: Colors.researcher },
+];
 
-export default function ProfileScreen(): React.ReactElement {
+const SPEEDS = { slow: 0.6, normal: 0.85, fast: 1 } as const;
+type Speed = keyof typeof SPEEDS;
+
+function speedFor(value: number): Speed {
+  if (value <= 0.7) return "slow";
+  if (value >= 0.95) return "fast";
+  return "normal";
+}
+
+export default function SettingsScreen(): React.ReactElement {
   const t = useTranslation();
-  const settings = useSettingsStore();
-  const dev = useDeveloperOptionsStore();
-  const [showDev, setShowDev] = useState(dev.enabled);
+  const language = useSettingsStore((s) => s.language);
+  const persona = useSettingsStore((s) => s.userPersona);
+  const units = useSettingsStore((s) => s.units);
+  const ttsSpeed = useSettingsStore((s) => s.ttsSpeed);
+  const savedCount = useSavedLocationsStore((s) => s.locations.length);
+  const devEnabled = useDeveloperOptionsStore((s) => s.enabled);
+  const sourcePin = useDeveloperOptionsStore((s) => s.sourcePin);
+  const showProvenance = useDeveloperOptionsStore((s) => s.showProvenanceOnHome);
+  const videoOff = useDeveloperOptionsStore((s) => s.disableVideoSky);
+  const ttsGender = useSettingsStore((s) => s.ttsGender);
+  const previewing = useVoiceStore((s) => s.status === VoiceStatus.Speaking);
+  const speechEngine = SpeechService.available();
+  const settings = useSettingsStore.getState;
+  const dev = useDeveloperOptionsStore.getState;
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll}>
-      <Text style={styles.title}>{t("settings.title")}</Text>
-
-      <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.section}>{t("settings.section_language")}</Text>
-        <View style={styles.pillWrap}>
-          {SUPPORTED_LANGUAGES.map((code) => (
-            <Pressable
-              key={code}
-              onPress={() => void settings.updateLanguage(code)}
-              style={[styles.pill, settings.language === code && styles.pillActive]}
-            >
-              <Text style={[styles.pillLabel, settings.language === code && { color: AppColors.bgPrimary }]}>
-                {LANGUAGE_META[code].native}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </GlassCard>
-
-      <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.section}>{t("settings.section_persona")}</Text>
-        <View style={styles.pillWrap}>
-          {PERSONAS.map((persona) => (
-            <Pressable
-              key={persona.id}
-              onPress={() => void settings.updatePersona(persona.id)}
-              style={[styles.pill, settings.userPersona === persona.id && styles.pillActive]}
-            >
-              <MaterialCommunityIcons
-                name={persona.icon}
-                size={14}
-                color={settings.userPersona === persona.id ? AppColors.bgPrimary : AppColors.textSecondary}
-              />
-              <Text style={[styles.pillLabel, settings.userPersona === persona.id && { color: AppColors.bgPrimary }]}>
-                {persona.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        {settings.userPersona === "farmer" && (
-          <Pressable onPress={() => router.push("/farm-profile")}>
-            <Text style={styles.link}>Farm profile →</Text>
-          </Pressable>
-        )}
-      </GlassCard>
-
-      <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.section}>{t("settings.section_units")}</Text>
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>{t("settings.use_fahrenheit")}</Text>
-          <Switch
-            value={settings.units === TemperatureUnit.Fahrenheit}
-            onValueChange={(v) => void settings.updateUnits(v ? TemperatureUnit.Fahrenheit : TemperatureUnit.Celsius)}
-            trackColor={{ true: AppColors.accent, false: AppColors.borderStrong }}
-            thumbColor={AppColors.textPrimary}
-          />
-        </View>
-      </GlassCard>
-
-      <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.section}>{t("settings.section_voice")}</Text>
-        <Text style={styles.note}>
-          Speech speed {settings.ttsSpeed.toFixed(2)} · voice locale {settings.ttsVoiceLocale}
-        </Text>
-        <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}> slower</Text>
-          <Pressable onPress={() => void settings.updateTtsSpeed(Math.max(0.3, settings.ttsSpeed - 0.05))}>
-            <Text style={styles.link}>−</Text>
-          </Pressable>
-          <Pressable onPress={() => void settings.updateTtsSpeed(Math.min(1.0, settings.ttsSpeed + 0.05))}>
-            <Text style={styles.link}>＋</Text>
-          </Pressable>
-        </View>
-      </GlassCard>
-
-      <GlassCard style={{ gap: Spacing.md }}>
-        <View style={styles.switchRow}>
-          <Text style={styles.section}>DEVELOPER</Text>
-          <Switch
-            value={dev.enabled}
-            onValueChange={(v) => {
-              void dev.patch({ enabled: v });
-              setShowDev(v);
-            }}
-            trackColor={{ true: AppColors.accent, false: AppColors.borderStrong }}
-            thumbColor={AppColors.textPrimary}
-          />
-        </View>
-        {showDev && (
-          <View style={{ gap: Spacing.md }}>
-            <Pressable onPress={() => router.push("/debug")}>
-              <Text style={styles.link}>Debug & state →</Text>
-            </Pressable>
-            <Text style={styles.note}>Source pin: {DEV_SOURCE_PIN_LABEL[dev.sourcePin]}</Text>
-            <View style={styles.pillWrap}>
-              {Object.values(DevSourcePin).map((pin) => (
-                <Pressable key={pin} onPress={() => void dev.patch({ sourcePin: pin })} style={[styles.pill, dev.sourcePin === pin && styles.pillActive]}>
-                  <Text style={[styles.pillLabel, dev.sourcePin === pin && { color: AppColors.bgPrimary }]}>{pin}</Text>
-                </Pressable>
-              ))}
+    <Screen inTabs title={t("settings.title")}>
+      <Section title={t("settings.user_type")}>
+        <Card padded={false}>
+          {PERSONAS.map((p, i) => {
+            const selected = persona === p.id;
+            return (
+              <View key={p.id}>
+                {i > 0 && <Divider inset={Space.lg + 44} />}
+                <Touchable
+                  scale={false}
+                  haptics="selection"
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  accessibilityLabel={t(`persona.${p.id}`)}
+                  onPress={() => void settings().updatePersona(p.id)}
+                  style={styles.persona}
+                >
+                  <View style={[styles.personaIcon, { backgroundColor: `${p.color}22` }]}>
+                    <Icon name={p.icon} size={20} color={p.color} />
+                  </View>
+                  <View style={styles.flex}>
+                    <AppText variant="callout">{t(`persona.${p.id}`)}</AppText>
+                    <AppText variant="footnote" tone="tertiary">
+                      {t(`persona.${p.id}_description`)}
+                    </AppText>
+                  </View>
+                  <Icon name={selected ? "check-circle" : "circle-outline"} size={22} color={selected ? Colors.accent : Colors.textTertiary} />
+                </Touchable>
+              </View>
+            );
+          })}
+        </Card>
+        {persona === "farmer" && (
+          <Card padded={false}>
+            <View style={styles.rowPad}>
+              <ListRow icon="sprout-outline" iconColor={Colors.farmer} label={t("farmer.edit_farm_profile")} onPress={() => router.push("/farm-profile")} />
             </View>
-          </View>
+          </Card>
         )}
-      </GlassCard>
+      </Section>
 
-      <Text style={styles.footer}>{t("settings.footer")}</Text>
-      <Text style={styles.footer}>Mode: {appModeFromName(settings.userPersona) ?? "everyone (de-escalated)"} · language {settings.language}</Text>
-    </ScrollView>
+      <Section title={t("settings.language")}>
+        <Card>
+          <ChipGroup<LanguageCode>
+            options={SUPPORTED_LANGUAGES}
+            value={language}
+            onChange={(code) => void settings().updateLanguage(code)}
+            labelFor={(code) => LANGUAGE_META[code].native}
+          />
+        </Card>
+      </Section>
+
+      <Section title={t("settings.units")}>
+        <Card padded={false}>
+          <View style={styles.rowPad}>
+            <SwitchRow
+              icon="thermometer"
+              label={t("settings.use_fahrenheit")}
+              description={units === TemperatureUnit.Fahrenheit ? "°F" : "°C"}
+              value={units === TemperatureUnit.Fahrenheit}
+              onValueChange={(v) => void settings().updateUnits(v ? TemperatureUnit.Fahrenheit : TemperatureUnit.Celsius)}
+            />
+          </View>
+        </Card>
+      </Section>
+
+      <Section title={t("settings.voice_title")} footer={speechEngine ? t("settings.voice_engine_bhashini") : t("settings.voice_engine_device")}>
+        <Card style={styles.gap}>
+          <AppText variant="callout">{t("voice_picker.title")}</AppText>
+          <View style={styles.voiceRow}>
+            <View style={styles.flex}>
+              <SegmentedControl<"female" | "male">
+                value={ttsGender}
+                onChange={(g) => void settings().updateTtsGender(g)}
+                segments={[
+                  { value: "female", label: t("settings.voice_female") },
+                  { value: "male", label: t("settings.voice_male") },
+                ]}
+              />
+            </View>
+            <Button
+              label={previewing ? t("voice_picker.stop") : t("voice_picker.preview")}
+              icon={previewing ? "stop" : "play"}
+              variant="secondary"
+              onPress={() => (previewing ? useVoiceStore.getState().stopSpeaking() : void useVoiceStore.getState().speak(t("voice_picker.sample")))}
+            />
+          </View>
+          <Divider />
+          <AppText variant="callout">{t("settings.tts_speed")}</AppText>
+          <SegmentedControl<Speed>
+            value={speedFor(ttsSpeed)}
+            onChange={(s) => void settings().updateTtsSpeed(SPEEDS[s])}
+            segments={[
+              { value: "slow", label: t("settings.speed_slow") },
+              { value: "normal", label: t("settings.speed_normal") },
+              { value: "fast", label: t("settings.speed_fast") },
+            ]}
+          />
+        </Card>
+      </Section>
+
+      <Section title={t("settings.section_data")}>
+        <Card padded={false}>
+          <View style={styles.rowPad}>
+            <ListRow icon="star-outline" label={t("settings.saved_locations")} value={String(savedCount)} onPress={() => router.push("/locations")} />
+          </View>
+          <Divider inset={Space.lg + 44} />
+          <View style={styles.rowPad}>
+            <ListRow icon="map-outline" label={t("settings.open_map")} onPress={() => router.navigate("/explore")} />
+          </View>
+        </Card>
+      </Section>
+
+      <Section title="Developer">
+        <Card padded={false}>
+          <View style={styles.rowPad}>
+            <SwitchRow icon="code-braces" label="Developer mode" description="Provider pinning, request log and diagnostics" value={devEnabled} onValueChange={(v) => void dev().patch({ enabled: v })} />
+          </View>
+          {devEnabled && (
+            <>
+              <Divider inset={Space.lg + 44} />
+              <View style={styles.rowPad}>
+                <SwitchRow icon="source-branch" label="Show provenance on Home" value={showProvenance} onValueChange={(v) => void dev().patch({ showProvenanceOnHome: v })} />
+              </View>
+              <Divider inset={Space.lg + 44} />
+              <View style={styles.rowPad}>
+                <SwitchRow icon="video-off-outline" label="Disable video sky" description="Gradient-only background" value={videoOff} onValueChange={(v) => void dev().patch({ disableVideoSky: v })} />
+              </View>
+              <Divider inset={Space.lg} />
+              <View style={styles.devBlock}>
+                <AppText variant="footnote" tone="secondary">
+                  Source · {DEV_SOURCE_PIN_LABEL[sourcePin]}
+                </AppText>
+                <ChipGroup<DevSourcePin> layout="scroll" options={Object.values(DevSourcePin)} value={sourcePin} onChange={(pin) => void dev().patch({ sourcePin: pin })} />
+              </View>
+              <Divider inset={Space.lg + 44} />
+              <View style={styles.rowPad}>
+                <ListRow icon="bug-outline" label="Debug & state" onPress={() => router.push("/debug")} />
+              </View>
+            </>
+          )}
+        </Card>
+      </Section>
+
+      <View style={styles.footer}>
+        <AppText variant="caption" tone="tertiary" align="center">
+          {t("app_name")} {Constants.expoConfig?.version ?? ""}
+        </AppText>
+        <AppText variant="caption" tone="tertiary" align="center">
+          {t("settings.footer")}
+        </AppText>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    padding: Spacing.lg,
-    paddingBottom: 120,
-    gap: Spacing.md,
+  flex: {
+    flex: 1,
   },
-  title: {
-    color: AppColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "800",
+  gap: {
+    gap: Space.md,
   },
-  section: {
-    color: AppColors.textTertiary,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.2,
+  rowPad: {
+    paddingHorizontal: Space.lg,
   },
-  pillWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: Spacing.sm,
-  },
-  pill: {
+  persona: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: AppColors.glassBorderStrong,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 7,
+    gap: Space.md,
+    paddingHorizontal: Space.lg,
+    paddingVertical: Space.md,
+    minHeight: 64,
   },
-  pillActive: {
-    backgroundColor: AppColors.accent,
-    borderColor: AppColors.accent,
+  personaIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  pillLabel: {
-    color: AppColors.textSecondary,
-    fontSize: 12.5,
-    fontWeight: "600",
-  },
-  switchRow: {
+  voiceRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: Space.sm,
   },
-  switchLabel: {
-    color: AppColors.textPrimary,
-    fontSize: 13.5,
-  },
-  link: {
-    color: AppColors.accent,
-    fontSize: 13.5,
-    fontWeight: "600",
-  },
-  note: {
-    color: AppColors.textTertiary,
-    fontSize: 12,
+  devBlock: {
+    padding: Space.lg,
+    gap: Space.sm,
   },
   footer: {
-    color: AppColors.textTertiary,
-    fontSize: 10.5,
-    textAlign: "center",
+    paddingTop: Space.xl,
+    gap: 2,
   },
 });

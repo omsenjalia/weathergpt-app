@@ -30,4 +30,5 @@ export const StorageKeys = {
   savedLocations: "wg.saved_locations",
   onboardingComplete: "wg.onboarding_complete",
   developerOptions: "wg.developer_options",
+  locationBannerDismissed: "wg.location_banner_dismissed",
 } as const;
