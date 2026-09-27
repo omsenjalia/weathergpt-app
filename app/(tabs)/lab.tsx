@@ -1,24 +1,20 @@
-import { useTranslation } from "../../src/i18n/useTranslation";
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import React, { useEffect, useMemo, useState } from "react";
+import { StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 
-import { GlassCard } from "../../src/ui/components/GlassCard";
-import { LineChart } from "../../src/ui/components/LineChart";
-import { AppColors } from "../../src/ui/appColors";
-import { Radius, Spacing } from "../../src/ui/theme";
+import { AppText, Button, Card, CardHeader, Colors, Divider, Screen, SegmentedControl, Skeleton, Space, StateView } from "../../src/ui";
+import { DeviationBars, LineChart } from "../../src/ui/charts/LineChart";
+import { useTranslation } from "../../src/i18n/useTranslation";
 import { useLocationStore } from "../../src/features/location/locationStore";
 import { useSavedLocationsStore } from "../../src/features/explore/exploreStores";
-import { AppLocation } from "../../src/features/models/location";
 import {
   anomalyPercent,
   ArchiveStatus,
   AsyncComparison,
   AsyncSeries,
-  COMPARISON_PALETTE,
-  comparisonLastTwoYears,
   comparedTotal,
   comparedValueFor,
+  comparisonLastTwoYears,
   fetchComparison,
   fetchHistoricalSeries,
   HistoricalMetric,
@@ -26,200 +22,219 @@ import {
   longTermAverage,
   metricLabel,
   metricUnit,
-  TrendMetric,
-  useAnomalyTrendsStore,
 } from "../../src/features/research/researchStores";
 
 export default function LabScreen(): React.ReactElement {
   const t = useTranslation();
+  return (
+    <Screen inTabs title={t("nav.lab")}>
+      <HistoricalCard />
+      <ComparisonCard />
+    </Screen>
+  );
+}
+
+function HistoricalCard(): React.ReactElement {
+  const t = useTranslation();
   const location = useLocationStore((s) => s.location);
   const [metric, setMetric] = useState<HistoricalMetric>(HistoricalMetric.Rainfall);
   const [series, setSeries] = useState<AsyncSeries>({ kind: "loading" });
-  const [comparison, setComparison] = useState<AsyncComparison>({ kind: "loading" });
-  const trend = useAnomalyTrendsStore((s) => s.metric);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    // Only the latest selection may write state.
+    let active = true;
     setSeries({ kind: "loading" });
     fetchHistoricalSeries({ metric, monthly: false }, location)
-      .then((s) => setSeries({ kind: "data", series: s }))
-      .catch((e: Error) => setSeries({ kind: "error", message: e.message }));
-  }, [metric, location.lat, location.lon, location.name]);
-
-  useEffect(() => {
-    const saved = useSavedLocationsStore.getState().locations;
-    setComparison({ kind: "loading" });
-    fetchComparison(saved)
-      .then((r) => setComparison({ kind: "data", result: r }))
-      .catch((e: Error) => setComparison({ kind: "error", message: e.message }));
-  }, []);
+      .then((s) => active && setSeries({ kind: "data", series: s }))
+      .catch((e: unknown) => active && setSeries({ kind: "error", message: e instanceof Error ? e.message : String(e) }));
+    return () => {
+      active = false;
+    };
+  }, [metric, location, attempt]);
 
   const unit = metricUnit(metric);
+  const points = series.kind === "data" && series.series.status === ArchiveStatus.Available ? series.series.points : [];
+  const mean = longTermAverage(points);
+  const deviation = anomalyPercent(points);
+  const deviations = useMemo(() => (mean === 0 ? [] : points.map((p) => ({ x: p.x, value: ((p.value - mean) / mean) * 100 }))), [points, mean]);
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll}>
-      <View style={styles.headerRow}>
-        <MaterialCommunityIcons name="flask-outline" size={24} color={AppColors.researcherBlue} />
-        <Text style={styles.title}>Lab</Text>
-      </View>
-
-      <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.sectionTitle}>Historical weather</Text>
-        <View style={styles.metricRow}>
-          {[HistoricalMetric.Rainfall, HistoricalMetric.Temperature, HistoricalMetric.Humidity].map((m) => (
-            <Pressable key={m} onPress={() => setMetric(m)} style={[styles.metricPill, metric === m && styles.metricActive]}>
-              <Text style={[styles.metricLabel, metric === m && { color: AppColors.bgPrimary }]}>{metricLabel(m)}</Text>
-            </Pressable>
-          ))}
-        </View>
-        {series.kind === "loading" && <Text style={styles.note}>Loading archive…</Text>}
-        {series.kind === "error" && <Text style={styles.errorText}>{series.message}</Text>}
-        {series.kind === "data" && (
-          <>
-            {series.series.status === ArchiveStatus.Unsupported && <Text style={styles.note}>{series.series.detail}</Text>}
-            {series.series.status === ArchiveStatus.Empty && (
-              <Text style={styles.note}>The archive has no data for this location.</Text>
-            )}
-            {series.series.status === ArchiveStatus.Available && (
-              <>
-                <LineChart points={series.series.points} color={AppColors.researcherBlue} unit={unit} />
-                <View style={styles.statRow}>
-                  <Text style={styles.stat}>Long-term mean: {longTermAverage(series.series.points).toFixed(1)}{unit}</Text>
-                  <Text style={styles.stat}>Latest vs mean: {anomalyPercent(series.series.points).toFixed(1)}%</Text>
-                </View>
-                <Text style={styles.note}>Coverage {historicalRangeLabel(series.series) ?? "—"} · {series.series.source ?? "source not reported"}</Text>
-              </>
-            )}
-          </>
+    <>
+      <Card style={styles.gap}>
+        <CardHeader icon="chart-line" title={`${t("researcher.historical_weather")} · ${location.name.split(",")[0]}`} />
+        <SegmentedControl
+          value={metric}
+          onChange={setMetric}
+          segments={[HistoricalMetric.Rainfall, HistoricalMetric.Temperature, HistoricalMetric.Humidity].map((m) => ({ value: m, label: metricLabel(m) }))}
+        />
+        {series.kind === "loading" && <Skeleton height={200} radius={12} />}
+        {series.kind === "error" && <StateView compact tone="error" icon="database-alert-outline" title={t("voice.error")} body={series.message} actionLabel={t("chat.retry")} onAction={() => setAttempt((n) => n + 1)} />}
+        {series.kind === "data" && series.series.status !== ArchiveStatus.Available && (
+          <StateView compact icon="database-off-outline" title={t("home.unavailable")} body={series.series.detail ?? t("home.unavailable_generic_short")} />
         )}
-      </GlassCard>
-
-      <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.sectionTitle}>{t("settings.comparison")}</Text>
-        {comparison.kind === "loading" && <Text style={styles.note}>Loading comparison…</Text>}
-        {comparison.kind === "error" && <Text style={styles.errorText}>{comparison.message}</Text>}
-        {comparison.kind === "data" && comparison.result.detail !== null && <Text style={styles.note}>{comparison.result.detail}</Text>}
-        {comparison.kind === "data" && comparison.result.detail === null && (
+        {points.length > 0 && series.kind === "data" && (
           <>
-            <LineChart
-              points={comparison.result.locations[0]?.points ?? []}
-              color={comparison.result.locations[0]?.colorValue ?? AppColors.researcherBlue}
-              unit=" mm"
-            />
-            <View style={{ gap: 4 }}>
-              {comparisonLastTwoYears(comparison.result).map((year) => (
-                <View key={year} style={styles.compareRow}>
-                  <Text style={styles.compareYear}>{year}</Text>
-                  {comparison.kind === "data" &&
-                    comparison.result.locations.map((loc) => (
-                      <Text key={loc.name} style={[styles.compareValue, { color: loc.colorValue }]}>
-                        {comparedValueFor(loc, year) === null ? "—" : `${Math.round(comparedValueFor(loc, year) ?? 0)}`}
-                      </Text>
-                    ))}
-                </View>
-              ))}
-              <View style={styles.compareRow}>
-                <Text style={styles.compareYear}>Σ</Text>
-                {comparison.result.locations.map((loc) => (
-                  <Text key={loc.name} style={[styles.compareValue, { color: loc.colorValue }]}>
-                    {comparedTotal(loc) === null ? "—" : `${Math.round(comparedTotal(loc) ?? 0)}`}
-                  </Text>
-                ))}
-              </View>
+            <LineChart series={[{ points, color: Colors.researcher }]} unit={unit === "°C" ? "°" : ""} accessibilityLabel={`${metricLabel(metric)} ${historicalRangeLabel(series.series) ?? ""}`} />
+            <View style={styles.stats}>
+              <Stat label="Mean" value={`${mean.toFixed(1)} ${unit}`} />
+              <Stat label="Latest vs mean" value={`${deviation >= 0 ? "+" : ""}${deviation.toFixed(1)}%`} color={deviation >= 0 ? Colors.tempWarm : Colors.tempCool} />
+              <Stat label="Coverage" value={historicalRangeLabel(series.series) ?? "—"} />
             </View>
-            <Text style={styles.note}>Rainfall totals, mm, per saved place.</Text>
+            <AppText variant="caption" tone="tertiary">
+              {series.series.source ?? t("home.source_not_reported")}
+            </AppText>
           </>
         )}
-      </GlassCard>
+      </Card>
 
-      <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.sectionTitle}>Anomaly & trends</Text>
-        <View style={styles.metricRow}>
-          {[TrendMetric.Temperature, TrendMetric.Rainfall].map((m) => (
-            <Pressable key={m} onPress={() => useAnomalyTrendsStore.getState().select(m)} style={[styles.metricPill, trend === m && styles.metricActive]}>
-              <Text style={[styles.metricLabel, trend === m && { color: AppColors.bgPrimary }]}>{m === TrendMetric.Temperature ? "Temperature" : "Rainfall"}</Text>
-            </Pressable>
-          ))}
-        </View>
-        {series.kind === "data" && series.series.status === ArchiveStatus.Available && (
-          <Text style={styles.note}>
-            Deviation of the latest year from the mean of the returned window: {anomalyPercent(series.series.points).toFixed(1)}% — a display statistic, not a 30-year climate normal.
-          </Text>
-        )}
-      </GlassCard>
-    </ScrollView>
+      {deviations.length > 1 && (
+        <Card style={styles.gap}>
+          <CardHeader icon="chart-bar" title={t("researcher.anomaly_trends")} />
+          <DeviationBars points={deviations} accessibilityLabel={t("researcher.anomaly_trends")} />
+          <AppText variant="footnote" tone="tertiary">
+            Deviation of each year from the mean of the returned window — a display statistic, not a 30-year climate normal.
+          </AppText>
+        </Card>
+      )}
+    </>
+  );
+}
+
+function ComparisonCard(): React.ReactElement {
+  const t = useTranslation();
+  const saved = useSavedLocationsStore((s) => s.locations);
+  const savedKey = saved.map((s) => s.name).join("|");
+  const [comparison, setComparison] = useState<AsyncComparison>({ kind: "loading" });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    setComparison({ kind: "loading" });
+    fetchComparison(useSavedLocationsStore.getState().locations)
+      .then((r) => active && setComparison({ kind: "data", result: r }))
+      .catch((e: unknown) => active && setComparison({ kind: "error", message: e instanceof Error ? e.message : String(e) }));
+    return () => {
+      active = false;
+    };
+  }, [savedKey, attempt]);
+
+  return (
+    <Card style={styles.gap}>
+      <CardHeader icon="compare-horizontal" title={`${t("researcher.compare_locations")} · ${t("researcher.rainfall")}`} />
+      {comparison.kind === "loading" && <Skeleton height={200} radius={12} />}
+      {comparison.kind === "error" && <StateView compact tone="error" icon="database-alert-outline" title={t("voice.error")} body={comparison.message} actionLabel={t("chat.retry")} onAction={() => setAttempt((n) => n + 1)} />}
+      {comparison.kind === "data" && comparison.result.detail !== null && (
+        <>
+          <StateView compact icon="map-marker-multiple-outline" title={t("researcher.compare_locations")} body={comparison.result.detail} />
+          <Button label={t("settings.saved_locations")} icon="star-outline" variant="secondary" onPress={() => router.push("/locations")} />
+        </>
+      )}
+      {comparison.kind === "data" && comparison.result.detail === null && (
+        <>
+          <LineChart series={comparison.result.locations.map((l) => ({ points: l.points, color: l.colorValue, label: l.name }))} accessibilityLabel={t("researcher.compare_locations")} />
+          <View style={styles.legend}>
+            {comparison.result.locations.map((loc) => (
+              <View key={loc.name} style={styles.legendItem}>
+                <View style={[styles.swatch, { backgroundColor: loc.colorValue }]} />
+                <AppText variant="footnote" numberOfLines={1}>
+                  {loc.name.split(",")[0]}
+                </AppText>
+              </View>
+            ))}
+          </View>
+          <Divider />
+          <View>
+            <View style={styles.tableRow}>
+              <AppText variant="caption" tone="tertiary" style={styles.tableHead}>
+                mm
+              </AppText>
+              {comparisonLastTwoYears(comparison.result).map((year) => (
+                <AppText key={year} variant="caption" tone="tertiary" style={styles.tableCell} align="right">
+                  {year}
+                </AppText>
+              ))}
+              <AppText variant="caption" tone="tertiary" style={styles.tableCell} align="right">
+                Σ
+              </AppText>
+            </View>
+            {comparison.result.locations.map((loc) => (
+              <View key={loc.name} style={styles.tableRow}>
+                <AppText variant="footnote" style={styles.tableHead} numberOfLines={1} color={loc.colorValue}>
+                  {loc.name.split(",")[0]}
+                </AppText>
+                {comparisonLastTwoYears(comparison.result).map((year) => {
+                  const v = comparedValueFor(loc, year);
+                  return (
+                    <AppText key={year} variant="numeric" style={styles.tableCell} align="right" tone={v === null ? "tertiary" : "primary"}>
+                      {v === null ? "—" : Math.round(v)}
+                    </AppText>
+                  );
+                })}
+                <AppText variant="numeric" style={styles.tableCell} align="right">
+                  {comparedTotal(loc) === null ? "—" : Math.round(comparedTotal(loc)!)}
+                </AppText>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+    </Card>
+  );
+}
+
+function Stat({ label, value, color }: { label: string; value: string; color?: string }): React.ReactElement {
+  return (
+    <View style={styles.stat}>
+      <AppText variant="caption" tone="tertiary">
+        {label}
+      </AppText>
+      <AppText variant="numeric" color={color}>
+        {value}
+      </AppText>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    padding: Spacing.lg,
-    paddingBottom: 120,
-    gap: Spacing.md,
+  gap: {
+    gap: Space.md,
   },
-  headerRow: {
+  stats: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.sm,
-  },
-  title: {
-    flex: 1,
-    color: AppColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  sectionTitle: {
-    color: AppColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  metricRow: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
-  metricPill: {
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: AppColors.glassBorderStrong,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-  },
-  metricActive: {
-    backgroundColor: AppColors.accent,
-    borderColor: AppColors.accent,
-  },
-  metricLabel: {
-    color: AppColors.textSecondary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  statRow: {
-    gap: 2,
+    gap: Space.sm,
   },
   stat: {
-    color: AppColors.textSecondary,
-    fontSize: 12,
+    flex: 1,
+    padding: Space.sm,
+    borderRadius: 10,
+    backgroundColor: Colors.surfaceInset,
+    gap: 2,
   },
-  note: {
-    color: AppColors.textTertiary,
-    fontSize: 11.5,
-    lineHeight: 17,
-  },
-  errorText: {
-    color: AppColors.statusRed,
-    fontSize: 12.5,
-  },
-  compareRow: {
+  legend: {
     flexDirection: "row",
-    gap: Spacing.lg,
+    flexWrap: "wrap",
+    gap: Space.md,
   },
-  compareYear: {
-    color: AppColors.textSecondary,
-    fontSize: 12.5,
-    width: 44,
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  compareValue: {
-    fontSize: 12.5,
-    fontWeight: "700",
-    width: 70,
+  swatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 3,
+  },
+  tableRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 32,
+  },
+  tableHead: {
+    flex: 1,
+  },
+  tableCell: {
+    width: 64,
   },
 });

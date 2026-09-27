@@ -285,5 +285,17 @@
   "location.search_hint": "Search city or village…",
   "location.no_results": "No places found. Check the spelling or your connection.",
   "location.save": "Save",
-  "location.saved": "Saved"
+  "location.saved": "Saved",
+  "nav.chat": "చాట్",
+  "nav.map": "మ్యాప్",
+  "nav.farm": "పొలం",
+  "nav.lab": "ల్యాబ్",
+  "home.load_failed": "వాతావరణాన్ని లోడ్ చేయలేకపోయాం",
+  "home.refresh_failed": "రిఫ్రెష్ కాలేదు. చివరి అప్‌డేట్ చూపిస్తున్నాం.",
+  "chat.copy": "కాపీ చేయండి",
+  "chat.read_aloud": "చదివి వినిపించండి",
+  "map.unavailable": "మ్యాప్ అందుబాటులో లేదు. మీ కనెక్షన్ తనిఖీ చేయండి.",
+  "chat.send": "పంపండి",
+  "farmer.band_caution": "జాగ్రత్త",
+  "farmer.band_avoid": "నివారించండి"
 }

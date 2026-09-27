@@ -285,5 +285,17 @@
   "location.search_hint": "Search city or village…",
   "location.no_results": "No places found. Check the spelling or your connection.",
   "location.save": "Save",
-  "location.saved": "Saved"
+  "location.saved": "Saved",
+  "nav.chat": "Chat",
+  "nav.map": "Map",
+  "nav.farm": "Farm",
+  "nav.lab": "Lab",
+  "home.load_failed": "Couldn't load the weather",
+  "home.refresh_failed": "Couldn't refresh. Showing the last update.",
+  "chat.copy": "Copy",
+  "chat.read_aloud": "Read aloud",
+  "map.unavailable": "Map unavailable. Check your connection.",
+  "chat.send": "Send",
+  "farmer.band_caution": "Caution",
+  "farmer.band_avoid": "Avoid"
 }

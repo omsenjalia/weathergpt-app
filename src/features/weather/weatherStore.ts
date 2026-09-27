@@ -76,6 +76,12 @@ export function buildWeatherQuery(opts: {
 
 interface WeatherStore extends WeatherStatus {
   generation: number;
+  /// Request identity of the snapshot on screen. A refresh with the same key
+  /// keeps the current snapshot visible; a new location/mode/pin clears it so
+  /// one place's weather is never shown under another place's name.
+  snapshotKey: string;
+  /// When the app received the snapshot on screen (device clock).
+  updatedAt: Date | null;
   locationRef: AppLocation;
   modeRef: AppMode;
   devRef: DeveloperOptions;
@@ -90,6 +96,8 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
   error: null,
   lastRequest: null,
   generation: 0,
+  snapshotKey: "",
+  updatedAt: null,
   locationRef: DEFAULT_LOCATION,
   modeRef: "everyone",
   devRef: DEFAULT_DEVELOPER_OPTIONS,
@@ -98,13 +106,19 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
 
   fetchWeather: async (location, mode, dev) => {
     const generation = get().generation + 1;
-    set({ generation, loading: true, error: null, snapshot: null, lastRequest: null });
+    const query = buildWeatherQuery({ lat: location.lat, lon: location.lon, mode, dev });
+    const requestKey = JSON.stringify(query);
+    const isRefresh = get().snapshot !== null && get().snapshotKey === requestKey;
+    set({
+      generation,
+      loading: true,
+      error: null,
+      ...(isRefresh ? {} : { snapshot: null, snapshotKey: "", lastRequest: null }),
+    });
     // Keep the ring buffer alive from app start so the Debug screen shows the
     // requests that happened before it was first opened.
     useRequestLogStore.getState().setEnabled(!dev.enabled || dev.logRequests);
     const cityName = location.name.split(",")[0]!.trim();
-
-    const query = buildWeatherQuery({ lat: location.lat, lon: location.lon, mode, dev });
 
     let v2Error: string | null = null;
     try {
@@ -121,6 +135,8 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
       set({
         loading: false,
         snapshot: parseWeatherSnapshotV2(data, { cityName }),
+        snapshotKey: requestKey,
+        updatedAt: new Date(),
         lastRequest: { endpoint: ApiEndpoints.v2Weather, query, usedLegacyFallback: false },
       });
       return;
@@ -157,6 +173,8 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
       set({
         loading: false,
         snapshot: parseWeatherSnapshot(data, { cityName }),
+        snapshotKey: requestKey,
+        updatedAt: new Date(),
         lastRequest: { endpoint: ApiEndpoints.weather, query: legacyQuery, usedLegacyFallback: true, v2Error },
       });
     } catch (error) {
@@ -169,7 +187,7 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
     }
   },
 
-  clear: () => set((s) => ({ generation: s.generation + 1, snapshot: null, error: null, lastRequest: null, loading: false })),
+  clear: () => set((s) => ({ generation: s.generation + 1, snapshot: null, snapshotKey: "", updatedAt: null, error: null, lastRequest: null, loading: false })),
 }));
 
 /// Computes the app-wide sky palette from wall-clock time and the live

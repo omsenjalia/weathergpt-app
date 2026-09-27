@@ -285,5 +285,17 @@
   "location.search_hint": "शहर या गाँव खोजें…",
   "location.no_results": "कोई जगह नहीं मिली। वर्तनी या अपना कनेक्शन जाँचें।",
   "location.save": "सहेजें",
-  "location.saved": "सहेजा गया"
+  "location.saved": "सहेजा गया",
+  "nav.chat": "चैट",
+  "nav.map": "मानचित्र",
+  "nav.farm": "खेत",
+  "nav.lab": "लैब",
+  "home.load_failed": "मौसम लोड नहीं हो सका",
+  "home.refresh_failed": "रीफ़्रेश नहीं हो सका। पिछला अपडेट दिखाया जा रहा है।",
+  "chat.copy": "कॉपी करें",
+  "chat.read_aloud": "पढ़कर सुनाएँ",
+  "map.unavailable": "मानचित्र उपलब्ध नहीं है। अपना कनेक्शन जाँचें।",
+  "chat.send": "भेजें",
+  "farmer.band_caution": "सावधानी",
+  "farmer.band_avoid": "टालें"
 }

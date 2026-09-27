@@ -1,240 +1,122 @@
-import { useTranslation } from "../../src/i18n/useTranslation";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform, TextInput, ActivityIndicator } from "react-native";
-
+import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 import { WebView } from "react-native-webview";
+import { router } from "expo-router";
 
-import { GlassCard } from "../../src/ui/components/GlassCard";
-import { AppColors } from "../../src/ui/appColors";
-import { Radius, Spacing } from "../../src/ui/theme";
-import {
-  MAP_ALL_LAYERS,
-  MAP_LAYER_LABEL,
-  MapLayer,
-  useMapStore,
-  useSavedLocationsStore,
-  windyEmbedUrl,
-} from "../../src/features/explore/exploreStores";
+import { Card, CardHeader, ChipGroup, Chip, Colors, IconButton, Radius, Screen, Section, Space, StateView } from "../../src/ui";
+import { useTranslation } from "../../src/i18n/useTranslation";
+import { MAP_ALL_LAYERS, MapLayer, useMapStore, useSavedLocationsStore, windyEmbedUrl } from "../../src/features/explore/exploreStores";
 import { useLocationStore } from "../../src/features/location/locationStore";
-import { SavedLocation } from "../../src/features/models/location";
-import { GeocodingService } from "../../src/core/services/geocodingService";
+
+const LAYER_KEY: Record<MapLayer, string> = {
+  [MapLayer.Wind]: "map.layer_wind",
+  [MapLayer.Rain]: "map.layer_rain",
+  [MapLayer.Temp]: "map.layer_temp",
+  [MapLayer.Clouds]: "map.layer_clouds",
+  [MapLayer.Radar]: "map.layer_radar",
+  [MapLayer.Waves]: "map.layer_waves",
+  [MapLayer.Pressure]: "map.layer_pressure",
+  [MapLayer.Thunder]: "map.layer_thunder",
+  [MapLayer.Snow]: "map.layer_snow",
+  [MapLayer.Humidity]: "map.layer_humidity",
+  [MapLayer.Cape]: "map.layer_cape",
+};
 
 export default function ExploreScreen(): React.ReactElement {
   const t = useTranslation();
-  const map = useMapStore();
+  const { height } = useWindowDimensions();
+  const activeLayer = useMapStore((s) => s.activeLayer);
+  const mapState = useMapStore();
   const saved = useSavedLocationsStore((s) => s.locations);
-  const currentLocation = useLocationStore((s) => s.location);
-  const [query, setQuery] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [results, setResults] = useState<SavedLocation[]>([]);
+  const current = useLocationStore((s) => s.location);
+  const [focus, setFocus] = useState<string>(current.name);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    map.setCenter(currentLocation.lat, currentLocation.lon, 8);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentLocation.lat, currentLocation.lon]);
+    useMapStore.getState().setCenter(current.lat, current.lon, 7);
+    setFocus(current.name);
+  }, [current.lat, current.lon, current.name]);
 
-  async function search(): Promise<void> {
-    if (query.trim().length < 2) return;
-    setBusy(true);
-    const places = await GeocodingService.searchMany(query, 5);
-    setResults(places.map((p) => new SavedLocation(p.name, p.lat, p.lon)));
-    setBusy(false);
-  }
+  const url = windyEmbedUrl(mapState);
+  const mapHeight = Math.round(Math.min(Math.max(height * 0.52, 320), 560));
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll}>
-      <Text style={styles.title}>{t("map.title")}</Text>
-
-      <GlassCard style={styles.mapCard}>
-        {Platform.OS === "web" ? (
-          <iframe
-            src={windyEmbedUrl(map)}
-            title="Windy map"
-            style={{ width: "100%", height: 360, border: "none", borderRadius: 12 }}
-          />
+    <Screen inTabs title={t("map.title")}>
+      <Card padded={false} style={[styles.mapCard, { height: mapHeight }]}>
+        {failed ? (
+          <StateView icon="map-marker-off-outline" tone="error" title={t("map.unavailable")} actionLabel={t("chat.retry")} onAction={() => setFailed(false)} />
+        ) : Platform.OS === "web" ? (
+          <iframe src={url} title={t("map.title")} style={{ width: "100%", height: "100%", border: "none" }} />
         ) : (
           <WebView
-            source={{ uri: windyEmbedUrl(map) }}
-            style={{ height: 360, backgroundColor: "transparent" }}
+            source={{ uri: url }}
+            style={styles.web}
             originWhitelist={["https://*"]}
             mixedContentMode="never"
             startInLoadingState
-            renderError={() => <Text style={styles.nativeNoteText}>Map unavailable. Check your connection.</Text>}
+            onError={() => setFailed(true)}
+            onHttpError={() => setFailed(true)}
           />
         )}
-      </GlassCard>
+      </Card>
 
-      <View style={styles.layers}>
-        {MAP_ALL_LAYERS.map((layer) => (
-          <Pressable
-            key={layer}
-            onPress={() => map.setLayer(layer)}
-            style={[styles.layerPill, map.activeLayer === layer && styles.layerActive]}
-          >
-            <Text style={[styles.layerLabel, map.activeLayer === layer && { color: AppColors.bgPrimary }]}>{MAP_LAYER_LABEL[layer]}</Text>
-          </Pressable>
-        ))}
-      </View>
+      <ChipGroup
+        layout="scroll"
+        options={MAP_ALL_LAYERS}
+        value={activeLayer}
+        onChange={(layer) => useMapStore.getState().setLayer(layer)}
+        labelFor={(layer) => t(LAYER_KEY[layer])}
+      />
 
-      <GlassCard style={{ gap: Spacing.md }}>
-        <Text style={styles.sectionTitle}>Add a place</Text>
-        <View style={{ flexDirection: "row", gap: Spacing.sm }}>
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            onSubmitEditing={() => void search()}
-            placeholder={t("location.search_hint")}
-            placeholderTextColor={AppColors.textTertiary}
-            style={styles.input}
+      <Section title={t("settings.saved_locations")}>
+        <Card>
+          <CardHeader
+            icon="star-outline"
+            title={t("home.choose_location")}
+            trailing={<IconButton icon="pencil-outline" size={32} accessibilityLabel={t("home.choose_location")} onPress={() => router.push("/locations")} color={Colors.textSecondary} />}
           />
-          <Pressable style={styles.add} onPress={() => void search()}>
-            {busy ? <ActivityIndicator size="small" color={AppColors.bgPrimary} /> : <Text style={styles.addLabel}>{t("location.save")}</Text>}
-          </Pressable>
-        </View>
-        {results.map((place) => (
-          <Pressable
-            key={`${place.name}-${place.lat}`}
-            style={styles.resultRow}
-            onPress={() => {
-              void useSavedLocationsStore.getState().add(place);
-              setResults((r) => r.filter((x) => x !== place));
-              setQuery("");
-            }}
-          >
-            <Text style={styles.resultText} numberOfLines={1}>{place.name}</Text>
-            <Text style={styles.resultSave}>{t("location.save")}</Text>
-          </Pressable>
-        ))}
-      </GlassCard>
-
-      <GlassCard style={{ gap: Spacing.sm }}>
-        <Text style={styles.sectionTitle}>Saved locations ({saved.length})</Text>
-        {saved.length === 0 && <Text style={styles.empty}>Save places to compare them in the Lab tab.</Text>}
-        {saved.map((place) => (
-          <View key={place.name} style={styles.savedRow}>
-            <Pressable onPress={() => map.setCenter(place.lat, place.lon, 9)} style={{ flex: 1 }}>
-              <Text style={styles.savedName} numberOfLines={1}>{place.name}</Text>
-            </Pressable>
-            <Pressable hitSlop={8} onPress={() => void useSavedLocationsStore.getState().remove(place)}>
-              <Text style={styles.remove}>Remove</Text>
-            </Pressable>
+          <View style={styles.places}>
+            <Chip
+              icon="crosshairs-gps"
+              label={current.name.split(",")[0]!}
+              selected={focus === current.name}
+              onPress={() => {
+                setFocus(current.name);
+                useMapStore.getState().setCenter(current.lat, current.lon, 8);
+              }}
+            />
+            {saved
+              .filter((p) => p.name !== current.name)
+              .map((place) => (
+                <Chip
+                  key={place.name}
+                  icon="star"
+                  label={place.name.split(",")[0]!}
+                  selected={focus === place.name}
+                  onPress={() => {
+                    setFocus(place.name);
+                    useMapStore.getState().setCenter(place.lat, place.lon, 8);
+                  }}
+                />
+              ))}
           </View>
-        ))}
-      </GlassCard>
-    </ScrollView>
+        </Card>
+      </Section>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    padding: Spacing.lg,
-    paddingBottom: 120,
-    gap: Spacing.md,
-  },
-  title: {
-    color: AppColors.textPrimary,
-    fontSize: 22,
-    fontWeight: "800",
-  },
   mapCard: {
-    padding: 6,
+    borderRadius: Radius.xl,
   },
-  nativeNote: {
-    height: 200,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: Spacing.lg,
+  web: {
+    flex: 1,
+    backgroundColor: "transparent",
   },
-  nativeNoteText: {
-    color: AppColors.textSecondary,
-    fontSize: 12.5,
-    textAlign: "center",
-    lineHeight: 18,
-  },
-  layers: {
+  places: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: Spacing.sm,
-  },
-  layerPill: {
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: AppColors.glassBorderStrong,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
-    backgroundColor: AppColors.glassFill,
-  },
-  layerActive: {
-    backgroundColor: AppColors.accent,
-    borderColor: AppColors.accent,
-  },
-  layerLabel: {
-    color: AppColors.textSecondary,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  sectionTitle: {
-    color: AppColors.textPrimary,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  input: {
-    flex: 1,
-    borderRadius: Radius.pill,
-    borderWidth: 1,
-    borderColor: AppColors.glassBorderStrong,
-    backgroundColor: AppColors.glassFill,
-    color: AppColors.textPrimary,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 9,
-    fontSize: 13.5,
-  },
-  add: {
-    borderRadius: Radius.pill,
-    backgroundColor: AppColors.accent,
-    paddingHorizontal: Spacing.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addLabel: {
-    color: AppColors.bgPrimary,
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  resultRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: AppColors.borderSubtle,
-  },
-  resultText: {
-    color: AppColors.textPrimary,
-    fontSize: 13,
-    flex: 1,
-  },
-  resultSave: {
-    color: AppColors.accent,
-    fontWeight: "700",
-    fontSize: 12.5,
-  },
-  savedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-  },
-  savedName: {
-    color: AppColors.textPrimary,
-    fontSize: 13.5,
-  },
-  remove: {
-    color: AppColors.statusRed,
-    fontSize: 12,
-  },
-  empty: {
-    color: AppColors.textTertiary,
-    fontSize: 12.5,
+    gap: Space.sm,
   },
 });

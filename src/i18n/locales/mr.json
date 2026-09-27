@@ -285,5 +285,17 @@
   "location.search_hint": "Search city or village…",
   "location.no_results": "No places found. Check the spelling or your connection.",
   "location.save": "Save",
-  "location.saved": "Saved"
+  "location.saved": "Saved",
+  "nav.chat": "चॅट",
+  "nav.map": "नकाशा",
+  "nav.farm": "शेत",
+  "nav.lab": "लॅब",
+  "home.load_failed": "हवामान लोड होऊ शकले नाही",
+  "home.refresh_failed": "रिफ्रेश होऊ शकले नाही. मागील अपडेट दाखवत आहोत.",
+  "chat.copy": "कॉपी करा",
+  "chat.read_aloud": "वाचून दाखवा",
+  "map.unavailable": "नकाशा उपलब्ध नाही. तुमचे कनेक्शन तपासा.",
+  "chat.send": "पाठवा",
+  "farmer.band_caution": "सावधगिरी",
+  "farmer.band_avoid": "टाळा"
 }

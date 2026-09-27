@@ -285,5 +285,17 @@
   "location.search_hint": "Search city or village…",
   "location.no_results": "No places found. Check the spelling or your connection.",
   "location.save": "Save",
-  "location.saved": "Saved"
+  "location.saved": "Saved",
+  "nav.chat": "ಚಾಟ್",
+  "nav.map": "ನಕ್ಷೆ",
+  "nav.farm": "ಹೊಲ",
+  "nav.lab": "ಲ್ಯಾಬ್",
+  "home.load_failed": "ಹವಾಮಾನವನ್ನು ಲೋಡ್ ಮಾಡಲಾಗಲಿಲ್ಲ",
+  "home.refresh_failed": "ರಿಫ್ರೆಶ್ ಆಗಲಿಲ್ಲ. ಕೊನೆಯ ಅಪ್‌ಡೇಟ್ ತೋರಿಸಲಾಗುತ್ತಿದೆ.",
+  "chat.copy": "ನಕಲಿಸಿ",
+  "chat.read_aloud": "ಓದಿ ಹೇಳಿ",
+  "map.unavailable": "ನಕ್ಷೆ ಲಭ್ಯವಿಲ್ಲ. ನಿಮ್ಮ ಸಂಪರ್ಕ ಪರಿಶೀಲಿಸಿ.",
+  "chat.send": "ಕಳುಹಿಸಿ",
+  "farmer.band_caution": "ಎಚ್ಚರಿಕೆ",
+  "farmer.band_avoid": "ತಪ್ಪಿಸಿ"
 }

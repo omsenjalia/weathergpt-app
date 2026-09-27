@@ -285,5 +285,17 @@
   "location.search_hint": "Search city or village…",
   "location.no_results": "No places found. Check the spelling or your connection.",
   "location.save": "Save",
-  "location.saved": "Saved"
+  "location.saved": "Saved",
+  "nav.chat": "அரட்டை",
+  "nav.map": "வரைபடம்",
+  "nav.farm": "பண்ணை",
+  "nav.lab": "ஆய்வகம்",
+  "home.load_failed": "வானிலையை ஏற்ற முடியவில்லை",
+  "home.refresh_failed": "புதுப்பிக்க முடியவில்லை. கடைசி தகவல் காட்டப்படுகிறது.",
+  "chat.copy": "நகலெடு",
+  "chat.read_aloud": "உரக்கப் படி",
+  "map.unavailable": "வரைபடம் கிடைக்கவில்லை. இணைப்பைச் சரிபார்க்கவும்.",
+  "chat.send": "அனுப்பு",
+  "farmer.band_caution": "கவனம்",
+  "farmer.band_avoid": "தவிர்க்கவும்"
 }

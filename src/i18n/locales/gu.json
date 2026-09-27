@@ -285,5 +285,17 @@
   "location.search_hint": "શહેર કે ગામ શોધો…",
   "location.no_results": "કોઈ જગ્યા મળી નથી. જોડણી કે તમારું કનેક્શન તપાસો.",
   "location.save": "સાચવો",
-  "location.saved": "સાચવેલું"
+  "location.saved": "સાચવેલું",
+  "nav.chat": "ચેટ",
+  "nav.map": "નકશો",
+  "nav.farm": "ખેતર",
+  "nav.lab": "લેબ",
+  "home.load_failed": "હવામાન લોડ થઈ શક્યું નહીં",
+  "home.refresh_failed": "રિફ્રેશ થઈ શક્યું નહીં. છેલ્લું અપડેટ બતાવી રહ્યા છીએ.",
+  "chat.copy": "કૉપિ કરો",
+  "chat.read_aloud": "વાંચીને સંભળાવો",
+  "map.unavailable": "નકશો ઉપલબ્ધ નથી. તમારું કનેક્શન તપાસો.",
+  "chat.send": "મોકલો",
+  "farmer.band_caution": "સાવધાની",
+  "farmer.band_avoid": "ટાળો"
 }
