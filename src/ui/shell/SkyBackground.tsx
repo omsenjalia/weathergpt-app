@@ -1,37 +1,45 @@
-/// Live sky behind every screen: the atmosphere palette gradient
-/// (time-of-day × weather), a soft sun/moon, horizon warmth at dawn/dusk and
-/// a vertical scrim that keeps white text legible from midday to midnight.
+/// Live sky behind every screen, bottom to top:
+///   1. palette gradient (time-of-day × weather) — always drawn
+///   2. looping sky video for that scene (fades in once ready)
+///   3. live particles: rain streaks, twinkling stars, lightning
+///   4. horizon warmth at dawn/dusk and a soft sun/moon glow
+///   5. a fixed readability veil so white copy stays legible on any clip
+/// Developer mode can switch the video off (gradient-only sky).
 
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg";
 
-import { AtmospherePalette } from "../../features/weather/theme/atmosphereTheme";
-import { Colors } from "../theme/tokens";
+import { SkyScene } from "../../features/weather/weatherStore";
+import { SkyParticles } from "./SkyParticles";
+import { SkyVideo, clipFor } from "./SkyVideo";
 
 interface SkyBackgroundProps {
-  palette: AtmospherePalette;
+  scene: SkyScene;
+  video: boolean;
   children?: React.ReactNode;
 }
 
-export function SkyBackground({ palette, children }: SkyBackgroundProps): React.ReactElement {
-  const showOrb = palette.showSun || palette.showMoon;
+export function SkyBackground({ scene, video, children }: SkyBackgroundProps): React.ReactElement {
+  const { palette, period, sky } = scene;
+  const showOrb = !video && (palette.showSun || palette.showMoon);
   const orbY = palette.showSun ? palette.sunY : palette.moonY;
   const orbColor = palette.showSun ? palette.orbEnd : palette.orbStart;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: palette.bottom }]}>
       <LinearGradient colors={[palette.top, palette.mid, palette.bottom]} locations={[0, 0.55, 1]} style={StyleSheet.absoluteFill} />
+      {video && <SkyVideo clip={clipFor(period, sky)} />}
+      <SkyParticles period={period} sky={sky} />
 
-      {palette.horizonWarmth > 0 && (
+      {palette.horizonWarmth > 0 && !video && (
         <LinearGradient
+          pointerEvents="none"
           colors={["transparent", `rgba(251, 146, 60, ${0.3 * palette.horizonWarmth})`, `rgba(234, 88, 12, ${0.45 * palette.horizonWarmth})`]}
           style={styles.horizon}
         />
       )}
-
-      <LinearGradient pointerEvents="none" colors={[Colors.scrimTop, Colors.scrimBottom]} locations={[0.1, 0.85]} style={StyleSheet.absoluteFill} />
 
       {/* Ambient sun/moon light: a soft radial glow, not a solid disk, so it
           never reads as an object sitting behind translucent cards. */}
@@ -46,6 +54,13 @@ export function SkyBackground({ palette, children }: SkyBackgroundProps): React.
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#sky-glow)" />
         </Svg>
       )}
+
+      <LinearGradient
+        pointerEvents="none"
+        colors={["rgba(4, 8, 18, 0.34)", "rgba(4, 8, 18, 0.14)", "rgba(4, 8, 18, 0.30)", "rgba(4, 8, 18, 0.66)"]}
+        locations={[0, 0.28, 0.62, 1]}
+        style={StyleSheet.absoluteFill}
+      />
       <View style={StyleSheet.absoluteFill}>{children}</View>
     </View>
   );
@@ -54,7 +69,7 @@ export function SkyBackground({ palette, children }: SkyBackgroundProps): React.
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.canvas,
+    overflow: "hidden",
   },
   horizon: {
     position: "absolute",

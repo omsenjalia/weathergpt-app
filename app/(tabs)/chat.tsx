@@ -7,11 +7,11 @@ import { AppText, Colors, Icon, IconButton, InlineBanner, Layout, Screen, Space,
 import { useKeyboardVisible } from "../../src/ui/shell/useKeyboardVisible";
 import { useTranslation } from "../../src/i18n/useTranslation";
 import { ChatMessage, useChatStore } from "../../src/features/chat/chatStore";
-import { useVoiceStore, VoiceStatus } from "../../src/features/voice/voiceStore";
+import { useVoiceStore } from "../../src/features/voice/voiceStore";
+import { MarkdownUtils } from "../../src/core/utils/markdownUtils";
 import { useSettingsStore, selectMode } from "../../src/features/settings/settingsStore";
 import { MessageItem, TypingIndicator } from "../../src/features/chat/components/MessageItem";
 import { Composer } from "../../src/features/chat/components/Composer";
-import { VoicePanel } from "../../src/features/chat/components/VoicePanel";
 
 export default function ChatScreen(): React.ReactElement {
   const t = useTranslation();
@@ -20,8 +20,22 @@ export default function ChatScreen(): React.ReactElement {
   const messages = useChatStore((s) => s.messages);
   const sending = useChatStore((s) => s.sending);
   const error = useChatStore((s) => s.error);
-  const voiceStatus = useVoiceStore((s) => s.status);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  // A question asked by voice gets its answer read aloud.
+  const speakReplyAfter = useRef<number | null>(null);
+
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (speakReplyAfter.current === null || last === undefined || last.role !== "assistant") return;
+    if (messages.length <= speakReplyAfter.current) return;
+    speakReplyAfter.current = null;
+    void useVoiceStore.getState().speak(MarkdownUtils.spokenSummary("", last.content));
+  }, [messages]);
+
+  const send = (text: string, viaVoice: boolean) => {
+    speakReplyAfter.current = viaVoice ? useChatStore.getState().messages.length + 1 : null;
+    void useChatStore.getState().send(text);
+  };
 
   // Questions handed over from Home arrive as ?q=… and are sent once.
   const { q } = useLocalSearchParams<{ q?: string }>();
@@ -38,12 +52,6 @@ export default function ChatScreen(): React.ReactElement {
   const newConversation = () => {
     useChatStore.getState().clear();
     useVoiceStore.getState().cancel();
-  };
-
-  const toggleMic = () => {
-    const voice = useVoiceStore.getState();
-    if (voice.status === VoiceStatus.Listening) void voice.stopListening();
-    else void voice.startListening();
   };
 
   const bottom = keyboard ? Space.sm : Layout.tabBarHeight + 8 + Math.max(insets.bottom, Space.md) + Space.md;
@@ -75,15 +83,11 @@ export default function ChatScreen(): React.ReactElement {
 
       <View style={[styles.dock, { paddingBottom: bottom }]}>
         {error !== null && <InlineBanner tone="error" message={error} actionLabel={t("chat.retry")} onAction={() => void useChatStore.getState().retryLast()} />}
-        <VoicePanel />
         <Composer
           placeholder={t("chat.hint")}
           sending={sending}
-          listening={voiceStatus === VoiceStatus.Listening}
-          onSend={(text) => void useChatStore.getState().send(text)}
-          onMic={toggleMic}
-          micLabel={t("chat.voice")}
-          sendLabel={t("chat.send")}
+          onSend={send}
+          labels={{ mic: t("chat.voice"), send: t("chat.send"), listening: t("voice.listening"), stop: t("voice_picker.stop"), processing: t("voice.thinking") }}
         />
       </View>
     </Screen>

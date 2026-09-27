@@ -13,3 +13,6 @@ export type { Segment } from "./primitives/Controls";
 export { TextField } from "./primitives/TextField";
 export { Skeleton, StateView, InlineBanner } from "./primitives/Feedback";
 export { Screen, Section } from "./primitives/Screen";
+export { Sheet } from "./primitives/Sheet";
+export { VoiceOrb } from "./primitives/VoiceOrb";
+export type { OrbState } from "./primitives/VoiceOrb";

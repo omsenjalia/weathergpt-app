@@ -45,7 +45,7 @@ type WeatherIcon =
   | "weather-lightning-rainy"
   | "weather-snowy"
   | "weather-windy"
-  | "weather-cloudy-alert";
+  | "cloud-question-outline";
 
 export function iconForSky(sky: SkyCondition, isNight = false): WeatherIcon {
   switch (sky) {
@@ -71,9 +71,14 @@ export function iconForSky(sky: SkyCondition, isNight = false): WeatherIcon {
     case SkyCondition.Windy:
       return "weather-windy";
     case SkyCondition.Unknown:
-      // Never draw an unknown sky as sunny.
-      return "weather-cloudy-alert";
+      // Never draw an unknown sky as sunny; render it dimmed (see isUnknownWeather).
+      return "cloud-question-outline";
   }
+}
+
+/// True when neither a WMO code nor a recognisable condition was reported.
+export function isUnknownWeather(input: { weatherCode?: number | null; condition?: string | null; windKmh?: number | null }): boolean {
+  return conditionFromWeather({ weatherCode: input.weatherCode ?? null, condition: input.condition ?? "", windKmh: input.windKmh ?? null }) === SkyCondition.Unknown;
 }
 
 export function iconForWeather(

@@ -138,7 +138,10 @@ describe("hourLabelFor", () => {
   it("labels in location-local time", () => {
     const utc = new Date("2026-09-19T18:30:00Z");
     expect(hourLabelFor(utc, 19800)).toBe("12AM");
-    expect(hourLabelFor(utc, null)).toMatch(/PM$/);
+    // No offset: falls back to the device clock, so derive the expectation
+    // from the machine's own timezone instead of assuming UTC.
+    const h = utc.getHours();
+    expect(hourLabelFor(utc, null)).toBe(h === 0 ? "12AM" : h === 12 ? "12PM" : h > 12 ? `${h - 12}PM` : `${h}AM`);
   });
   it("handles midnight and noon", () => {
     expect(hourLabelFor(new Date("2026-09-19T00:30:00Z"), 0)).toBe("12AM");

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, RefreshControl, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 
@@ -14,6 +14,8 @@ import { DailyForecast } from "../../src/features/weather/components/DailyForeca
 import { MetricTiles } from "../../src/features/weather/components/MetricTiles";
 import { HomeSkeleton } from "../../src/features/weather/components/HomeSkeleton";
 import { AskCard } from "../../src/features/weather/components/AskCard";
+import { WeatherDetail, WeatherDetailSheet } from "../../src/features/weather/components/DetailSheets";
+import { LocationPromptBar } from "../../src/features/location/components/LocationPromptBar";
 
 /// Refetch when the app returns to the foreground with data older than this.
 const STALE_AFTER_MS = 10 * 60_000;
@@ -52,6 +54,7 @@ export default function HomeScreen(): React.ReactElement {
   }, [load]);
 
   const openLocations = () => router.push("/locations");
+  const [detail, setDetail] = useState<WeatherDetail | null>(null);
 
   if (snapshot === null && error !== null && !loading) {
     return (
@@ -74,15 +77,24 @@ export default function HomeScreen(): React.ReactElement {
       ) : (
         <>
           <CurrentConditions snapshot={snapshot} locationName={location.name} units={units} onPressLocation={openLocations} />
+          <LocationPromptBar />
           {error !== null && <InlineBanner tone="caution" icon="cloud-alert" message={t("home.refresh_failed")} actionLabel={t("chat.retry")} onAction={load} />}
           <AskCard mode={mode} />
           {mode === "farmer" && <FarmShortcut />}
-          <HourlyForecast snapshot={snapshot} units={units} />
-          <DailyForecast snapshot={snapshot} units={units} />
-          <MetricTiles snapshot={snapshot} units={units} />
+          <HourlyForecast snapshot={snapshot} units={units} onSelectHour={(index) => setDetail({ kind: "hour", index })} />
+          <DailyForecast snapshot={snapshot} units={units} onSelectDay={(index) => setDetail({ kind: "day", index })} />
+          <MetricTiles snapshot={snapshot} units={units} onSelect={(metric) => setDetail({ kind: "metric", metric })} />
           <Attribution
             source={snapshot.provenance.selectedSource ?? snapshot.provenance.source ?? null}
             detail={devEnabled && (showProvenance || lastRequest?.usedLegacyFallback) ? `${lastRequest?.endpoint ?? ""}${lastRequest?.usedLegacyFallback ? " · legacy fallback" : ""}${snapshot.provenance.runId ? ` · run ${snapshot.provenance.runId}` : ""}` : null}
+          />
+          <WeatherDetailSheet
+            detail={detail}
+            snapshot={snapshot}
+            units={units}
+            developer={devEnabled}
+            onClose={() => setDetail(null)}
+            onNavigate={setDetail}
           />
         </>
       )}

@@ -3,12 +3,13 @@
 
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { Tabs } from "expo-router";
+import { router, Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText } from "../primitives/AppText";
 import { Icon, IconName } from "../primitives/Icon";
 import { Touchable } from "../primitives/Touchable";
+import { VoiceOrb } from "../primitives/VoiceOrb";
 import { Colors, Layout, Radius, Space } from "../theme/tokens";
 import { useKeyboardVisible } from "./useKeyboardVisible";
 
@@ -22,26 +23,28 @@ export interface TabSpec {
 
 interface FloatingTabBarProps extends TabBarProps {
   specs: Record<string, TabSpec>;
-  /// Route names to show, in order.
+  /// Route names to show, in order. The voice button sits in the middle.
   visible: readonly string[];
+  voiceLabel: string;
 }
 
-export function FloatingTabBar({ state, navigation, specs, visible }: FloatingTabBarProps): React.ReactElement | null {
+export function FloatingTabBar({ state, navigation, specs, visible, voiceLabel }: FloatingTabBarProps): React.ReactElement | null {
   const insets = useSafeAreaInsets();
   const keyboard = useKeyboardVisible();
   if (keyboard) return null;
 
   const activeName = state.routes[state.index]?.name;
+  const middle = Math.ceil(visible.length / 2);
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, Space.md) }]}>
       <View style={styles.bar} accessibilityRole="tablist">
-        {visible.map((name) => {
+        {visible.map((name, index) => {
           const route = state.routes.find((r) => r.name === name);
           const spec = specs[name];
           if (route === undefined || spec === undefined) return null;
           const focused = name === activeName;
-          return (
+          const tab = (
             <Touchable
               key={route.key}
               scale={false}
@@ -63,6 +66,18 @@ export function FloatingTabBar({ state, navigation, specs, visible }: FloatingTa
                 {spec.label}
               </AppText>
             </Touchable>
+          );
+          if (index !== middle) return tab;
+          // Voice-first: the assistant is one tap away from every tab.
+          return (
+            <React.Fragment key={route.key}>
+              <View style={styles.voiceSlot}>
+                <View style={styles.voiceLift}>
+                  <VoiceOrb size={58} ambient={false} accessibilityLabel={voiceLabel} onPress={() => router.push("/voice")} />
+                </View>
+              </View>
+              {tab}
+            </React.Fragment>
           );
         })}
       </View>
@@ -102,6 +117,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 3,
     minHeight: Layout.minTouch,
+  },
+  voiceSlot: {
+    width: 66,
+    alignItems: "center",
+  },
+  voiceLift: {
+    marginTop: -30,
+    borderRadius: 34,
+    borderWidth: 4,
+    borderColor: "rgba(8, 13, 26, 0.9)",
   },
   iconPill: {
     width: 52,

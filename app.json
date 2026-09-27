@@ -33,7 +33,14 @@
       "expo-web-browser",
       "expo-font",
       "expo-location",
-      "expo-speech-recognition"
+      "expo-speech-recognition",
+      "expo-video",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "WeatherGPT uses the microphone so you can ask weather questions by voice."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false

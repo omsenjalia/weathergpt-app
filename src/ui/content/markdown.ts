@@ -13,6 +13,13 @@ export type Block =
 
 const TABLE_DIVIDER = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 
+/// Native-card payloads: ```widget:*``` fences, or JSON fences carrying a
+/// `widget_type` key (how the backend attaches weather cards).
+function isWidgetFence(info: string, body: string[]): boolean {
+  if (info.toLowerCase().startsWith("widget")) return true;
+  return /"widget(_type)?"\s*:/.test(body.join("\n"));
+}
+
 function splitRow(line: string): string[] {
   return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
 }
@@ -32,7 +39,7 @@ export function parseMarkdown(source: string): Block[] {
       i++;
       while (i < lines.length && !/^```/.test(lines[i]!)) body.push(lines[i++]!);
       i++;
-      if (!fence[1]!.toLowerCase().startsWith("widget")) blocks.push({ kind: "code", text: body.join("\n") });
+      if (!isWidgetFence(fence[1]!, body)) blocks.push({ kind: "code", text: body.join("\n") });
       continue;
     }
 

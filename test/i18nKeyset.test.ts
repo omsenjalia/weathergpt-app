@@ -31,9 +31,15 @@ describe("i18n", () => {
     expect(t("definitely.not.a.key")).toBe("definitely.not.a.key");
   });
 
-  it("key counts are reported for the fact-checked 287-key contract", () => {
+  it("key counts stay within a sane band (287 at the Flutter port, grows with features)", () => {
     expect(translationKeyCount("en")).toBe(EN_KEYS.length);
     expect(EN_KEYS.length).toBeGreaterThanOrEqual(280);
-    expect(EN_KEYS.length).toBeLessThanOrEqual(300);
+    expect(EN_KEYS.length).toBeLessThanOrEqual(340);
+  });
+
+  it("every locale translates every English key (no silent English fallback)", () => {
+    for (const language of SUPPORTED_LANGUAGES) {
+      expect(translationKeyCount(language)).toBe(EN_KEYS.length);
+    }
   });
 });

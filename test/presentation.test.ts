@@ -45,7 +45,7 @@ describe("weather formatting keeps null semantics", () => {
 
   it("never draws an unknown sky as sunny", () => {
     expect(iconForSky(SkyCondition.Unknown)).not.toBe("weather-sunny");
-    expect(iconForWeather({ weatherCode: null, condition: "" })).toBe("weather-cloudy-alert");
+    expect(iconForWeather({ weatherCode: null, condition: "" })).toBe("cloud-question-outline");
     expect(iconForWeather({ weatherCode: 0, condition: "" })).toBe("weather-sunny");
     expect(iconForWeather({ weatherCode: 0, condition: "" }, true)).toBe("weather-night");
   });
@@ -103,6 +103,11 @@ describe("markdown parser", () => {
   it("drops widget fences but keeps ordinary code blocks", () => {
     const blocks = parseMarkdown("Hello\n\n```widget:weather\n{}\n```\n\n```\nx = 1\n```");
     expect(blocks.map((b) => b.kind)).toEqual(["paragraph", "code"]);
+  });
+
+  it("drops JSON fences that carry a widget payload", () => {
+    const md = 'Answer\n\n```json\n{\n  "widget_type": "weather_forecast",\n  "date": "2026-09-28"\n}\n```\n\n```json\n{"a": 1}\n```';
+    expect(parseMarkdown(md).map((b) => b.kind)).toEqual(["paragraph", "code"]);
   });
 
   it("parses pipe tables, numbered lists and headings", () => {

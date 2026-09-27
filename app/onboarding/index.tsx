@@ -9,6 +9,7 @@ import { useOnboardingStore } from "../../src/features/onboarding/onboardingStor
 import { useLocationStore } from "../../src/features/location/locationStore";
 import { DEFAULT_FARM_PROFILE } from "../../src/features/farm/models/farmProfile";
 import { FarmProfileForm } from "../../src/features/farm/components/FarmProfileForm";
+import { FarmVoiceFlow } from "../../src/features/farm/components/FarmVoiceFlow";
 
 type Step = "welcome" | "language" | "persona" | "farm";
 
@@ -22,6 +23,7 @@ export default function OnboardingScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>("welcome");
   const [finishing, setFinishing] = useState(false);
+  const [farmMode, setFarmMode] = useState<"choose" | "voice" | "form">("choose");
   const language = useOnboardingStore((s) => s.selectedLanguage);
   const persona = useOnboardingStore((s) => s.selectedPersona);
   // Render in the language being chosen, before settings are persisted.
@@ -69,7 +71,10 @@ export default function OnboardingScreen(): React.ReactElement {
   return (
     <View style={[styles.root, { paddingTop: insets.top + Space.sm }]}>
       <View style={styles.topBar}>
-        <IconButton icon="chevron-left" variant="filled" accessibilityLabel={t("onboarding.back")} onPress={() => setStep(steps[Math.max(0, index - 1)]!)} />
+        <IconButton icon="chevron-left" variant="filled" accessibilityLabel={t("onboarding.back")} onPress={() => {
+            if (step === "farm" && farmMode !== "choose") setFarmMode("choose");
+            else setStep(steps[Math.max(0, index - 1)]!);
+          }} />
         <Progress current={index} total={steps.length - 1} />
         <View style={styles.topSpacer} />
       </View>
@@ -112,11 +117,26 @@ export default function OnboardingScreen(): React.ReactElement {
           </>
         )}
 
-        {step === "farm" && (
+        {step === "farm" && farmMode === "choose" && (
+          <>
+            <Heading title={t("onboarding.farm_choice_title")} hint={t("onboarding.farm_choice_subtitle")} />
+            <View style={styles.list}>
+              <OptionCard action selected={false} icon="microphone" iconColor={Colors.accent} title={t("onboarding.farm_choice_talk")} subtitle={t("onboarding.farm_choice_talk_desc")} onPress={() => setFarmMode("voice")} />
+              <OptionCard action selected={false} icon="keyboard-outline" iconColor={Colors.farmer} title={t("onboarding.farm_choice_type")} subtitle={t("onboarding.farm_choice_type_desc")} onPress={() => setFarmMode("form")} />
+            </View>
+            <Button label={t("onboarding.skip_for_now")} variant="ghost" onPress={() => void finish()} />
+          </>
+        )}
+
+        {step === "farm" && farmMode === "voice" && (
+          <FarmVoiceFlow language={language} onSaved={() => void finish()} onTypeInstead={() => setFarmMode("form")} />
+        )}
+
+        {step === "farm" && farmMode === "form" && (
           <>
             <Heading title={t("onboarding.farm_headline")} hint={t("onboarding.farm_hint")} />
             <FarmProfileForm
-              initial={{ ...DEFAULT_FARM_PROFILE, location: "" }}
+              initial={{ ...DEFAULT_FARM_PROFILE, location: "", farmSizeAcres: 0 }}
               submitLabel={t("onboarding.continue")}
               onSaved={() => void finish()}
               secondaryAction={<Button label={t("onboarding.skip_for_now")} variant="ghost" onPress={() => void finish()} />}
@@ -165,14 +185,16 @@ interface OptionCardProps {
   iconColor?: string;
   onPress: () => void;
   half?: boolean;
+  /// Navigational choice: shows a chevron instead of a radio circle.
+  action?: boolean;
 }
 
-function OptionCard({ selected, title, subtitle, icon, iconColor = Colors.accent, onPress, half = false }: OptionCardProps): React.ReactElement {
+function OptionCard({ selected, title, subtitle, icon, iconColor = Colors.accent, onPress, half = false, action = false }: OptionCardProps): React.ReactElement {
   return (
     <Touchable
       haptics="selection"
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
+      accessibilityRole={action ? "button" : "radio"}
+      accessibilityState={action ? undefined : { checked: selected }}
       accessibilityLabel={subtitle ? `${title}, ${subtitle}` : title}
       onPress={onPress}
       style={[styles.option, half && styles.half, selected && styles.optionSelected]}
@@ -192,7 +214,7 @@ function OptionCard({ selected, title, subtitle, icon, iconColor = Colors.accent
           </AppText>
         )}
       </View>
-      <Icon name={selected ? "check-circle" : "circle-outline"} size={22} color={selected ? Colors.accent : Colors.textTertiary} />
+      <Icon name={action ? "chevron-right" : selected ? "check-circle" : "circle-outline"} size={22} color={selected ? Colors.accent : Colors.textTertiary} />
     </Touchable>
   );
 }

@@ -297,5 +297,18 @@
   "map.unavailable": "मानचित्र उपलब्ध नहीं है। अपना कनेक्शन जाँचें।",
   "chat.send": "भेजें",
   "farmer.band_caution": "सावधानी",
-  "farmer.band_avoid": "टालें"
+  "farmer.band_avoid": "टालें",
+  "settings.voice_female": "महिला",
+  "settings.voice_male": "पुरुष",
+  "settings.voice_engine_bhashini": "भाषिणी आवाज़ें (भारत सरकार)",
+  "settings.voice_engine_device": "डिवाइस की आवाज़",
+  "lab.mean": "औसत",
+  "lab.latest_vs_mean": "नवीनतम बनाम औसत",
+  "lab.coverage": "अवधि",
+  "lab.deviation_note": "लौटाई गई अवधि के औसत से प्रत्येक वर्ष का विचलन — यह एक प्रदर्शन आँकड़ा है, 30-वर्षीय जलवायु मानक नहीं।",
+  "map.zoom_in": "ज़ूम इन",
+  "map.zoom_out": "ज़ूम आउट",
+  "notfound.title": "यह पेज मौजूद नहीं है",
+  "notfound.body": "लिंक टूटा हो सकता है या पेज हटाया गया हो सकता है।",
+  "location.popular": "लोकप्रिय स्थान"
 }

@@ -297,5 +297,18 @@
   "map.unavailable": "ನಕ್ಷೆ ಲಭ್ಯವಿಲ್ಲ. ನಿಮ್ಮ ಸಂಪರ್ಕ ಪರಿಶೀಲಿಸಿ.",
   "chat.send": "ಕಳುಹಿಸಿ",
   "farmer.band_caution": "ಎಚ್ಚರಿಕೆ",
-  "farmer.band_avoid": "ತಪ್ಪಿಸಿ"
+  "farmer.band_avoid": "ತಪ್ಪಿಸಿ",
+  "settings.voice_female": "ಸ್ತ್ರೀ",
+  "settings.voice_male": "ಪುರುಷ",
+  "settings.voice_engine_bhashini": "ಭಾಷಿಣಿ ಧ್ವನಿಗಳು (ಭಾರತ ಸರ್ಕಾರ)",
+  "settings.voice_engine_device": "ಸಾಧನದ ಧ್ವನಿ",
+  "lab.mean": "ಸರಾಸರಿ",
+  "lab.latest_vs_mean": "ಇತ್ತೀಚಿನದು vs ಸರಾಸರಿ",
+  "lab.coverage": "ಅವಧಿ",
+  "lab.deviation_note": "ಬಂದ ಅವಧಿಯ ಸರಾಸರಿಯಿಂದ ಪ್ರತಿ ವರ್ಷದ ವ್ಯತ್ಯಾಸ — ಇದು ಪ್ರದರ್ಶನ ಅಂಕಿಅಂಶ, 30 ವರ್ಷಗಳ ಹವಾಮಾನ ಸಾಮಾನ್ಯ ಮಟ್ಟವಲ್ಲ.",
+  "map.zoom_in": "ಝೂಮ್ ಇನ್",
+  "map.zoom_out": "ಝೂಮ್ ಔಟ್",
+  "notfound.title": "ಈ ಪುಟ ಅಸ್ತಿತ್ವದಲ್ಲಿಲ್ಲ",
+  "notfound.body": "ಲಿಂಕ್ ಮುರಿದಿರಬಹುದು ಅಥವಾ ಪುಟವನ್ನು ಸ್ಥಳಾಂತರಿಸಿರಬಹುದು.",
+  "location.popular": "ಜನಪ್ರಿಯ ಸ್ಥಳಗಳು"
 }

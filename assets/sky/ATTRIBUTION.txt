@@ -1,0 +1,13 @@
+Weather sky loops — Wikimedia Commons (free licenses; transcoded for mobile)
+
+Portrait 720x1280 H.264, 24 fps, no audio, ~10 s loops (re-encoded from the
+1080x1920 originals used by the Flutter build to keep the app small).
+
+- rain.mp4:    "Radevormwald - Raindrops on a window 07" (ies) — CC BY-SA 4.0
+- day.mp4:     "Timelapse of Clouds over Bellevue Canyon" (also used for cloudy/fog skies)
+- sunset.mp4:  "Pacific Ocean sunset (Ocean Shores, Washington), 01"
+- sunrise.mp4: "Time-lapse sunrise Berlin Drachenberg"
+- night.mp4:   "Night sky time lapse"
+- thunder.mp4: "Hail thunderstorm in Romans-sur-Isère"
+
+Sources: https://commons.wikimedia.org/

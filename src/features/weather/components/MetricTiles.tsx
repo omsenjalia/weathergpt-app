@@ -7,10 +7,11 @@ import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Path } from "react-native-svg";
 
-import { AppText, Card, CardHeader, Colors, Icon, IconName, Radius, Space } from "../../../ui";
+import { AppText, Card, CardHeader, Colors, Icon, IconName, Radius, Space, Touchable } from "../../../ui";
 import { useTranslation } from "../../../i18n/useTranslation";
 import { WeatherSnapshot } from "../models/weather";
 import { precipIntervalIsComplete } from "../../../core/models/fieldSources";
+import type { MetricKind } from "./DetailSheets";
 import {
   EM_DASH,
   aqiBandKey,
@@ -29,9 +30,10 @@ import {
 interface MetricTilesProps {
   snapshot: WeatherSnapshot;
   units: "celsius" | "fahrenheit";
+  onSelect?: (metric: MetricKind) => void;
 }
 
-export function MetricTiles({ snapshot, units }: MetricTilesProps): React.ReactElement {
+export function MetricTiles({ snapshot, units, onSelect }: MetricTilesProps): React.ReactElement {
   const t = useTranslation();
   const uvKey = uvBandKey(snapshot.uvIndex);
   const aqiKey = aqiBandKey(snapshot.aqi);
@@ -40,15 +42,16 @@ export function MetricTiles({ snapshot, units }: MetricTilesProps): React.ReactE
 
   return (
     <View style={styles.grid}>
-      <Tile icon="white-balance-sunny" title={t("home.uv_index")} value={formatNumber(snapshot.uvIndex)} caption={uvKey ? t(uvKey) : t("home.unavailable_generic_short")}>
+      <Tile onPress={onSelect ? () => onSelect("uv") : undefined} icon="white-balance-sunny" title={t("home.uv_index")} value={formatNumber(snapshot.uvIndex)} caption={uvKey ? t(uvKey) : t("home.unavailable_generic_short")}>
         <GradientScale ratio={scaleRatio(snapshot.uvIndex, 0, 11)} colors={["#4ADE80", "#FACC15", "#FB923C", "#F87171", "#C084FC"]} />
       </Tile>
 
-      <Tile icon="blur" title={t("home.aqi")} value={formatNumber(snapshot.aqi)} caption={aqiKey ? t(aqiKey) : t("home.unavailable_generic_short")}>
+      <Tile onPress={onSelect ? () => onSelect("aqi") : undefined} icon="blur" title={t("home.aqi")} value={formatNumber(snapshot.aqi)} caption={aqiKey ? t(aqiKey) : t("home.unavailable_generic_short")}>
         <GradientScale ratio={scaleRatio(snapshot.aqi, 0, 100)} colors={["#4ADE80", "#A3E635", "#FACC15", "#FB923C", "#F87171", "#A855F7"]} />
       </Tile>
 
       <Tile
+        onPress={onSelect ? () => onSelect("wind") : undefined}
         icon="weather-windy"
         title={t("home.wind")}
         value={formatNumber(snapshot.windKmh)}
@@ -58,6 +61,7 @@ export function MetricTiles({ snapshot, units }: MetricTilesProps): React.ReactE
       />
 
       <Tile
+        onPress={onSelect ? () => onSelect("humidity") : undefined}
         icon="water-percent"
         title={t("home.humidity")}
         value={formatPercent(snapshot.humidity)}
@@ -66,9 +70,10 @@ export function MetricTiles({ snapshot, units }: MetricTilesProps): React.ReactE
         <Meter ratio={scaleRatio(snapshot.humidity, 0, 100)} color={Colors.rain} />
       </Tile>
 
-      <SunTile snapshot={snapshot} />
+      <SunTile snapshot={snapshot} onPress={onSelect ? () => onSelect("sun") : undefined} />
 
       <Tile
+        onPress={onSelect ? () => onSelect("precip") : undefined}
         icon="umbrella-outline"
         title={t("home.precipitation")}
         value={precip24 !== null ? formatNumber(precip24.totalMm, "", 1) : formatPercent(snapshot.rainProbability)}
@@ -77,6 +82,7 @@ export function MetricTiles({ snapshot, units }: MetricTilesProps): React.ReactE
       />
 
       <Tile
+        onPress={onSelect ? () => onSelect("feels") : undefined}
         icon="thermometer"
         title={t("home.feels_like")}
         value={formatDegrees(snapshot.feelsLikeC, units)}
@@ -84,6 +90,7 @@ export function MetricTiles({ snapshot, units }: MetricTilesProps): React.ReactE
       />
 
       <Tile
+        onPress={onSelect ? () => onSelect("pressure") : undefined}
         icon="gauge"
         title={t("home.pressure")}
         value={formatNumber(snapshot.pressureHpa)}
@@ -112,34 +119,37 @@ interface TileProps {
   caption: string;
   visual?: React.ReactNode;
   children?: React.ReactNode;
+  onPress?: () => void;
 }
 
-function Tile({ icon, title, value, unit, caption, visual, children }: TileProps): React.ReactElement {
+function Tile({ icon, title, value, unit, caption, visual, children, onPress }: TileProps): React.ReactElement {
   return (
-    <Card style={styles.tile} accessible accessibilityLabel={`${title}: ${value}${unit ? ` ${unit}` : ""}. ${caption}`}>
-      <CardHeader icon={icon} title={title} />
-      <View style={styles.valueRow}>
-        <View style={styles.flex}>
-          <View style={styles.valueLine}>
-            <AppText variant="metric" tone={value === EM_DASH ? "tertiary" : "primary"}>
-              {value}
-            </AppText>
-            {unit !== undefined && (
-              <AppText variant="footnote" tone="secondary" style={styles.unit}>
-                {unit}
+    <Touchable onPress={onPress} style={styles.tileWrap} accessibilityLabel={`${title}: ${value}${unit ? ` ${unit}` : ""}. ${caption}`}>
+      <Card style={styles.tile}>
+        <CardHeader icon={icon} title={title} />
+        <View style={styles.valueRow}>
+          <View style={styles.flex}>
+            <View style={styles.valueLine}>
+              <AppText variant="metric" tone={value === EM_DASH ? "tertiary" : "primary"}>
+                {value}
               </AppText>
-            )}
+              {unit !== undefined && (
+                <AppText variant="footnote" tone="secondary" style={styles.unit}>
+                  {unit}
+                </AppText>
+              )}
+            </View>
           </View>
+          {visual}
         </View>
-        {visual}
-      </View>
-      <View style={styles.tileFooter}>
-        {children}
-        <AppText variant="footnote" tone="secondary" numberOfLines={2}>
-          {caption}
-        </AppText>
-      </View>
-    </Card>
+        <View style={styles.tileFooter}>
+          {children}
+          <AppText variant="footnote" tone="secondary" numberOfLines={2}>
+            {caption}
+          </AppText>
+        </View>
+      </Card>
+    </Touchable>
   );
 }
 
@@ -179,7 +189,7 @@ function Compass({ degrees }: { degrees: number | null }): React.ReactElement {
   );
 }
 
-function SunTile({ snapshot }: { snapshot: WeatherSnapshot }): React.ReactElement {
+function SunTile({ snapshot, onPress }: { snapshot: WeatherSnapshot; onPress?: () => void }): React.ReactElement {
   const t = useTranslation();
   const sunrise = localMinutesOfDay(snapshot.sunrise, snapshot.utcOffsetSeconds);
   const sunset = localMinutesOfDay(snapshot.sunset, snapshot.utcOffsetSeconds);
@@ -194,7 +204,7 @@ function SunTile({ snapshot }: { snapshot: WeatherSnapshot }): React.ReactElemen
     : `${t("home.sunset")} ${formatLocalClock(snapshot.sunset, snapshot.utcOffsetSeconds)}`;
 
   return (
-    <Tile icon={beforeSunset ? "weather-sunset-down" : "weather-sunset-up"} title={title} value={value} caption={other}>
+    <Tile onPress={onPress} icon={beforeSunset ? "weather-sunset-down" : "weather-sunset-up"} title={title} value={value} caption={other}>
       <SunArc progress={progress} />
     </Tile>
   );
@@ -222,9 +232,12 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: Space.md,
   },
-  tile: {
+  tileWrap: {
     flexBasis: "46%",
     flexGrow: 1,
+  },
+  tile: {
+    flex: 1,
     minHeight: 164,
     justifyContent: "space-between",
   },

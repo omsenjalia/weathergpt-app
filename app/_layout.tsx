@@ -6,7 +6,8 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { useAgentContextSync, useAppReady, useSkyPalette } from "../src/features/app/bootstrap";
+import { useAgentContextSync, useAppReady, useSkyScene } from "../src/features/app/bootstrap";
+import { useDeveloperOptionsStore } from "../src/features/settings/developerOptionsStore";
 import { SkyBackground } from "../src/ui/shell/SkyBackground";
 import { Colors, Icon } from "../src/ui";
 
@@ -19,13 +20,14 @@ const NAV_THEME = {
 export default function RootLayout(): React.ReactElement {
   const ready = useAppReady();
   useAgentContextSync(ready);
-  const palette = useSkyPalette();
+  const scene = useSkyScene();
+  const videoOff = useDeveloperOptionsStore((s) => s.enabled && s.disableVideoSky);
 
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <SkyBackground palette={palette}>
+        <SkyBackground scene={scene} video={ready && !videoOff}>
           {ready ? (
             <ThemeProvider value={NAV_THEME}>
               <Stack
@@ -39,6 +41,7 @@ export default function RootLayout(): React.ReactElement {
                 <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
                 <Stack.Screen name="onboarding/index" options={{ animation: "fade", gestureEnabled: false }} />
                 <Stack.Screen name="locations" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+                <Stack.Screen name="voice" options={{ presentation: "transparentModal", animation: "fade", gestureEnabled: false }} />
               </Stack>
             </ThemeProvider>
           ) : (

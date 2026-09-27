@@ -297,5 +297,18 @@
   "map.unavailable": "মানচিত্র পাওয়া যাচ্ছে না। সংযোগ পরীক্ষা করুন।",
   "chat.send": "পাঠান",
   "farmer.band_caution": "সতর্কতা",
-  "farmer.band_avoid": "এড়িয়ে চলুন"
+  "farmer.band_avoid": "এড়িয়ে চলুন",
+  "settings.voice_female": "মহিলা",
+  "settings.voice_male": "পুরুষ",
+  "settings.voice_engine_bhashini": "ভাষিণী কণ্ঠ (ভারত সরকার)",
+  "settings.voice_engine_device": "ডিভাইসের কণ্ঠ",
+  "lab.mean": "গড়",
+  "lab.latest_vs_mean": "সর্বশেষ বনাম গড়",
+  "lab.coverage": "সময়কাল",
+  "lab.deviation_note": "প্রাপ্ত সময়কালের গড় থেকে প্রতি বছরের বিচ্যুতি — এটি প্রদর্শনের পরিসংখ্যান, ৩০ বছরের জলবায়ু মান নয়।",
+  "map.zoom_in": "জুম ইন",
+  "map.zoom_out": "জুম আউট",
+  "notfound.title": "এই পৃষ্ঠাটি নেই",
+  "notfound.body": "লিঙ্কটি ভাঙা থাকতে পারে বা পৃষ্ঠাটি সরানো হয়েছে।",
+  "location.popular": "জনপ্রিয় স্থান"
 }

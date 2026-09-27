@@ -77,9 +77,9 @@ function HistoricalCard(): React.ReactElement {
           <>
             <LineChart series={[{ points, color: Colors.researcher }]} unit={unit === "°C" ? "°" : ""} accessibilityLabel={`${metricLabel(metric)} ${historicalRangeLabel(series.series) ?? ""}`} />
             <View style={styles.stats}>
-              <Stat label="Mean" value={`${mean.toFixed(1)} ${unit}`} />
-              <Stat label="Latest vs mean" value={`${deviation >= 0 ? "+" : ""}${deviation.toFixed(1)}%`} color={deviation >= 0 ? Colors.tempWarm : Colors.tempCool} />
-              <Stat label="Coverage" value={historicalRangeLabel(series.series) ?? "—"} />
+              <Stat label={t("lab.mean")} value={`${mean.toFixed(1)} ${unit}`} />
+              <Stat label={t("lab.latest_vs_mean")} value={`${deviation >= 0 ? "+" : ""}${deviation.toFixed(1)}%`} color={deviation >= 0 ? Colors.tempWarm : Colors.tempCool} />
+              <Stat label={t("lab.coverage")} value={historicalRangeLabel(series.series) ?? "—"} />
             </View>
             <AppText variant="caption" tone="tertiary">
               {series.series.source ?? t("home.source_not_reported")}
@@ -93,7 +93,7 @@ function HistoricalCard(): React.ReactElement {
           <CardHeader icon="chart-bar" title={t("researcher.anomaly_trends")} />
           <DeviationBars points={deviations} accessibilityLabel={t("researcher.anomaly_trends")} />
           <AppText variant="footnote" tone="tertiary">
-            Deviation of each year from the mean of the returned window — a display statistic, not a 30-year climate normal.
+            {t("lab.deviation_note")}
           </AppText>
         </Card>
       )}

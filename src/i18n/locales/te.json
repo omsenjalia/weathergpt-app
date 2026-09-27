@@ -297,5 +297,18 @@
   "map.unavailable": "మ్యాప్ అందుబాటులో లేదు. మీ కనెక్షన్ తనిఖీ చేయండి.",
   "chat.send": "పంపండి",
   "farmer.band_caution": "జాగ్రత్త",
-  "farmer.band_avoid": "నివారించండి"
+  "farmer.band_avoid": "నివారించండి",
+  "settings.voice_female": "స్త్రీ",
+  "settings.voice_male": "పురుషుడు",
+  "settings.voice_engine_bhashini": "భాషిణి గొంతులు (భారత ప్రభుత్వం)",
+  "settings.voice_engine_device": "పరికరం గొంతు",
+  "lab.mean": "సగటు",
+  "lab.latest_vs_mean": "తాజా vs సగటు",
+  "lab.coverage": "కాలవ్యవధి",
+  "lab.deviation_note": "అందిన కాలవ్యవధి సగటు నుండి ప్రతి సంవత్సరపు విచలనం — ఇది ప్రదర్శన గణాంకం, 30 ఏళ్ల వాతావరణ సాధారణం కాదు.",
+  "map.zoom_in": "జూమ్ ఇన్",
+  "map.zoom_out": "జూమ్ అవుట్",
+  "notfound.title": "ఈ పేజీ లేదు",
+  "notfound.body": "లింక్ విరిగి ఉండవచ్చు లేదా పేజీ తరలించబడి ఉండవచ్చు.",
+  "location.popular": "ప్రముఖ ప్రదేశాలు"
 }

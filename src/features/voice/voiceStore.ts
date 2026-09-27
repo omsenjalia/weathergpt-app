@@ -1,6 +1,10 @@
 /// Voice store — port of `lib/features/voice/providers/voice_provider.dart`.
 ///
-/// Native and web recognition via expo-speech-recognition; typed fallback remains available.
+/// Speech runs on Bhashini (via the backend) when the backend reports it
+/// configured: TTS audio from /v2/speech/tts, and a recorded WAV of each
+/// question re-transcribed by /v2/speech/asr. The device engines
+/// (expo-speech, native/web recognition) are the fallback, and the live
+/// interim transcript always comes from the device recognizer.
 
 import { create } from "zustand";
 import * as Speech from "expo-speech";
@@ -14,6 +18,7 @@ import { ApiClient } from "../../core/services/apiClient";
 import { AppLocation, DEFAULT_LOCATION } from "../location/locationStore";
 import { DEFAULT_FARM_PROFILE, FarmProfile } from "../farm/models/farmProfile";
 import { mapBackendAnswer, VoiceResponse } from "./mappers/voiceResponseMapper";
+import { SpeechService, speakWithBhashini, stopPlayback, TtsGender } from "./speechService";
 
 export enum VoiceStatus {
   Idle = "idle",
@@ -36,6 +41,8 @@ export interface VoiceContext {
   userPersona: string;
   ttsVoiceLocale: string;
   ttsSpeed: number;
+  /// Bhashini voice. Ignored by the on-device fallback.
+  ttsGender?: TtsGender;
   location: AppLocation;
   profile: FarmProfile;
   profileCompleted?: boolean;
@@ -55,6 +62,15 @@ export function speechRecognitionAvailable(): boolean {
 }
 
 let recognitionSubscriptions: Array<{ remove: () => void }> = [];
+/// WAV of the current utterance when the recognizer can persist audio.
+let recordedAudioUri: string | null = null;
+/// Set while dictating: receives the final transcript instead of /chat.
+let dictationHandler: ((text: string) => void) | null = null;
+
+function supportsRecording(): boolean {
+  try { return ExpoSpeechRecognitionModule.supportsRecording(); } catch { return false; }
+}
+
 function cleanupRecognition() {
   recognitionSubscriptions.forEach((subscription) => subscription.remove());
   recognitionSubscriptions = [];
@@ -70,7 +86,11 @@ interface VoiceStore extends VoiceState {
   context: VoiceContext;
   silenceTimer: ReturnType<typeof setTimeout> | null;
   setContext: (context: VoiceContext) => void;
+  /// Listens and asks WeatherGPT (full voice-assistant turn).
   startListening: () => Promise<void>;
+  /// Listens and hands the transcript to `onText` instead of asking
+  /// (chat dictation, farm voice onboarding). Status returns to Idle.
+  startDictation: (onText: (text: string) => void) => Promise<void>;
   stopListening: () => Promise<void>;
   submitQuery: (text: string) => Promise<void>;
   speak: (text: string) => Promise<void>;
@@ -98,6 +118,11 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
     }
   },
 
+  startDictation: async (onText) => {
+    await get().startListening();
+    dictationHandler = onText;
+  },
+
   startListening: async () => {
     get().cancel();
     const generation = get().generation;
@@ -117,17 +142,25 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
           cleanupRecognition();
           set({ status: VoiceStatus.Error, errorMessage: event.message || "Could not recognize speech. Please type your question." });
         }),
+        ExpoSpeechRecognitionModule.addListener("audioend", (event) => {
+          if (generation === get().generation && event?.uri) recordedAudioUri = event.uri;
+        }),
         ExpoSpeechRecognitionModule.addListener("end", () => {
           cleanupRecognition();
           if (generation !== get().generation || get().status !== VoiceStatus.Listening) return;
-          void get().submitQuery(get().transcript);
+          void finishUtterance(generation);
         }),
       ];
+      recordedAudioUri = null;
+      const record = SpeechService.available() && supportsRecording();
       set({ status: VoiceStatus.Listening });
       ExpoSpeechRecognitionModule.start({
         lang: sttLocale(get().context.language).replace("_", "-"),
         interimResults: true,
         continuous: false,
+        // 16 kHz 16-bit PCM WAV is what Bhashini ASR expects (Android default;
+        // iOS needs it spelled out).
+        ...(record ? { recordingOptions: { persist: true, outputSampleRate: 16000, outputEncoding: "pcmFormatInt16" } } : {}),
       });
     } catch {
       if (generation !== get().generation) return;
@@ -209,6 +242,24 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
     const done = () => {
       if (generation === get().generation) set({ status: VoiceStatus.Done });
     };
+    const context = get().context;
+    if (SpeechService.available()) {
+      try {
+        await speakWithBhashini(clean, {
+          language: context.language,
+          gender: context.ttsGender ?? "female",
+          rate: context.ttsSpeed,
+          isCurrent: () => generation === get().generation,
+          onDone: done,
+        });
+        return;
+      } catch {
+        // Bhashini failed: fall through to the device voice for this and the
+        // next few minutes.
+        SpeechService.markFailed();
+        if (generation !== get().generation) return;
+      }
+    }
     try {
       Speech.speak(clean, {
         language: get().context.ttsVoiceLocale,
@@ -221,6 +272,7 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
   },
 
   stopSpeaking: () => {
+    stopPlayback();
     void Speech.stop();
     set({ status: VoiceStatus.Done });
   },
@@ -230,6 +282,38 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
     if (get().silenceTimer !== null) clearTimeout(get().silenceTimer!);
     set((s) => ({ generation: s.generation + 1, status: VoiceStatus.Idle, transcript: "", response: null, errorMessage: null, silenceTimer: null }));
     try { ExpoSpeechRecognitionModule.abort(); } catch { /* no recognition service */ }
+    recordedAudioUri = null;
+    dictationHandler = null;
+    stopPlayback();
     void Speech.stop();
   },
 }));
+
+/// End of an utterance: prefer Bhashini's transcript of the recorded WAV,
+/// fall back to the device recognizer's.
+async function finishUtterance(generation: number): Promise<void> {
+  const store = useVoiceStore;
+  const uri = recordedAudioUri;
+  recordedAudioUri = null;
+  let transcript = store.getState().transcript;
+  if (uri !== null && SpeechService.available()) {
+    store.setState({ status: VoiceStatus.Processing });
+    try {
+      const heard = await SpeechService.transcribe(uri, store.getState().context.language);
+      if (heard !== "") transcript = heard;
+    } catch {
+      SpeechService.markFailed();
+    }
+    if (generation !== store.getState().generation) return;
+  }
+  const handler = dictationHandler;
+  if (handler !== null) {
+    dictationHandler = null;
+    store.setState({ status: VoiceStatus.Idle, transcript: "" });
+    const text = transcript.trim();
+    if (text !== "") handler(text);
+    else store.setState({ status: VoiceStatus.Error, errorMessage: "No speech detected. Try again or type instead." });
+    return;
+  }
+  await store.getState().submitQuery(transcript);
+}

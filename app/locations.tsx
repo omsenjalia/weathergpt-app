@@ -6,7 +6,7 @@ import { AppText, Card, Colors, Divider, Icon, IconButton, InlineBanner, ListRow
 import { useTranslation } from "../src/i18n/useTranslation";
 import { useLocationStore } from "../src/features/location/locationStore";
 import { useSavedLocationsStore } from "../src/features/explore/exploreStores";
-import { AppLocation, SavedLocation } from "../src/models/location";
+import { AppLocation, PRESET_LOCATIONS, SavedLocation } from "../src/models/location";
 import { GeocodingService } from "../src/core/services/geocodingService";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -120,22 +120,27 @@ export default function LocationsScreen(): React.ReactElement {
           </Card>
           {gpsError && <InlineBanner tone="caution" icon="map-marker-off-outline" message={t("location.not_available")} />}
 
-          <Section title={t("settings.saved_locations")}>
-            <Card padded={false}>
-              {saved.length === 0 ? (
-                <View style={styles.empty}>
-                  <AppText variant="subhead" tone="tertiary" align="center">
-                    {t("location.search_hint")}
-                  </AppText>
-                </View>
-              ) : (
-                saved.map((place, i) => (
+          {saved.length > 0 && (
+            <Section title={t("settings.saved_locations")}>
+              <Card padded={false}>
+                {saved.map((place, i) => (
                   <View key={place.name}>
                     {i > 0 && <Divider inset={Space.lg + 44} />}
                     <PlaceRow place={place} saved onPress={() => choose(place)} onToggleSave={() => toggleSaved(place)} />
                   </View>
-                ))
-              )}
+                ))}
+              </Card>
+            </Section>
+          )}
+
+          <Section title={t("location.popular")}>
+            <Card padded={false}>
+              {PRESET_LOCATIONS.filter((p) => p.name !== current.name).map((place, i) => (
+                <View key={place.name}>
+                  {i > 0 && <Divider inset={Space.lg + 44} />}
+                  <PlaceRow place={place} saved={isSaved(place.name)} onPress={() => choose(place)} onToggleSave={() => toggleSaved(place)} />
+                </View>
+              ))}
             </Card>
           </Section>
         </>

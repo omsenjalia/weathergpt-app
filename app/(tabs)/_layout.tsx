@@ -34,7 +34,7 @@ export default function TabsLayout(): React.ReactElement {
   return (
     <Tabs
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: "transparent" }, animation: "shift" }}
-      tabBar={(props) => <FloatingTabBar {...props} specs={specs} visible={visible} />}
+      tabBar={(props) => <FloatingTabBar {...props} specs={specs} visible={visible} voiceLabel={t("chat.voice")} />}
     >
       <Tabs.Screen name="home" />
       <Tabs.Screen name="chat" />

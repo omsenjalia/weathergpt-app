@@ -3,12 +3,14 @@ import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 
-import { AppText, Card, ChipGroup, Colors, Divider, Icon, IconName, ListRow, Radius, Screen, Section, SegmentedControl, Space, SwitchRow, Touchable } from "../../src/ui";
+import { AppText, Button, Card, ChipGroup, Colors, Divider, Icon, IconName, ListRow, Radius, Screen, Section, SegmentedControl, Space, SwitchRow, Touchable } from "../../src/ui";
 import { useTranslation } from "../../src/i18n/useTranslation";
 import { LANGUAGE_META, LanguageCode, SUPPORTED_LANGUAGES } from "../../src/i18n";
 import { TemperatureUnit, useSettingsStore } from "../../src/features/settings/settingsStore";
 import { DEV_SOURCE_PIN_LABEL, DevSourcePin, useDeveloperOptionsStore } from "../../src/features/settings/developerOptionsStore";
 import { useSavedLocationsStore } from "../../src/features/explore/exploreStores";
+import { useVoiceStore, VoiceStatus } from "../../src/features/voice/voiceStore";
+import { SpeechService } from "../../src/features/voice/speechService";
 
 const PERSONAS: ReadonlyArray<{ id: "everyone" | "farmer" | "researcher"; icon: IconName; color: string }> = [
   { id: "everyone", icon: "account-outline", color: Colors.accent },
@@ -35,6 +37,10 @@ export default function SettingsScreen(): React.ReactElement {
   const devEnabled = useDeveloperOptionsStore((s) => s.enabled);
   const sourcePin = useDeveloperOptionsStore((s) => s.sourcePin);
   const showProvenance = useDeveloperOptionsStore((s) => s.showProvenanceOnHome);
+  const videoOff = useDeveloperOptionsStore((s) => s.disableVideoSky);
+  const ttsGender = useSettingsStore((s) => s.ttsGender);
+  const previewing = useVoiceStore((s) => s.status === VoiceStatus.Speaking);
+  const speechEngine = SpeechService.available();
   const settings = useSettingsStore.getState;
   const dev = useDeveloperOptionsStore.getState;
 
@@ -105,8 +111,28 @@ export default function SettingsScreen(): React.ReactElement {
         </Card>
       </Section>
 
-      <Section title={t("settings.voice_title")}>
+      <Section title={t("settings.voice_title")} footer={speechEngine ? t("settings.voice_engine_bhashini") : t("settings.voice_engine_device")}>
         <Card style={styles.gap}>
+          <AppText variant="callout">{t("voice_picker.title")}</AppText>
+          <View style={styles.voiceRow}>
+            <View style={styles.flex}>
+              <SegmentedControl<"female" | "male">
+                value={ttsGender}
+                onChange={(g) => void settings().updateTtsGender(g)}
+                segments={[
+                  { value: "female", label: t("settings.voice_female") },
+                  { value: "male", label: t("settings.voice_male") },
+                ]}
+              />
+            </View>
+            <Button
+              label={previewing ? t("voice_picker.stop") : t("voice_picker.preview")}
+              icon={previewing ? "stop" : "play"}
+              variant="secondary"
+              onPress={() => (previewing ? useVoiceStore.getState().stopSpeaking() : void useVoiceStore.getState().speak(t("voice_picker.sample")))}
+            />
+          </View>
+          <Divider />
           <AppText variant="callout">{t("settings.tts_speed")}</AppText>
           <SegmentedControl<Speed>
             value={speedFor(ttsSpeed)}
@@ -142,6 +168,10 @@ export default function SettingsScreen(): React.ReactElement {
               <Divider inset={Space.lg + 44} />
               <View style={styles.rowPad}>
                 <SwitchRow icon="source-branch" label="Show provenance on Home" value={showProvenance} onValueChange={(v) => void dev().patch({ showProvenanceOnHome: v })} />
+              </View>
+              <Divider inset={Space.lg + 44} />
+              <View style={styles.rowPad}>
+                <SwitchRow icon="video-off-outline" label="Disable video sky" description="Gradient-only background" value={videoOff} onValueChange={(v) => void dev().patch({ disableVideoSky: v })} />
               </View>
               <Divider inset={Space.lg} />
               <View style={styles.devBlock}>
@@ -195,6 +225,11 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     alignItems: "center",
     justifyContent: "center",
+  },
+  voiceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Space.sm,
   },
   devBlock: {
     padding: Space.lg,

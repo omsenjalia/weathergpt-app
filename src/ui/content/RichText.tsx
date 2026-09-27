@@ -110,14 +110,23 @@ export function RichText({ content, color = Colors.text }: RichTextProps): React
   );
 }
 
+/// One width per column (from its longest cell) so rows line up.
+function columnWidths(header: string[], rows: string[][]): number[] {
+  return header.map((h, c) => {
+    const longest = Math.max(h.length, ...rows.map((r) => (r[c] ?? "").replace(/[*`]/g, "").length));
+    return Math.min(Math.max(Math.round(longest * 7.2) + 24, 88), 220);
+  });
+}
+
 function Table({ header, rows, color }: { header: string[]; rows: string[][]; color: string }): React.ReactElement {
   const cell: TextStyle = { ...Type.subhead, color };
+  const widths = columnWidths(header, rows);
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.table}>
       <View>
         <View style={[styles.tr, styles.thead]}>
           {header.map((h, c) => (
-            <Text key={c} style={[cell, styles.td, styles.th]}>
+            <Text key={c} style={[cell, styles.td, styles.th, { width: widths[c] }]}>
               {renderInline(h, `th${c}`, cell, color)}
             </Text>
           ))}
@@ -125,7 +134,7 @@ function Table({ header, rows, color }: { header: string[]; rows: string[][]; co
         {rows.map((row, r) => (
           <View key={r} style={[styles.tr, r % 2 === 1 && styles.zebra]}>
             {header.map((_, c) => (
-              <Text key={c} style={[cell, styles.td]}>
+              <Text key={c} style={[cell, styles.td, { width: widths[c] }]}>
                 {renderInline(row[c] ?? "", `td${r}-${c}`, cell, color)}
               </Text>
             ))}
@@ -203,8 +212,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.03)",
   },
   td: {
-    minWidth: 88,
-    maxWidth: 200,
     paddingHorizontal: Space.md,
     paddingVertical: Space.sm,
   },

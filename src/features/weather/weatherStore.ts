@@ -190,16 +190,20 @@ export const useWeatherStore = create<WeatherStore>((set, get) => ({
   clear: () => set((s) => ({ generation: s.generation + 1, snapshot: null, snapshotKey: "", updatedAt: null, error: null, lastRequest: null, loading: false })),
 }));
 
-/// Computes the app-wide sky palette from wall-clock time and the live
-/// snapshot — port of `atmosphere_provider.dart` (`atmospherePaletteProvider`).
-export function atmospherePalette(
+export interface SkyScene {
+  period: SkyPeriod;
+  sky: SkyCondition;
+  palette: AtmospherePalette;
+}
+
+/// Resolves the live sky — solar period at the location, weather condition
+/// and the derived palette — from wall-clock time and the snapshot. Port of
+/// `atmosphere_provider.dart`. Developer overrides win when set.
+export function skyScene(
   now: Date,
   snapshot: WeatherSnapshot | null,
   dev?: { forcePeriod: SkyPeriod | null; forceSky: SkyCondition | null },
-): AtmospherePalette {
-  if (dev?.forcePeriod !== undefined && dev.forcePeriod !== null && dev.forceSky !== undefined && dev.forceSky !== null) {
-    return paletteFor(dev.forcePeriod, dev.forceSky);
-  }
+): SkyScene {
   const offset = snapshot?.utcOffsetSeconds;
   const localClock = (instant: Date): Date => {
     if (offset == null) return instant;
@@ -210,19 +214,18 @@ export function atmospherePalette(
     const parsed = parseWeatherTime(raw);
     if (!parsed) return null;
     // Naive solar timestamps already represent location-local wall time.
-    return raw && /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw) ? localClock(parsed) : parsed;
+    return raw && /(?:Z|[+-]d{2}:?d{2})$/i.test(raw) ? localClock(parsed) : parsed;
   };
-  const sunrise = solarClock(snapshot?.sunrise);
-  const sunset = solarClock(snapshot?.sunset);
-  const sky =
-    dev?.forceSky !== undefined && dev.forceSky !== null
-      ? dev.forceSky
-      : snapshot === null
-        ? SkyCondition.Clear
-        : conditionFromWeather(snapshot);
-  const period =
-    dev?.forcePeriod !== undefined && dev.forcePeriod !== null
-      ? dev.forcePeriod
-      : periodFromLocalTime(localClock(now), sunrise, sunset);
-  return paletteFor(period, sky);
+  const sky = dev?.forceSky ?? (snapshot === null ? SkyCondition.Clear : conditionFromWeather(snapshot));
+  const period = dev?.forcePeriod ?? periodFromLocalTime(localClock(now), solarClock(snapshot?.sunrise), solarClock(snapshot?.sunset));
+  return { period, sky, palette: paletteFor(period, sky) };
+}
+
+/// App-wide sky palette (see `skyScene`).
+export function atmospherePalette(
+  now: Date,
+  snapshot: WeatherSnapshot | null,
+  dev?: { forcePeriod: SkyPeriod | null; forceSky: SkyCondition | null },
+): AtmospherePalette {
+  return skyScene(now, snapshot, dev).palette;
 }

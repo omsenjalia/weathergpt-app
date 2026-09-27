@@ -3,13 +3,15 @@ import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 
 import { Button, Screen, StateView } from "../src/ui";
+import { useTranslation } from "../src/i18n/useTranslation";
 
 export default function NotFoundScreen(): React.ReactElement {
+  const t = useTranslation();
   return (
     <Screen>
       <View style={styles.center}>
-        <StateView icon="map-search-outline" title="This page doesn't exist" body="The link may be broken or the page may have moved." />
-        <Button label="Go to today's weather" icon="weather-partly-cloudy" onPress={() => router.replace("/home")} />
+        <StateView icon="map-search-outline" title={t("notfound.title")} body={t("notfound.body")} />
+        <Button label={t("common.today")} icon="weather-partly-cloudy" onPress={() => router.replace("/home")} />
       </View>
     </Screen>
   );

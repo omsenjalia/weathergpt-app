@@ -2,80 +2,88 @@ import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 
-import { AppText, Card, Colors, Icon, Radius, Space, Touchable } from "../../../ui";
+import { AppText, Card, Colors, Icon, Radius, Space, Touchable, VoiceOrb } from "../../../ui";
 import { useTranslation } from "../../../i18n/useTranslation";
 import { AppMode } from "../../../core/models/appMode";
 
-/// Entry point into the assistant: a search-style bar plus persona-specific
-/// suggested questions that open Chat pre-filled and sent.
+/// Voice-first entry to the assistant: a large mic that opens voice mode,
+/// persona-specific spoken questions, and a quieter path to typed chat.
 export function AskCard({ mode }: { mode: AppMode }): React.ReactElement {
   const t = useTranslation();
   const prefix = mode === "farmer" ? "home.farmer" : mode === "researcher" ? "home.researcher" : "home.everyone";
   const prompts = [1, 2, 3].map((n) => t(`${prefix}_prompt_${n}`));
 
-  const open = (q?: string) => router.push(q === undefined ? "/chat" : { pathname: "/chat", params: { q } });
-
   return (
-    <Card padded={false} style={styles.card}>
-      <Touchable onPress={() => open()} haptics="light" accessibilityLabel={t(`${prefix}_hint`)} style={styles.bar}>
-        <View style={styles.spark}>
-          <Icon name="creation" size={18} color={Colors.onAccent} />
+    <Card style={styles.card}>
+      <View style={styles.top}>
+        <VoiceOrb size={76} accessibilityLabel={t("chat.voice")} onPress={() => router.push("/voice")} />
+        <View style={styles.flex}>
+          <AppText variant="headline">{t("chat.voice")}</AppText>
+          <AppText variant="subhead" tone="secondary">
+            {t(`${prefix}_hint`)}
+          </AppText>
         </View>
-        <AppText variant="callout" tone="secondary" style={styles.flex} numberOfLines={1}>
-          {t(`${prefix}_hint`)}
-        </AppText>
-        <Icon name="microphone-outline" size={20} color={Colors.textSecondary} />
-      </Touchable>
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.prompts}>
         {prompts.map((prompt) => (
-          <Touchable key={prompt} onPress={() => open(prompt)} haptics="selection" accessibilityLabel={prompt} style={styles.prompt}>
+          <Touchable
+            key={prompt}
+            onPress={() => router.push({ pathname: "/voice", params: { q: prompt } })}
+            haptics="selection"
+            accessibilityLabel={prompt}
+            style={styles.prompt}
+          >
+            <Icon name="volume-high" size={15} color={Colors.accentText} />
             <AppText variant="footnote" numberOfLines={1}>
               {prompt}
             </AppText>
           </Touchable>
         ))}
       </ScrollView>
+      <Touchable onPress={() => router.navigate("/chat")} scale={false} accessibilityLabel={t("home.ask_something_else")} style={styles.typeRow}>
+        <Icon name="keyboard-outline" size={18} color={Colors.textTertiary} />
+        <AppText variant="footnote" tone="tertiary" style={styles.flex}>
+          {t("home.ask_something_else")}
+        </AppText>
+        <Icon name="chevron-right" size={18} color={Colors.textTertiary} />
+      </Touchable>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    paddingVertical: Space.md,
-    gap: Space.md,
+    gap: Space.lg,
   },
   flex: {
     flex: 1,
   },
-  bar: {
+  top: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Space.md,
-    marginHorizontal: Space.md,
-    minHeight: 48,
-    paddingLeft: 6,
-    paddingRight: Space.md,
-    borderRadius: Radius.pill,
-    backgroundColor: Colors.surfaceInset,
-  },
-  spark: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.accent,
-    alignItems: "center",
-    justifyContent: "center",
+    gap: Space.lg,
   },
   prompts: {
     gap: Space.sm,
-    paddingHorizontal: Space.md,
   },
   prompt: {
-    minHeight: 36,
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minHeight: 40,
     paddingHorizontal: 14,
     borderRadius: Radius.pill,
+    backgroundColor: Colors.surfaceInset,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.hairlineStrong,
+  },
+  typeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Space.sm,
+    minHeight: 40,
+    paddingHorizontal: Space.md,
+    borderRadius: Radius.md,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
   },
 });

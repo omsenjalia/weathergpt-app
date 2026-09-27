@@ -2,20 +2,21 @@ import React, { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
-import { AppText, Card, CardHeader, Colors, Divider, Icon, Radius, Space, StateView } from "../../../ui";
+import { AppText, Card, CardHeader, Colors, Divider, Icon, Radius, Space, StateView, Touchable } from "../../../ui";
 import { useTranslation } from "../../../i18n/useTranslation";
 import { LANGUAGE_META } from "../../../i18n";
 import { DayForecast, WeatherSnapshot } from "../models/weather";
-import { formatDegrees, iconForWeather, weekdayShort } from "../format";
+import { formatDegrees, iconForWeather, isUnknownWeather, weekdayShort } from "../format";
 
 interface DailyForecastProps {
   snapshot: WeatherSnapshot;
   units: "celsius" | "fahrenheit";
+  onSelectDay?: (index: number) => void;
 }
 
 /// Daily list with range bars on a shared week-wide scale, so days can be
 /// compared at a glance. Missing highs/lows render as an empty track.
-export function DailyForecast({ snapshot, units }: DailyForecastProps): React.ReactElement {
+export function DailyForecast({ snapshot, units, onSelectDay }: DailyForecastProps): React.ReactElement {
   const t = useTranslation();
   const locale = LANGUAGE_META[t.language].ttsLocale;
   const days = snapshot.forecast;
@@ -48,6 +49,7 @@ export function DailyForecast({ snapshot, units }: DailyForecastProps): React.Re
             weekMin={weekMin}
             weekMax={weekMax}
             current={index === 0 ? snapshot.temperatureC ?? null : null}
+            onPress={onSelectDay ? () => onSelectDay(index) : undefined}
           />
         </View>
       ))}
@@ -62,9 +64,11 @@ interface DayRowProps {
   weekMin: number;
   weekMax: number;
   current: number | null;
+  onPress?: () => void;
 }
 
-function DayRow({ day, label, units, weekMin, weekMax, current }: DayRowProps): React.ReactElement {
+function DayRow({ day, label, units, weekMin, weekMax, current, onPress }: DayRowProps): React.ReactElement {
+  const t = useTranslation();
   const rain = day.rainProbability;
   const span = Math.max(weekMax - weekMin, 1);
   const hasRange = day.lowC != null && day.highC != null;
@@ -73,16 +77,22 @@ function DayRow({ day, label, units, weekMin, weekMax, current }: DayRowProps): 
   const dot = current !== null && hasRange ? ((Math.min(Math.max(current, weekMin), weekMax) - weekMin) / span) * 100 : null;
 
   return (
-    <View
+    <Touchable
       style={styles.row}
-      accessible
-      accessibilityLabel={`${label}: ${day.condition}, high ${formatDegrees(day.highC, units)}, low ${formatDegrees(day.lowC, units)}${rain != null ? `, ${Math.round(rain)}% rain` : ""}`}
+      scale={false}
+      onPress={onPress}
+      accessibilityLabel={`${label}: ${day.condition}, ${t("home.high_low")} ${formatDegrees(day.highC, units)} / ${formatDegrees(day.lowC, units)}${rain != null ? `, ${t("home.rain_chance")} ${Math.round(rain)}%` : ""}`}
+      accessibilityHint={t("home.tap_for_details")}
     >
       <AppText variant="callout" style={styles.day} numberOfLines={1}>
         {label}
       </AppText>
       <View style={styles.iconCol}>
-        <Icon name={iconForWeather({ weatherCode: day.weatherCode, condition: day.condition, windKmh: day.windKmhMax })} size={22} color={Colors.text} />
+        <Icon
+          name={iconForWeather({ weatherCode: day.weatherCode, condition: day.condition, windKmh: day.windKmhMax })}
+          size={22}
+          color={isUnknownWeather({ weatherCode: day.weatherCode, condition: day.condition }) ? Colors.textTertiary : Colors.text}
+        />
         {rain != null && rain >= 10 && (
           <AppText variant="caption" color={Colors.rain}>
             {Math.round(rain)}%
@@ -106,7 +116,7 @@ function DayRow({ day, label, units, weekMin, weekMax, current }: DayRowProps): 
       <AppText variant="numeric" style={styles.temp} align="right">
         {formatDegrees(day.highC, units)}
       </AppText>
-    </View>
+    </Touchable>
   );
 }
 
