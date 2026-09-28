@@ -267,7 +267,7 @@ weathergpt-app/
 Backend layout (`backend/backend/`):
 
 ```
-main.py, api/index.py   uvicorn entry / Vercel entry (vercel.json rewrites every path to api/index)
+main.py, api/index.py   uvicorn entry / Vercel entry (vercel.json sets maxDuration only; a catch-all rewrite 404s every route)
 weathergpt/
   config.py             typed settings (placeholders count as unset)
   http.py, runtime.py   upstream HTTP seam; logs, uptime, TTL caches
