@@ -9,14 +9,13 @@ import { SkyCondition, SkyPeriod } from "../weather/theme/atmosphereTheme";
 import { loadJson, saveJson, StorageKeys } from "../../lib/persistence";
 
 /// Which provider the app asks the backend to use. `auto` lets the backend
-/// run its IMD → WeatherNext → AccuWeather → Open-Meteo policy; anything else
+/// run its IMD → WeatherNext → Open-Meteo policy; anything else
 /// is an explicit pin and the backend returns that provider or an honest
 /// `unavailable` — it never silently substitutes another one.
 export enum DevSourcePin {
   Auto = "auto",
   WeatherNext = "weathernext",
   OpenMeteo = "openMeteo",
-  AccuWeather = "accuweather",
   Imd = "imd",
 }
 
@@ -24,7 +23,6 @@ export const DEV_SOURCE_PIN_WIRE: Record<DevSourcePin, string> = {
   [DevSourcePin.Auto]: "auto",
   [DevSourcePin.WeatherNext]: "weathernext",
   [DevSourcePin.OpenMeteo]: "open_meteo",
-  [DevSourcePin.AccuWeather]: "accuweather",
   [DevSourcePin.Imd]: "imd",
 };
 
@@ -32,7 +30,6 @@ export const DEV_SOURCE_PIN_LABEL: Record<DevSourcePin, string> = {
   [DevSourcePin.Auto]: "Auto (backend policy)",
   [DevSourcePin.WeatherNext]: "WeatherNext (pinned)",
   [DevSourcePin.OpenMeteo]: "Open-Meteo (pinned)",
-  [DevSourcePin.AccuWeather]: "AccuWeather (pinned)",
   [DevSourcePin.Imd]: "IMD (pinned)",
 };
 
@@ -95,6 +92,14 @@ interface DeveloperOptionsStore extends DeveloperOptions {
   reset: () => Promise<void>;
 }
 
+function isDevSourcePin(value: unknown): value is DevSourcePin {
+  return Object.values(DevSourcePin).includes(value as DevSourcePin);
+}
+
+function isDevWnModel(value: unknown): value is DevWnModel {
+  return Object.values(DevWnModel).includes(value as DevWnModel);
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
@@ -112,8 +117,9 @@ export const useDeveloperOptionsStore = create<DeveloperOptionsStore>((set, get)
     const raw = await loadJson<Partial<DeveloperOptions> | null>(StorageKeys.developerOptions);
     set({
       ...(raw ?? {}),
-      sourcePin: raw?.sourcePin !== undefined ? (raw.sourcePin as DevSourcePin) : DEFAULT_DEVELOPER_OPTIONS.sourcePin,
-      wnModel: raw?.wnModel !== undefined ? (raw.wnModel as DevWnModel) : DEFAULT_DEVELOPER_OPTIONS.wnModel,
+      // A stale pin (e.g. AccuWeather, which the backend no longer ships) falls back to auto.
+      sourcePin: isDevSourcePin(raw?.sourcePin) ? raw.sourcePin : DEFAULT_DEVELOPER_OPTIONS.sourcePin,
+      wnModel: isDevWnModel(raw?.wnModel) ? raw.wnModel : DEFAULT_DEVELOPER_OPTIONS.wnModel,
       hourlyHours: clamp(Math.round(Number(raw?.hourlyHours ?? 48)), 1, 168),
       forecastDays: clamp(Math.round(Number(raw?.forecastDays ?? 7)), 1, 15),
       hydrated: true,

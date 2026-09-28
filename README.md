@@ -75,9 +75,10 @@ citizens, farmers, and disaster managers with:
   regional mother tongue (*"Will it rain on my cotton crop in Rajkot tomorrow?"*).
 - **TypeSafe System One (Jev) Agricultural AI**: Calibrated probabilistic farm action
   windows for pesticide spraying, irrigation scheduling, and harvesting.
-- **Authoritative Multi-Source Ensemble Engine**: Current production uses
-  **IMD → WeatherNext → AccuWeather → Open-Meteo** selection policy with per-field
-  supplementation and provenance tracking (see `docs/app_data_contracts.md`).
+- **Official IMD data first**: forecasts follow **IMD → WeatherNext → Open-Meteo** —
+  IMD station observations and the official 7-day forecast, Google WeatherNext ensembles,
+  then Open-Meteo — with per-field attribution, and official IMD / NDMA warnings on every
+  forecast (see `docs/app_data_contracts.md`).
 - **Dynamic Live Atmospheric Sky**: 11 solar periods and 12 weather conditions driving
   smooth gradient transitions (native builds add looping video skies).
 - **Interactive Windy GIS Radar & Maps**: Full-screen radar, satellite, wind stream, and
@@ -112,8 +113,8 @@ citizens, farmers, and disaster managers with:
 
 ## 🏛️ System Architecture
 
-WeatherGPT Mobile pairs with a unified FastAPI backend that simultaneously serves the
-React web client. Both clients share the conversational agent and ensemble fusion engine.
+WeatherGPT Mobile pairs with one FastAPI backend (the `backend/` submodule) that also serves
+weathergpt-android and the React web client; all of them share the forecast chain and the agent.
 
 ```mermaid
 graph TB
@@ -127,20 +128,19 @@ graph TB
         MAP["Windy Embed<br/>(iframe / WebView)"]
     end
 
-    subgraph "FastAPI Server Infrastructure (Shared Dual-Client Cloud)"
-        SERVER["FastAPI Server<br/>(CORS * · Request Logging)"]
-        RCHAT["POST /chat<br/>(Shared Contract)"]
-        RMOB["GET /weather · /advisory · /historical<br/>(Mobile Routes)"]
-        FUSION["Multi-Source Ensemble Engine<br/>(services/fusion.py)"]
-        JEV["TypeSafe System One (Jev)<br/>(Farm Decision Model)"]
-        AGENT["LangGraph Agent<br/>(Groq 8-Model Cascade)"]
+    subgraph "FastAPI backend (shared by weathergpt-app, weathergpt-android, web)"
+        RCHAT["POST /chat · /voice<br/>(answer + live card)"]
+        RMOB["GET /v2/weather · /advisory · /historical · /v2/alerts · /v2/imd/*"]
+        CHAIN["Provider chain<br/>(IMD → WeatherNext → Open-Meteo)"]
+        JEV["TypeSafe System One<br/>(optional advisory overlay)"]
+        AGENT["LangGraph Agent<br/>(Groq)"]
     end
 
-    subgraph "Meteorological Telemetry Sources"
-        OM["Open-Meteo (ECMWF/IMD)"]
-        AW["AccuWeather"]
-        WN["WeatherNext"]
-        IMD["IMD"]
+    subgraph "Sources"
+        IMD["IMD API gateway<br/>(observations, forecast, warnings)"]
+        WN["Google WeatherNext"]
+        OM["Open-Meteo"]
+        SACHET["NDMA SACHET alerts"]
     end
 
     UI --> ROUTER
@@ -150,22 +150,23 @@ graph TB
     UI --> VOICE
     UI --> MAP
 
-    API -->|"GET /weather, /advisory, /historical"| RMOB
+    API -->|"GET /v2/weather, /advisory, /historical"| RMOB
     API -->|"POST /chat (mode, crop, coords)"| RCHAT
 
     RCHAT --> AGENT
-    AGENT --> FUSION
-    RMOB --> FUSION
+    RCHAT --> CHAIN
+    AGENT --> CHAIN
+    RMOB --> CHAIN
     RMOB --> JEV
+    RMOB --> SACHET
 
-    FUSION --> OM
-    FUSION --> AW
-    FUSION --> WN
-    FUSION --> IMD
+    CHAIN --> IMD
+    CHAIN --> WN
+    CHAIN --> OM
 ```
 
-> 📖 **Deep Dive**: For full technical specifications, sequence diagrams, mathematical
-> fusion formulas, and component listings, consult [**`ARCHITECTURE.md`**](ARCHITECTURE.md).
+> 📖 **Deep Dive**: For full technical specifications, sequence diagrams, provider
+> rules, and component listings, consult [**`ARCHITECTURE.md`**](ARCHITECTURE.md).
 
 ---
 
