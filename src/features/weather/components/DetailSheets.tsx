@@ -251,6 +251,9 @@ function DayDetail({ snapshot, index, units, developer, onNavigate }: { snapshot
           </View>
         }
       />
+      {day.forecastText != null && day.forecastText !== "" && (
+        <Note icon="bullhorn-outline" text={`${t("home.imd_forecast")}: ${day.forecastText}`} />
+      )}
       {partial && <Note icon="timer-sand" text={t("home.partial_day_detail", { n: day.hoursCovered ?? "?" })} />}
       {hours.length > 0 && (
         <View style={styles.gapSm}>

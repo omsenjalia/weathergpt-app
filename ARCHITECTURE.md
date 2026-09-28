@@ -384,11 +384,11 @@ sequenceDiagram
 ```mermaid
 graph TD
     ROUTES["Routes - home, chat, farm, lab, explore, profile, voice, locations, farm-profile, debug, onboarding"]
-    COMPONENTS["Feature components - CurrentConditions, AskCard, DetailSheets, MetricTiles, Composer, InsightCard, SuitabilityTrack, FarmVoiceFlow"]
+    COMPONENTS["Feature components - CurrentConditions, OfficialAlertsCard, AskCard, DetailSheets, MetricTiles, Composer, InsightCard, SuitabilityTrack, FarmVoiceFlow"]
     UIKIT["src/ui - tokens, primitives, SkyBackground, TabBar, RichText, LineChart"]
     STORES["Zustand stores - weather, chat, voice, location, farmProfile, actionWindows, settings, developerOptions, map, savedLocations, requestLog"]
     BOOT["bootstrap.ts - hydration, context sync, sky scene"]
-    PARSERS["Parsers - weatherV2Parser, weatherParser, jsonValues, voiceResponseMapper, farmVoiceParser"]
+    PARSERS["Parsers - weatherV2Parser, weatherParser, officialAlerts, jsonValues, voiceResponseMapper, farmVoiceParser"]
     SERVICES["Services - ApiClient, SpeechService, GeocodingService"]
     STORAGE["AsyncStorage (persistence.ts)"]
     DEVICE["Device - expo-location, expo-speech-recognition, expo-audio, expo-speech, expo-video"]
@@ -473,7 +473,7 @@ sequenceDiagram
     end
 
     App->>App: skyScene → SkyPeriod (11) × SkyCondition (12) → palette + clip + particles
-    App->>App: CurrentConditions, AskCard, Hourly, Daily, MetricTiles
+    App->>App: CurrentConditions (+ IMD observing station), OfficialAlertsCard, AskCard, Hourly, Daily, MetricTiles
 ```
 
 A failed refresh while a snapshot is on screen keeps the data and shows an `InlineBanner` with retry. Tapping an hour, a day or a metric tile opens `WeatherDetailSheet` (hour / day / metric detail; a day's hours link to hour detail).
@@ -517,6 +517,11 @@ A failed refresh while a snapshot is on screen keeps the data and shows an `Inli
 - All 21 APIs in the IMD account docs (verified live) are exposed at `/v2/imd/{endpoint}` (catalog at `/v2/imd`); raw data there needs `X-Admin-Token` because IMD prohibits redistribution. `/dev/imd/probe` tests them all.
 - Tokens: `POST /api/oauth/token.php {email, password}` → 1-hour JWT; with `IMD_EMAIL`/`IMD_PASSWORD` the backend renews it two minutes before expiry and once after an early rejection. The API key is bound to the server IP.
 - Observations: only ~440 of ~1,300 forecast stations report `current_wx`, so "now" comes from the nearest *reporting* station within 35 km (observations older than 4 h are not shown as now); `current.station` names it.
+
+### In the app
+
+- `src/core/models/officialAlerts.ts` parses `alerts` (sorted red → orange → yellow; IMD "green" is dropped), `alerts_status` and the station behind `current` (`kind: "observation"`); both weather parsers attach them to `WeatherSnapshot` (`alerts`, `alertsStatus`, `observation`), and daily rows carry IMD's `forecastText`.
+- Home shows `OfficialAlertsCard` under the hero (two warnings, then "Show N more"); with no warnings it renders nothing, and with `alertsStatus: "unknown"` it says the status is unavailable. The hero adds "Observed at <station> · <local time>" for IMD observations; the day sheet quotes IMD's wording; the source caption uses `providerLabel` ("IMD", "Open-Meteo", "Google WeatherNext").
 
 ### Official warnings (`alerts/`)
 

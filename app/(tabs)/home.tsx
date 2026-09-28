@@ -16,6 +16,8 @@ import { HomeSkeleton } from "../../src/features/weather/components/HomeSkeleton
 import { AskCard } from "../../src/features/weather/components/AskCard";
 import { WeatherDetail, WeatherDetailSheet } from "../../src/features/weather/components/DetailSheets";
 import { LocationPromptBar } from "../../src/features/location/components/LocationPromptBar";
+import { OfficialAlertsCard } from "../../src/features/weather/components/OfficialAlertsCard";
+import { providerLabel } from "../../src/features/weather/format";
 
 /// Refetch when the app returns to the foreground with data older than this.
 const STALE_AFTER_MS = 10 * 60_000;
@@ -78,6 +80,7 @@ export default function HomeScreen(): React.ReactElement {
         <>
           <CurrentConditions snapshot={snapshot} locationName={location.name} units={units} onPressLocation={openLocations} />
           <LocationPromptBar />
+          <OfficialAlertsCard alerts={snapshot.alerts ?? []} status={snapshot.alertsStatus ?? null} />
           {error !== null && <InlineBanner tone="caution" icon="cloud-alert" message={t("home.refresh_failed")} actionLabel={t("chat.retry")} onAction={load} />}
           <AskCard mode={mode} />
           {mode === "farmer" && <FarmShortcut />}
@@ -85,7 +88,7 @@ export default function HomeScreen(): React.ReactElement {
           <DailyForecast snapshot={snapshot} units={units} onSelectDay={(index) => setDetail({ kind: "day", index })} />
           <MetricTiles snapshot={snapshot} units={units} onSelect={(metric) => setDetail({ kind: "metric", metric })} />
           <Attribution
-            source={snapshot.provenance.selectedSource ?? snapshot.provenance.source ?? null}
+            source={providerLabel(snapshot.provenance.selectedSource ?? snapshot.provenance.source ?? null)}
             detail={devEnabled && (showProvenance || lastRequest?.usedLegacyFallback) ? `${lastRequest?.endpoint ?? ""}${lastRequest?.usedLegacyFallback ? " · legacy fallback" : ""}${snapshot.provenance.runId ? ` · run ${snapshot.provenance.runId}` : ""}` : null}
           />
           <WeatherDetailSheet

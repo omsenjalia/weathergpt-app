@@ -1,6 +1,6 @@
 /// Every backend path the app calls — port of
 /// `lib/core/constants/api_endpoints.dart`. Legacy paths stay version-less for
-/// backward compatibility; `/v2/...` WeatherNext contracts are live in backend v2.1.0.
+/// backward compatibility. Backend v3: IMD → WeatherNext → Open-Meteo, official alerts.
 
 export const ApiEndpoints = {
   chat: "/chat",
@@ -17,6 +17,7 @@ export const ApiEndpoints = {
   v2WeatherHealth: "/v2/weather/health",
   v2WeatherCatalog: "/v2/weather/catalog",
   v2WeatherSeries: "/v2/weather/series",
+  v2Alerts: "/v2/alerts",
 
   // Bhashini speech (backend proxies MeitY ULCA; keys stay server-side)
   speechHealth: "/v2/speech/health",

@@ -310,5 +310,15 @@
   "map.zoom_out": "Zoom out",
   "notfound.title": "This page doesn't exist",
   "notfound.body": "The link may be broken or the page may have moved.",
-  "location.popular": "Popular places"
+  "location.popular": "Popular places",
+  "alerts.title": "Official warnings",
+  "alerts.unknown": "Official warning status is unavailable right now",
+  "alerts.red": "Red warning",
+  "alerts.orange": "Orange warning",
+  "alerts.yellow": "Yellow warning",
+  "alerts.more": "Show {n} more",
+  "alerts.show_less": "Show less",
+  "alerts.until": "until {time}",
+  "home.observed_at": "Observed at {station} · {time}",
+  "home.imd_forecast": "IMD forecast"
 }

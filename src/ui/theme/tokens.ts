@@ -21,6 +21,7 @@ const palette = {
   sky400: "#38BDF8",
   green400: "#4ADE80",
   amber400: "#FBBF24",
+  orange400: "#FB923C",
   red400: "#F87171",
   blue400: "#60A5FA",
   white: "#FFFFFF",
@@ -65,6 +66,7 @@ export const Colors = {
   good: palette.green400,
   caution: palette.amber400,
   danger: palette.red400,
+  warning: palette.orange400,
   info: palette.blue400,
   neutral: "rgba(148, 163, 184, 0.45)",
 

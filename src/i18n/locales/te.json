@@ -310,5 +310,15 @@
   "map.zoom_out": "జూమ్ అవుట్",
   "notfound.title": "ఈ పేజీ లేదు",
   "notfound.body": "లింక్ విరిగి ఉండవచ్చు లేదా పేజీ తరలించబడి ఉండవచ్చు.",
-  "location.popular": "ప్రముఖ ప్రదేశాలు"
+  "location.popular": "ప్రముఖ ప్రదేశాలు",
+  "alerts.title": "అధికారిక హెచ్చరికలు",
+  "alerts.unknown": "అధికారిక హెచ్చరికల స్థితి ప్రస్తుతం అందుబాటులో లేదు",
+  "alerts.red": "రెడ్ హెచ్చరిక",
+  "alerts.orange": "ఆరెంజ్ హెచ్చరిక",
+  "alerts.yellow": "ఎల్లో హెచ్చరిక",
+  "alerts.more": "మరో {n} చూపించు",
+  "alerts.show_less": "తక్కువ చూపించు",
+  "alerts.until": "{time} వరకు",
+  "home.observed_at": "{station} వద్ద నమోదు · {time}",
+  "home.imd_forecast": "IMD సూచన"
 }

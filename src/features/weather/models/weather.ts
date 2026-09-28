@@ -5,6 +5,7 @@
 /// `0`, and a missing weather code is never treated as "clear".
 
 import { WeatherProvenance, noProvenance } from "../../../core/models/dataProvenance";
+import { AlertsStatus, OfficialAlert, StationObservation } from "../../../core/models/officialAlerts";
 import {
   FieldSources,
   PrecipitationInterval,
@@ -17,7 +18,7 @@ import {
   temperatureSpreadFromJson,
 } from "../../../core/models/fieldSources";
 
-export type { FieldSources, PrecipitationInterval, TemperatureSpread, WeatherProvenance };
+export type { AlertsStatus, FieldSources, OfficialAlert, PrecipitationInterval, StationObservation, TemperatureSpread, WeatherProvenance };
 export {
   fieldSourcesFromJson,
   fieldSourcesIsSupplemented,
@@ -71,6 +72,8 @@ export interface DayForecast {
   precipIntervalLabel?: string | null;
   coversFullDay?: boolean | null;
   windKmhMax?: number | null;
+  /// IMD's own wording for the day ("Partly cloudy sky with possibility of rain").
+  forecastText?: string | null;
 }
 
 export function dayHasAnyMeasurement(day: DayForecast): boolean {
@@ -118,6 +121,12 @@ export interface WeatherSnapshot {
   endpoint?: string | null;
   fetchedAtUtc?: Date | null;
   rawPayload?: Record<string, unknown> | null;
+  /// Official IMD / NDMA warnings for the location, most severe first.
+  alerts?: OfficialAlert[];
+  /// `unknown` = no official channel answered (never "no warnings").
+  alertsStatus?: AlertsStatus | null;
+  /// Set when "now" is a real IMD station reading rather than model guidance.
+  observation?: StationObservation | null;
 }
 
 export function snapshotHasCondition(w: WeatherSnapshot): boolean {

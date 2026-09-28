@@ -310,5 +310,15 @@
   "map.zoom_out": "ಝೂಮ್ ಔಟ್",
   "notfound.title": "ಈ ಪುಟ ಅಸ್ತಿತ್ವದಲ್ಲಿಲ್ಲ",
   "notfound.body": "ಲಿಂಕ್ ಮುರಿದಿರಬಹುದು ಅಥವಾ ಪುಟವನ್ನು ಸ್ಥಳಾಂತರಿಸಿರಬಹುದು.",
-  "location.popular": "ಜನಪ್ರಿಯ ಸ್ಥಳಗಳು"
+  "location.popular": "ಜನಪ್ರಿಯ ಸ್ಥಳಗಳು",
+  "alerts.title": "ಅಧಿಕೃತ ಎಚ್ಚರಿಕೆಗಳು",
+  "alerts.unknown": "ಅಧಿಕೃತ ಎಚ್ಚರಿಕೆಯ ಸ್ಥಿತಿ ಈಗ ಲಭ್ಯವಿಲ್ಲ",
+  "alerts.red": "ರೆಡ್ ಎಚ್ಚರಿಕೆ",
+  "alerts.orange": "ಆರೆಂಜ್ ಎಚ್ಚರಿಕೆ",
+  "alerts.yellow": "ಯೆಲ್ಲೋ ಎಚ್ಚರಿಕೆ",
+  "alerts.more": "ಇನ್ನೂ {n} ತೋರಿಸಿ",
+  "alerts.show_less": "ಕಡಿಮೆ ತೋರಿಸಿ",
+  "alerts.until": "{time} ವರೆಗೆ",
+  "home.observed_at": "{station} ನಲ್ಲಿ ದಾಖಲು · {time}",
+  "home.imd_forecast": "IMD ಮುನ್ಸೂಚನೆ"
 }

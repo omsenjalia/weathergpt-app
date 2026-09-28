@@ -14,6 +14,24 @@ function present(value: number | null | undefined): value is number {
 
 /// Degrees without the unit letter ("31°") — used where the unit is implied
 /// (hero, hourly strip, daily list).
+/// Human name for a backend provider id (`imd` → "IMD").
+export function providerLabel(id: string | null | undefined): string | null {
+  if (id == null || id.trim() === "") return null;
+  switch (id.trim().toLowerCase().replaceAll("-", "_")) {
+    case "imd":
+      return "IMD";
+    case "open_meteo":
+    case "openmeteo":
+      return "Open-Meteo";
+    case "weathernext":
+      return "Google WeatherNext";
+    case "ndma_sachet":
+      return "NDMA";
+    default:
+      return id;
+  }
+}
+
 export function formatDegrees(celsius: number | null | undefined, unit: TempUnit): string {
   if (!present(celsius)) return EM_DASH;
   return `${Math.round(unit === "fahrenheit" ? (celsius * 9) / 5 + 32 : celsius)}°`;

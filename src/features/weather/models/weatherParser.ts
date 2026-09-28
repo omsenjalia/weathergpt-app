@@ -5,6 +5,7 @@
 import { jsonDate, jsonBool, jsonDouble, jsonInt, jsonList, jsonMap, jsonNum, jsonString, naiveTimestampAssumedUtc } from "../../../core/models/jsonValues";
 import { weatherProvenanceFromJson } from "../../../core/models/dataProvenance";
 import { fieldSourcesFromJson, precipitationIntervalFromJson, temperatureSpreadFromJson } from "../../../core/models/fieldSources";
+import { alertsStatusFromJson, officialAlertsFromJson, stationObservationFromJson } from "../../../core/models/officialAlerts";
 import { DayForecast, HourlyPoint, WeatherSnapshot } from "./weather";
 import { hourLabelFor, parseUtcOffsetSeconds } from "./weatherV2Parser";
 
@@ -78,6 +79,7 @@ export function parseWeatherSnapshot(
       sunset: jsonString(row["sunset"]),
       uvIndexMax: jsonNum(row["uv_index_max"]),
       fieldSources: {},
+      forecastText: jsonString(row["forecast_text"]),
     });
   }
 
@@ -113,5 +115,8 @@ export function parseWeatherSnapshot(
     endpoint: "/weather",
     fetchedAtUtc: jsonDate(data["fetched_at"]),
     rawPayload: data,
+    alerts: officialAlertsFromJson(data["alerts"]),
+    alertsStatus: alertsStatusFromJson(data["alerts_status"]),
+    observation: stationObservationFromJson(jsonMap(data["current"])),
   };
 }

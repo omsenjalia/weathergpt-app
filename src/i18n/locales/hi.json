@@ -310,5 +310,15 @@
   "map.zoom_out": "ज़ूम आउट",
   "notfound.title": "यह पेज मौजूद नहीं है",
   "notfound.body": "लिंक टूटा हो सकता है या पेज हटाया गया हो सकता है।",
-  "location.popular": "लोकप्रिय स्थान"
+  "location.popular": "लोकप्रिय स्थान",
+  "alerts.title": "आधिकारिक चेतावनियाँ",
+  "alerts.unknown": "आधिकारिक चेतावनी की स्थिति अभी उपलब्ध नहीं है",
+  "alerts.red": "रेड चेतावनी",
+  "alerts.orange": "ऑरेंज चेतावनी",
+  "alerts.yellow": "येलो चेतावनी",
+  "alerts.more": "{n} और दिखाएँ",
+  "alerts.show_less": "कम दिखाएँ",
+  "alerts.until": "{time} तक",
+  "home.observed_at": "{station} पर दर्ज · {time}",
+  "home.imd_forecast": "IMD पूर्वानुमान"
 }
