@@ -274,7 +274,7 @@ weathergpt/
   geo.py                Open-Meteo geocoding (+ Nominatim for Indic scripts), Nominatim reverse (district)
   weather/              models, codes (WMO + IMD ww/text), service (chain), supplement, payloads,
                         summaries, archive, providers/{imd, weathernext, open_meteo}
-  imd/                  endpoints (registry of all 28 APIs), client (auth, errors, cache), stations, parse
+  imd/                  endpoints (registry of the 21 account APIs), client (auth, token renewal, errors, cache), stations, parse
   alerts/               imd_district, sachet, service
   weathernext/          bigquery, normalize, auth
   farm/advisory.py      hourly bands, best window, official warnings, System One overlay
@@ -301,9 +301,9 @@ tests/                  offline pytest suites
 | Variable | Purpose |
 | :--- | :--- |
 | WEATHER_PROVIDER_PRIORITY | Chain order (default `imd,weathernext,open_meteo`); providers left out are not used |
-| IMD_API_KEY, IMD_JWT_TOKEN | IMD gateway — both required; the server's egress IP must also be whitelisted by IMD. Absent = skipped, not "degraded" |
-| IMD_MAX_STATION_KM (35), IMD_OBSERVATION_MAX_AGE_HOURS (3), IMD_TIMEOUT_SECONDS (8), IMD_BASE_URL | Station distance, observation freshness, gateway |
-| IMD_ENDPOINT_&lt;KEY&gt; | Override the provisional path of an IMD API whose docs are login-only |
+| IMD_API_KEY, IMD_EMAIL, IMD_PASSWORD (or IMD_JWT_TOKEN) | IMD gateway — key bound to the server IP; the backend mints/renews 1-hour JWTs. Absent = skipped, not "degraded" |
+| IMD_MAX_STATION_KM (35), IMD_OBSERVATION_MAX_AGE_HOURS (4), IMD_TIMEOUT_SECONDS (8), IMD_BASE_URL, IMD_PUBLIC_PROXY | Station distance, observation freshness, gateway, raw-proxy exposure |
+| IMD_ENDPOINT_&lt;KEY&gt; | Override an IMD API path without a code change |
 | WEATHERNEXT_ENABLED (0), WEATHERNEXT_MOCK_DATA | Turn WeatherNext on; mock = labelled synthetic data |
 | GOOGLE_CLOUD_PROJECT, WEATHERNEXT_TABLE_3 / _3_HR / _2, WEATHERNEXT_BQ_*, WEATHERNEXT_RUN_HOURS, _DELIVERY_LATENCY_HOURS, _MAX_RUN_ATTEMPTS, _FRESHNESS_HOURS, _CACHE_TTL_SECONDS | BigQuery tables, cost bounds, run selection |
 | GOOGLE_APPLICATION_CREDENTIALS_JSON, GOOGLE_APPLICATION_CREDENTIALS, GOOGLE_OAUTH_CLIENT_ID / _SECRET / _REFRESH_TOKEN | Credential chain (§10) |
@@ -338,7 +338,7 @@ The nightly release **fails closed** without these; the per-commit signed build 
 | /v2/alerts | GET | Shared | Official warnings for a point (IMD district warning/nowcast + NDMA SACHET): `status` ok / unknown / not_covered |
 | /v2/weather/health | GET | Debug (Health tab) | Provider chain health, IMD + WeatherNext status, caches (no secrets) |
 | /v2/weather/catalog, /v2/weather/series | GET | Researcher | What each provider supplies; one variable as a series (WeatherNext statistics or hourly values) |
-| /v2/imd, /v2/imd/{endpoint}, /v2/imd/nearest | GET | Researcher / agent | Every IMD gateway API proxied with server-side keys; nearest station + district |
+| /v2/imd, /v2/imd/{endpoint}, /v2/imd/nearest | GET | Operators (`X-Admin-Token`) | Catalog is public; raw IMD data needs the admin token (IMD prohibits redistribution) |
 | /chat, /voice | POST | Mobile chat + voice, web | `{response, meta, card}` — `card` is built from the same live evidence as the answer (§12) |
 | /advisory | GET | Farm tab | Per-day suitability, hourly bands for today/tomorrow, computed best window, official-warning downgrades, optional System One |
 | /historical, /comparison | GET | Lab | ERA5 yearly series; comparison names may contain commas |
@@ -514,7 +514,9 @@ A failed refresh while a snapshot is on screen keeps the data and shows an `Inli
 - Gateway `https://api.imd.gov.in/api/v1`, headers `X-API-Key` **and** `Authorization: Bearer <JWT>`; access is IP-whitelisted. Errors are classified (`token_invalid_or_expired`, `api_key_rejected`, `forbidden_ip_not_whitelisted`, `rate_limited`, …) and reported, never hidden.
 - Forecast: `cityforecastloc` (all stations, cached 30 min) → nearest station → 7-day forecast; `current_wx` → that station's observation (older than 3 h is not shown as "now"). IMD present-weather codes (WMO 4677) and forecast text are mapped to the WMO interpretation codes the app uses.
 - IMD has no hourly series, rain probability or UV: those come from Open-Meteo, attributed per field.
-- All 28 IMD APIs are exposed at `/v2/imd/{endpoint}` (catalog at `/v2/imd`). 8 paths are provisional because their docs are login-only; override with `IMD_ENDPOINT_<KEY>` and verify with `/dev/imd/probe`.
+- All 21 APIs in the IMD account docs (verified live) are exposed at `/v2/imd/{endpoint}` (catalog at `/v2/imd`); raw data there needs `X-Admin-Token` because IMD prohibits redistribution. `/dev/imd/probe` tests them all.
+- Tokens: `POST /api/oauth/token.php {email, password}` → 1-hour JWT; with `IMD_EMAIL`/`IMD_PASSWORD` the backend renews it two minutes before expiry and once after an early rejection. The API key is bound to the server IP.
+- Observations: only ~440 of ~1,300 forecast stations report `current_wx`, so "now" comes from the nearest *reporting* station within 35 km (observations older than 4 h are not shown as now); `current.station` names it.
 
 ### Official warnings (`alerts/`)
 
