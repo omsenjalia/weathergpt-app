@@ -310,5 +310,15 @@
   "map.zoom_out": "சிறிதாக்கு",
   "notfound.title": "இந்தப் பக்கம் இல்லை",
   "notfound.body": "இணைப்பு உடைந்திருக்கலாம் அல்லது பக்கம் நகர்த்தப்பட்டிருக்கலாம்.",
-  "location.popular": "பிரபல இடங்கள்"
+  "location.popular": "பிரபல இடங்கள்",
+  "alerts.title": "அதிகாரப்பூர்வ எச்சரிக்கைகள்",
+  "alerts.unknown": "அதிகாரப்பூர்வ எச்சரிக்கை நிலை தற்போது கிடைக்கவில்லை",
+  "alerts.red": "சிவப்பு எச்சரிக்கை",
+  "alerts.orange": "ஆரஞ்சு எச்சரிக்கை",
+  "alerts.yellow": "மஞ்சள் எச்சரிக்கை",
+  "alerts.more": "மேலும் {n} காட்டு",
+  "alerts.show_less": "குறைவாகக் காட்டு",
+  "alerts.until": "{time} வரை",
+  "home.observed_at": "{station} இல் பதிவு · {time}",
+  "home.imd_forecast": "IMD முன்னறிவிப்பு"
 }

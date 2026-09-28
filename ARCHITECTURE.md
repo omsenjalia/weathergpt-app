@@ -6,7 +6,7 @@
 > **Target Audience**: Evaluation Panel, Technical Judges, Systems Architects  
 > **Last Updated**: 27 September 2026  
 > **Status**: React Native app — typecheck, 148 unit tests and Expo bundles verified; native release/device acceptance pending
-> **Backend**: `https://weathergpt-backend.vercel.app` — WeatherGPT API **v2.1.0** (submodule `backend/` → `omsenjalia/weathergpt`)
+> **Backend**: `https://weathergpt-backend.vercel.app` — WeatherGPT API **v3.0.0** (submodule `backend/` → `omsenjalia/weathergpt`)
 > **Mobile client**: **React Native (Expo SDK 54, React Native 0.81, TypeScript 5.9)** — ported from Flutter 3.44 (mapping table in [`FLUTTER_TO_REACT_NATIVE_MIGRATION.md`](FLUTTER_TO_REACT_NATIVE_MIGRATION.md)), then rebuilt around a voice-first UX, a shared design system (`src/ui`), looping video skies and Bhashini speech.
 
 ---
@@ -20,13 +20,13 @@
 | [3. Technology Stack and Design System](#3-technology-stack-and-design-system) | Frameworks and design tokens | Live | React Native, expo-router, `src/ui` |
 | [4. Repository Structure](#4-repository-structure) | Codebase layout (app + backend) | Live | Feature-first modules |
 | [5. Environment Variables and Secrets](#5-environment-variables-and-secrets) | Config and credential isolation | Live | EXPO_PUBLIC_BACKEND_URL, backend `.env`, signing |
-| [6. Backend Integration and API Architecture](#6-backend-integration-and-api-architecture) | FastAPI routers and endpoints | Live | chat, mobile, weather_v2, speech, decisions, dev |
+| [6. Backend Integration and API Architecture](#6-backend-integration-and-api-architecture) | FastAPI routers and endpoints | Live | weather, imd, farm, research, chat, speech, dev |
 | [7. Mobile App Architecture](#7-mobile-app-architecture) | Routing, stores, persistence | Live | expo-router 6, Zustand 5, AsyncStorage |
 | [8. Data Flow and Request Lifecycle](#8-data-flow-and-request-lifecycle) | Weather fetch and live sky | Live | fetch, generation-guarded stores |
 | [9. AI Agent Architecture and Conversational Engine](#9-ai-agent-architecture-and-conversational-engine) | Routing policy, LangGraph, Groq | Live | LangGraph, Groq cascade, TypeSafe |
-| [10. Multi-Source Ensemble Fusion Engine](#10-multi-source-ensemble-fusion-engine) | Provider selection, WeatherNext integration, supplementation | Live | IMD, WeatherNext, AccuWeather, Open-Meteo |
+| [10. Provider Chain and Official Data](#10-provider-chain-and-official-data) | Provider selection, IMD, WeatherNext, supplementation, warnings | Live | IMD, WeatherNext, Open-Meteo, NDMA SACHET |
 | [11. API Contract Reference](#11-api-contract-reference) | Request/response shapes | Live | /chat, /v2/weather, /v2/speech, /advisory |
-| [12. Answer Cards and Markdown Rendering](#12-answer-cards-and-markdown-rendering) | RichText live; structured cards client-only | Partial | `card`, InsightCard, RichText |
+| [12. Answer Cards and Markdown Rendering](#12-answer-cards-and-markdown-rendering) | RichText + structured cards from live evidence | Live | `card`, InsightCard, RichText |
 | [13. Voice and Multilingual Engine](#13-voice-and-multilingual-engine) | 9 Indian languages + Bhashini | Live | Bhashini TTS/ASR, expo-speech-recognition, expo-audio |
 | [14. Risk Assessment and Environmental Hazard Engine](#14-risk-assessment-and-environmental-hazard-engine) | Hazard advisory | Live | Backend-driven thresholds |
 | [15. Agricultural Farmer Advisory Mode and TypeSafe System One](#15-agricultural-farmer-advisory-mode-and-typesafe-system-one) | Crop decisions | Live | Jev AI, Farm Action Windows |
@@ -45,8 +45,8 @@ It turns multi-source meteorological data into actionable, hyper-local guidance 
 
 - **Framework**: React Native 0.81 on **Expo SDK 54** + TypeScript 5.9 strict; file-based routes in `app/`, feature modules in `src/`
 - **State**: Zustand 5 stores · **Routing**: expo-router 6 · **Persistence**: AsyncStorage
-- **Backend**: one FastAPI app (v2.1.0) serving the web client and this app, deployed on Vercel
-- **Forecast policy**: **IMD → WeatherNext → AccuWeather → Open-Meteo** selection with per-field Open-Meteo supplementation and full provenance. The legacy weighted fusion (Open-Meteo 2.0×, AccuWeather 1.5×, WeatherAPI 1.2×, Tomorrow.io 1.2×, OWM 1.1×) survives only as the `GET /fusion` diagnostic.
+- **Backend**: one FastAPI app (v3.0.0) serving the web client, this app and weathergpt-android, deployed on Vercel
+- **Forecast policy**: **IMD → WeatherNext → Open-Meteo** selection with per-field Open-Meteo supplementation and full provenance. IMD answers with the nearest city station's observation and official 7-day forecast; official warnings come from IMD district warnings/nowcasts and the NDMA SACHET CAP feed. The same backend serves weathergpt-app, weathergpt-android and the web app.
 
 ### Core Innovations
 
@@ -78,28 +78,30 @@ graph TB
         WEBVIEW["Windy embed - iframe (web) / WebView (native)"]
     end
 
-    subgraph "FastAPI Backend v2.1.0 (Vercel)"
-        API["main.py - CORS *, X-Request-ID, request log, JSON 500 guard"]
-        RCHAT["routers/chat - POST /chat"]
-        RMOB["routers/mobile - /weather, /advisory, /historical, /comparison"]
-        RV2["routers/weather_v2 - /v2/weather (+catalog, series, profile, ensemble, tiles, cyclones, jobs, health)"]
-        RSPEECH["routers/speech - /v2/speech/health|tts|asr"]
-        RDEC["routers/decisions - /v2/decisions/*, /admin/decisions/*"]
-        RDEV["routers/dev - /health, /dev, /fusion, /dev/sandbox, /dev/intent, ..."]
-        CHATSVC["services/chat - greeting / fast telemetry / agent routing"]
-        FORECAST["services/forecast - provider selection + supplement + cache"]
-        DEC["services/decisions - 45-feature registry, engine, policy, audit"]
-        JEV["services/typesafe - TypeSafe System One client"]
-        AGT["agent.py + tools.py - LangGraph tool loop"]
-        LLM["Groq cascade - gpt-oss-120b → qwen3.8 → qwen3.6 → gpt-oss-20b → safeguard-20b"]
-        BH["services/bhashini - ULCA pipeline config + compute"]
+    subgraph "FastAPI Backend v3.0.0 (Vercel) · backend/backend/weathergpt"
+        API["app.py - CORS *, X-Request-ID, request log, JSON 500 guard"]
+        RCHAT["api/chat - POST /chat, /voice"]
+        RWX["api/weather - /v2/weather, /weather, /v2/alerts, /v2/weather/series|catalog|health"]
+        RFARM["api/farm + api/research - /advisory, /historical, /comparison"]
+        RIMD["api/imd - /v2/imd, /v2/imd/{endpoint}, /v2/imd/nearest"]
+        RSPEECH["api/speech - /v2/speech/health|tts|asr"]
+        RDEV["api/dev - /health, /dev, /dev/sandbox, /dev/intent, /dev/forecast, /dev/imd/probe"]
+        CHAIN["weather/service - IMD → WeatherNext → Open-Meteo, circuit breakers"]
+        SUP["weather/supplement - Open-Meteo fills null fields, per-field attribution"]
+        ALERTS["alerts - IMD district warnings/nowcast + NDMA SACHET polygons"]
+        CHATSVC["ai/chat + ai/evidence - intent, place, live evidence, card"]
+        AGT["ai/agent + ai/tools - LangGraph tool loop"]
+        LLM["Groq - GROQ_MODEL (gpt-oss-120b) → GROQ_FALLBACK_MODELS"]
+        JEV["ai/typesafe - TypeSafe System One (optional)"]
+        BH["speech/bhashini - ULCA pipeline config + compute"]
     end
 
     subgraph "External Providers"
-        IMD["IMD - primary when keys configured"]
-        WN["Google DeepMind WeatherNext - BigQuery / GCS / Earth Engine"]
-        AW["AccuWeather - fallback"]
-        OM["Open-Meteo - baseline + supplement (sunrise, UV, AQI, humidity)"]
+        IMD["IMD API gateway (api.imd.gov.in) - X-API-Key + Bearer JWT, IP whitelisted"]
+        WN["Google DeepMind WeatherNext - BigQuery"]
+        OM["Open-Meteo - baseline, supplement, air quality, ERA5 archive"]
+        SACHET["NDMA SACHET CAP feed (keyless)"]
+        OSM["OSM Nominatim - district lookup"]
         BHX["Bhashini (MeitY ULCA / Dhruva)"]
         TS["TypeSafe AI"]
         GROQ["Groq"]
@@ -113,24 +115,23 @@ graph TB
     UI --> WEBVIEW
     VOICE --> CLIENT
 
-    CLIENT --> RCHAT & RMOB & RV2 & RSPEECH & RDEV
+    CLIENT --> RCHAT & RWX & RFARM & RIMD & RSPEECH & RDEV
 
     RCHAT --> CHATSVC
-    CHATSVC --> JEV
-    CHATSVC --> FORECAST
+    CHATSVC --> JEV --> TS
+    CHATSVC --> CHAIN & ALERTS
     CHATSVC --> AGT
     AGT --> LLM --> GROQ
-    AGT --> FORECAST
-    AGT --> DEC
-    RMOB --> FORECAST
-    RMOB --> JEV
-    RV2 --> FORECAST
-    RDEC --> DEC
-    DEC --> JEV
-    JEV --> TS
+    AGT --> CHAIN & ALERTS & RIMD
+    RWX --> CHAIN --> SUP
+    RWX --> ALERTS
+    RFARM --> CHAIN & ALERTS & JEV
+    RIMD --> IMD
     RSPEECH --> BH --> BHX
 
-    FORECAST --> IMD & WN & AW & OM
+    CHAIN --> IMD & WN & OM
+    SUP --> OM
+    ALERTS --> IMD & SACHET & OSM
 ```
 
 ---
@@ -174,15 +175,13 @@ graph TB
 | Layer | Technology | Purpose |
 | :--- | :--- | :--- |
 | Web framework | FastAPI 0.115 + Uvicorn | Async REST API (port 8888 locally) |
-| Agent | LangGraph 0.2 + langchain-core | Stateful tool-calling loop |
-| LLM | langchain-groq | Groq model cascade |
-| Decisions | TypeSafe AI (Jev) via httpx | Calibrated intent, advisory and reply checks |
-| Speech | Bhashini ULCA via httpx | TTS / ASR proxy |
-| HTTP | httpx | Provider ingestion |
-| Validation | Pydantic v2 | Typed contracts (`schemas.py`) |
-| WeatherNext | google-cloud-bigquery, google-cloud-storage, google-auth, earthengine-api, xarray/zarr/gcsfs | BigQuery tables, GCS statistics/ensembles, Earth Engine tiles |
-| Language | langdetect | Reply-language normalisation |
-| Tests | pytest | `backend/backend/tests/` (API, chat guard, fusion, speech, TypeSafe, WeatherNext) |
+| Agent | LangGraph 0.2 + langchain-core | Tool-calling loop over the same services the REST API uses |
+| LLM | langchain-groq | `GROQ_MODEL` with `GROQ_FALLBACK_MODELS` |
+| HTTP | httpx behind `weathergpt/http.py` | Every upstream call goes through one seam (tests install a fake transport) |
+| WeatherNext | google-cloud-bigquery, google-auth | Bounded BigQuery point queries (lazy import) |
+| Decisions | TypeSafe AI (optional) | Intent routing, advisory overlay |
+| Speech | Bhashini ULCA | TTS / ASR proxy |
+| Tests | pytest + pytest-socket | 65 offline tests (`backend/backend/tests/`) |
 
 ### 3.3 Design System (`src/ui`)
 
@@ -268,16 +267,21 @@ weathergpt-app/
 Backend layout (`backend/backend/`):
 
 ```
-main.py              app factory, CORS, request-ID/log middleware, service index at GET /
-api/index.py         Vercel entry (re-exports app); vercel.json maxDuration 60 s
-schemas.py, state.py pydantic contracts; uptime + recent-log ring buffer
-agent.py, tools.py   LangGraph agent + telemetry tools (bind_tools/ToolNode parity)
-routers/             chat, mobile, weather_v2, speech, decisions (+admin), dev
-services/            chat (routing), forecast (+_models, _cache, _aggregation, _supplement), providers/
-                     (imd, weathernext, accuweather, open_meteo), fusion (legacy), advisory, typesafe,
-                     bhashini, config, response (sanitizer), weathernext_* (auth, bigquery, gcs, ee,
-                     catalog, normalize, tools), decisions/ (registry, engine, policy, features, questions, audit)
-tests/               pytest suites
+main.py, api/index.py   uvicorn entry / Vercel entry (vercel.json rewrites every path to api/index)
+weathergpt/
+  config.py             typed settings (placeholders count as unset)
+  http.py, runtime.py   upstream HTTP seam; logs, uptime, TTL caches
+  geo.py                Open-Meteo geocoding (+ Nominatim for Indic scripts), Nominatim reverse (district)
+  weather/              models, codes (WMO + IMD ww/text), service (chain), supplement, payloads,
+                        summaries, archive, providers/{imd, weathernext, open_meteo}
+  imd/                  endpoints (registry of the 21 account APIs), client (auth, token renewal, errors, cache), stations, parse
+  alerts/               imd_district, sachet, service
+  weathernext/          bigquery, normalize, auth
+  farm/advisory.py      hourly bands, best window, official warnings, System One overlay
+  ai/                   chat (orchestrator), evidence (card / reply / facts), intent, place, agent, tools, typesafe, sanitize
+  speech/bhashini.py    Bhashini TTS/ASR
+  api/                  routers: weather, imd, farm, research, chat, speech, dev
+tests/                  offline pytest suites
 ```
 
 ---
@@ -296,23 +300,18 @@ tests/               pytest suites
 
 | Variable | Purpose |
 | :--- | :--- |
-| GROQ_API_KEY, GROQ_MODEL | LLM access; `GROQ_MODEL` overrides the head of the cascade (default `openai/gpt-oss-120b`) |
-| WEATHER_PROVIDER_PRIORITY | Override the IMD → WeatherNext → AccuWeather → Open-Meteo order |
-| IMD_API_KEY, IMD_JWT_TOKEN | IMD provider (skipped, not "degraded", when absent) |
-| ACCUWEATHER_KEY | AccuWeather fallback provider |
-| WEATHERAPI_KEY, TOMORROW_KEY, OPENWEATHER_KEY | Legacy `/fusion` diagnostic providers only |
-| WEATHERNEXT_ENABLED (default `0`), WEATHERNEXT_MOCK_DATA | Turn WeatherNext on; mock mode returns clearly labelled synthetic data without Google credentials |
-| GOOGLE_CLOUD_PROJECT, GOOGLE_CLOUD_QUOTA_PROJECT | Billing / quota project (required when enabled) |
-| GOOGLE_APPLICATION_CREDENTIALS_JSON, GOOGLE_APPLICATION_CREDENTIALS, GOOGLE_OAUTH_CLIENT_ID / _SECRET / _REFRESH_TOKEN / _REDIRECT_URI, WEATHERNEXT_AUTH_MODE (`adc` \| `oauth`) | Credential chain (§10) |
-| WEATHERNEXT_SURFACE (`bigquery` \| `gcs_statistics`), WEATHERNEXT_TABLE_3 (alias WEATHERNEXT_BQ_SURFACE_TABLE / WEATHERNEXT_TABLE), WEATHERNEXT_TABLE_3_HR, WEATHERNEXT_TABLE_2, WEATHERNEXT_BQ_LOCATION (`US`) | BigQuery tables (fully qualified `project.dataset.table`) |
-| WEATHERNEXT_BQ_MAX_BYTES_BILLED (100 GiB), WEATHERNEXT_BQ_COLUMN_PROFILE (`standard`), WEATHERNEXT_QUERY_TIMEOUT_SECONDS (25), WEATHERNEXT_NEAREST_RADIUS_KM (9) | Cost and lookup bounds |
-| WEATHERNEXT_RUN_HOURS (0,6,12,18), WEATHERNEXT_DELIVERY_LATENCY_HOURS (7), WEATHERNEXT_MAX_RUN_ATTEMPTS (3), WEATHERNEXT_FRESHNESS_HOURS (24), WEATHERNEXT_CACHE_TTL_SECONDS (3600), WEATHERNEXT_MAX_HORIZON_HOURS (360) | Run selection, freshness, cache |
-| WEATHERNEXT_GCS_ENSEMBLE_ROOT / _STATISTICS_ROOT, WEATHERNEXT_GCS_BUCKET_2/3, WEATHERNEXT_GCS_STATS_2/3, WEATHERNEXT_GCS_USER_PROJECT, WEATHERNEXT_EE_PROJECT | GCS Zarr and Earth Engine surfaces |
-| TYPESAFE_WEATHERNEXT_MODE (`off` \| `shadow` \| `enforce`) | Whether Jev decisions act on WeatherNext evidence |
-| WEATHER_SUPPLEMENT_ENABLED | Set `0` to disable Open-Meteo gap filling |
-| TYPESAFE_API_KEY, TYPESAFE_ENABLED, TYPESAFE_* | System One: chat routing, reply check, abuse gate, advisory min confidence, timeouts, audit |
-| BHASHINI_USER_ID, BHASHINI_ULCA_API_KEY, BHASHINI_PIPELINE_ID (optional) | Bhashini speech; default pipeline `64392f96daac500b55c543cd` |
-| CHAT_TIMEOUT_SECONDS | Agent hard timeout (default 22 s) before the deterministic fallback |
+| WEATHER_PROVIDER_PRIORITY | Chain order (default `imd,weathernext,open_meteo`); providers left out are not used |
+| IMD_API_KEY, IMD_EMAIL, IMD_PASSWORD (or IMD_JWT_TOKEN) | IMD gateway — key bound to the server IP; the backend mints/renews 1-hour JWTs. Absent = skipped, not "degraded" |
+| IMD_MAX_STATION_KM (35), IMD_OBSERVATION_MAX_AGE_HOURS (4), IMD_TIMEOUT_SECONDS (8), IMD_BASE_URL, IMD_PUBLIC_PROXY | Station distance, observation freshness, gateway, raw-proxy exposure |
+| IMD_ENDPOINT_&lt;KEY&gt; | Override an IMD API path without a code change |
+| WEATHERNEXT_ENABLED (0), WEATHERNEXT_MOCK_DATA | Turn WeatherNext on; mock = labelled synthetic data |
+| GOOGLE_CLOUD_PROJECT, WEATHERNEXT_TABLE_3 / _3_HR / _2, WEATHERNEXT_BQ_*, WEATHERNEXT_RUN_HOURS, _DELIVERY_LATENCY_HOURS, _MAX_RUN_ATTEMPTS, _FRESHNESS_HOURS, _CACHE_TTL_SECONDS | BigQuery tables, cost bounds, run selection |
+| GOOGLE_APPLICATION_CREDENTIALS_JSON, GOOGLE_APPLICATION_CREDENTIALS, GOOGLE_OAUTH_CLIENT_ID / _SECRET / _REFRESH_TOKEN | Credential chain (§10) |
+| WEATHER_SUPPLEMENT_ENABLED, WEATHER_ALERTS_ENABLED | Open-Meteo gap filling; official warnings |
+| GROQ_API_KEY, GROQ_MODEL, GROQ_FALLBACK_MODELS, CHAT_TIMEOUT_SECONDS (22), CHAT_FAST_PATH | Chat LLM; without a key chat answers deterministically from live data |
+| BHASHINI_USER_ID, BHASHINI_ULCA_API_KEY, BHASHINI_PIPELINE_ID | Bhashini speech |
+| TYPESAFE_API_KEY, TYPESAFE_* | Optional System One routing / advisory overlay |
+| ADMIN_TOKEN | Enables `/dev/imd/probe` and `/dev/reset` (header `X-Admin-Token`) |
 
 ### Android Release Signing (GitHub secrets)
 
@@ -333,74 +332,49 @@ The nightly release **fails closed** without these; the per-commit signed build 
 
 | Path | Method | Used By | Function |
 | :--- | :--- | :--- | :--- |
-| / | GET | Meta | Service index: version, client endpoint lists, provider priority, WeatherNext + Jev config, chat contract |
-| /chat | POST | Mobile chat + voice, web | Conversational AI. Body: message, messages, location, lat, lon, language, mode, farmer_mode, crop, growth_stage, soil, irrigation. Returns `{response: markdown, meta}` (no `card` today — see §12) |
-| /v2/weather | GET | Mobile primary | Provider-selected forecast: lat, lon, mode, requested_source, forecast_days, hourly_hours, supplement, model → `{current, hourly, daily, provenance, field_sources, temperature_spread, precip_next_24h, degraded}` or `{status: "unavailable", error}` |
-| /v2/weather/health | GET | Debug (Health tab) | Provider health probe |
-| /v2/weather/catalog | GET | Future / researcher | Entitlement-filtered WeatherNext capability metadata |
-| /v2/weather/series, /profile, /ensemble | GET | Future / researcher | Variable time series, upper-air profile, ensemble member series |
-| /v2/weather/tiles/{variable}/{run_id}/{z}/{x}/{y}.png | GET | Future | Run-keyed map tiles |
-| /v2/weather/cyclones | GET | Future | Cyclone tracks |
-| /v2/weather/jobs (+ `/{id}`, `/{id}/confirm`, DELETE `/{id}`) | POST/GET/DELETE | Future | Bounded scientific export/inference jobs |
-| /v2/speech/health | GET | Mobile (startup probe) | `{provider, configured, pipeline_id, languages, tasks}` — no secrets |
-| /v2/speech/tts | POST | Mobile voice | `{text ≤ 8000, language, gender}` → base64 WAV |
-| /v2/speech/asr | POST | Mobile voice | `{audio_base64, language, audio_format, sampling_rate?}` → `{transcript}` |
-| /weather | GET | Mobile legacy fallback | Legacy snapshot: current, hourly, forecast, AQI, UV, sunrise/sunset |
-| /advisory | GET | Farm tab | Day-by-day suitability, 2-hour buckets (irrigation / spraying / field_work), System One decisions. `days` 1–7 (backend default 3; the app sends 7) |
-| /historical | GET | Lab | Yearly series from the Open-Meteo archive (`source: "open-meteo-archive"`): `{metric, points: [{year, value}]}`; metric rainfall / temperature / humidity, years 2000–2024 by default |
-| /comparison | GET | Lab | Same archive, several places: `{metric, locations: [{name, points}]}`; `locations=name,lat,lon;...` from saved locations, 2015–2024 by default |
-| /v2/decisions/capabilities | GET | Agent / future clients | Authorised decision features, inputs, blockers per mode |
-| /v2/decisions/evaluate | POST | Agent / future clients | Evaluate one feature for a location/time/activity |
-| /v2/decisions/{id}, /{id}/feedback | GET/POST | Future | Decision result, user feedback |
-| /admin/decisions/health, /replay, /evaluations/{id} | GET/POST | Ops (protected) | Counters, offline replay, shadow evaluation reports |
-| /health | GET | Probes | `{status: ok}` |
-| /dev | GET | Web dev view | `{ai_decisions, fusion weights, provider_keys_status, recent_logs}` |
-| /dev/sandbox | POST | Web dev view | Single-prompt sandbox with latency |
-| /dev/intent | GET | Diagnostics | Intent routing inspector (same `decide_intent` as /chat) |
-| /dev/weathernext, /dev/forecast, /dev/decisions | GET | Diagnostics | WeatherNext surface status, provider selection trace, decision-platform stats |
-| /fusion | GET | Diagnostics | Legacy weighted inspector: provider values, weights, outlier flags |
+| / | GET | Meta | Service index: version, provider priority, endpoint lists |
+| /v2/weather | GET | Mobile primary | lat, lon, mode, requested_source, model, run_id, forecast_days (7), hourly_hours (48), supplement, alerts → nested `current/hourly/daily` **and** flat legacy fields, `field_sources`, `provenance`, `alerts`, `temperature_spread`, `precip_next_24h`, `degraded`; or 200 `{status: "unavailable", fallback_reasons}` |
+| /weather | GET | Mobile legacy fallback | Same payload; unavailable → 502 `{detail: {...}}` |
+| /v2/alerts | GET | Shared | Official warnings for a point (IMD district warning/nowcast + NDMA SACHET): `status` ok / unknown / not_covered |
+| /v2/weather/health | GET | Debug (Health tab) | Provider chain health, IMD + WeatherNext status, caches (no secrets) |
+| /v2/weather/catalog, /v2/weather/series | GET | Researcher | What each provider supplies; one variable as a series (WeatherNext statistics or hourly values) |
+| /v2/imd, /v2/imd/{endpoint}, /v2/imd/nearest | GET | Operators (`X-Admin-Token`) | Catalog is public; raw IMD data needs the admin token (IMD prohibits redistribution) |
+| /chat, /voice | POST | Mobile chat + voice, web | `{response, meta, card}` — `card` is built from the same live evidence as the answer (§12) |
+| /advisory | GET | Farm tab | Per-day suitability, hourly bands for today/tomorrow, computed best window, official-warning downgrades, optional System One |
+| /historical, /comparison | GET | Lab | ERA5 yearly series; comparison names may contain commas |
+| /v2/speech/health, /tts, /asr | GET/POST | Mobile voice | Bhashini |
+| /health, /dev, /dev/sandbox, /dev/intent, /dev/forecast | GET/POST | Web dev view, probes | Diagnostics |
+| /dev/imd/probe, /dev/reset | GET/POST | Operators (`X-Admin-Token`) | Test all IMD endpoints; drop caches after rotating keys |
 
-All responses carry `X-Request-ID`; an unhandled exception becomes JSON `500 {detail, request_id}` so clients never receive HTML.
+All responses carry `X-Request-ID`; an unhandled exception becomes JSON `500 {detail, request_id}`.
 
 ### Chat Lifecycle
 
 ```mermaid
 sequenceDiagram
     actor User
-    participant UI as Chat / Voice screen
-    participant Client as ApiClient (fetch)
-    participant Router as routers/chat
-    participant Service as services/chat
-    participant Jev as TypeSafe System One
-    participant Agent as LangGraph Agent
-    participant Forecast as services/forecast
+    participant Client as ApiClient
+    participant Chat as ai/chat
+    participant Ev as ai/evidence
+    participant Agent as LangGraph agent
 
-    User->>UI: "Will it rain on my wheat crop?"
-    UI->>Client: POST /chat + Accept-Language + mode + farm context
-    Client->>Router: {message, messages, location, lat, lon, language, mode, crop, ...}
-    Router->>Service: run_chat
-
-    alt Greeting / meta
-        Service-->>Client: canned intro (no upstream calls)
-    else
-        Service->>Jev: decide_intent (≤ 3 s, keyword fallback)
-        Jev-->>Service: {intent, engine: system-one|keywords, confidence}
-        alt Simple weather question
-            Service->>Forecast: deterministic telemetry
-            Forecast-->>Service: provider-selected data
-            Service-->>Client: markdown
-        else Complex / multilingual / farm / research
-            Service->>Agent: run_weather_agent (hard timeout 22 s)
-            Agent->>Forecast: tool calls (weather, AQI, crop, WeatherNext, decisions)
-            Agent-->>Service: answer + evidence
-            Service->>Jev: optional reply-evidence check
-            Service-->>Client: {response, meta}
+    User->>Client: "Will it rain tomorrow in Pune?"
+    Client->>Chat: POST /chat {message, messages, lat, lon, language, mode, farm context}
+    alt greeting / off-topic / abuse
+        Chat-->>Client: canned reply in the user's language (no upstream calls)
+    else weather question
+        Chat->>Chat: intent (keywords, optional System One) + place (named place, else device location)
+        Chat->>Ev: gather: provider chain + supplement + official alerts (parallel)
+        Ev-->>Chat: evidence → card
+        alt simple ask (current, rain, alerts, AQI) in everyone mode
+            Chat-->>Client: deterministic answer from evidence (LLM-translated when not English) + card
+        else farm / research / explanation
+            Chat->>Agent: system prompt with live facts, 22 s budget
+            Agent-->>Chat: answer (tools for other places, hours, history, IMD products)
+            Chat-->>Client: answer + card
         end
     end
-    Note over Service: agent timeout / error / no key → deterministic telemetry fallback
-
-    Client-->>UI: ChatMessage / VoiceResponse
-    UI->>User: RichText and speech
+    Note over Chat: agent timeout/error → deterministic answer; a pinned source is never substituted
 ```
 
 ---
@@ -410,11 +384,11 @@ sequenceDiagram
 ```mermaid
 graph TD
     ROUTES["Routes - home, chat, farm, lab, explore, profile, voice, locations, farm-profile, debug, onboarding"]
-    COMPONENTS["Feature components - CurrentConditions, AskCard, DetailSheets, MetricTiles, Composer, InsightCard, SuitabilityTrack, FarmVoiceFlow"]
+    COMPONENTS["Feature components - CurrentConditions, OfficialAlertsCard, AskCard, DetailSheets, MetricTiles, Composer, InsightCard, SuitabilityTrack, FarmVoiceFlow"]
     UIKIT["src/ui - tokens, primitives, SkyBackground, TabBar, RichText, LineChart"]
     STORES["Zustand stores - weather, chat, voice, location, farmProfile, actionWindows, settings, developerOptions, map, savedLocations, requestLog"]
     BOOT["bootstrap.ts - hydration, context sync, sky scene"]
-    PARSERS["Parsers - weatherV2Parser, weatherParser, jsonValues, voiceResponseMapper, farmVoiceParser"]
+    PARSERS["Parsers - weatherV2Parser, weatherParser, officialAlerts, jsonValues, voiceResponseMapper, farmVoiceParser"]
     SERVICES["Services - ApiClient, SpeechService, GeocodingService"]
     STORAGE["AsyncStorage (persistence.ts)"]
     DEVICE["Device - expo-location, expo-speech-recognition, expo-audio, expo-speech, expo-video"]
@@ -499,7 +473,7 @@ sequenceDiagram
     end
 
     App->>App: skyScene → SkyPeriod (11) × SkyCondition (12) → palette + clip + particles
-    App->>App: CurrentConditions, AskCard, Hourly, Daily, MetricTiles
+    App->>App: CurrentConditions (+ IMD observing station), OfficialAlertsCard, AskCard, Hourly, Daily, MetricTiles
 ```
 
 A failed refresh while a snapshot is on screen keeps the data and shows an `InlineBanner` with retry. Tapping an hour, a day or a metric tile opens `WeatherDetailSheet` (hour / day / metric detail; a day's hours link to hour detail).
@@ -512,174 +486,64 @@ A failed refresh while a snapshot is on screen keeps the data and shows an `Inli
 
 ## 9. AI Agent Architecture and Conversational Engine
 
-- **Routing policy** (`services/chat.py`): greeting/meta → canned reply; simple weather question → deterministic telemetry (no LLM); everything else → LangGraph agent with a hard timeout (`CHAT_TIMEOUT_SECONDS`, default 22 s) that falls back to deterministic telemetry on timeout, error or missing key. Research-grade asks (ensemble, profile, run, cyclone, export, inference, catalog) are forced onto the tool path.
-- **Intent**: `decide_intent` asks TypeSafe System One (≤ 3 s, `TYPESAFE_INTENT_TIMEOUT_SECONDS`) and falls back to keyword classification. Labels: `greeting`, `unrelated`, `weather_current_or_forecast`, `rain_probability`, `weather_explanation`, `weather_comparison`, `historical_weather`, `weather_conversation`, `ensemble_query`, `profile_query`, `run_query`, `cyclone_query`, `export_query`, `inference_query`, `catalog_query`, `ambiguous`. `meta` reports `intent`, `intent_engine` (`system-one` | `keywords`) and confidence.
-- **Tools** (`agent.py` / `tools.py`, same list for `bind_tools` and `ToolNode`): geocode_city, current / daily / hourly forecast, air quality, UV & sun, surface pressure & wind, agricultural crop telemetry, severe weather alerts; decision tools (list capabilities, evaluate decision, compare eligible windows, request missing context, assess reply evidence, get decision result); WeatherNext tools.
-- **Decision platform** (`services/decisions/`): versioned registry of 45 features in six groups (routing 8, farmer 12, everyone 5, researcher 8, evidence/quality 7, ops 5), each with modes, required evidence, confidence gate and a release state (off / shadow / enforce); engine with cache and audit store; policy helpers (eligibility, warning floor, conservative merge, safety monotonicity).
-- **Language**: `language` / `Accept-Language` codes are mapped to names (incl. Punjabi, Odia, Urdu, Assamese, Nepali on the backend); Indic city phrases are extracted (`"delhi me kal barish hogi?"` → Delhi).
-
-```mermaid
-graph TD
-    Q["Agent turn"] --> M1["openai/gpt-oss-120b (GROQ_MODEL)"]
-    M1 -->|429/Error| M2["qwen/qwen3.8-27b"]
-    M2 -->|Error| M3["qwen/qwen3.6-27b"]
-    M3 -->|Error| M4["openai/gpt-oss-20b"]
-    M4 -->|Error| M5["openai/gpt-oss-safeguard-20b"]
-    M5 -->|All fail / timeout| DET["Deterministic telemetry synthesizer"]
-```
-
-A separate text-only cascade (`groq/compound` → `groq/compound-mini` → `allam-2-7b`) handles non-tool generations.
+- **Routing** (`ai/chat.py`): greeting/off-topic/abuse → canned reply in 9 languages; simple weather asks (current, rain, alerts, air quality) in Everyone mode → deterministic answer built from live evidence (LLM translation when the language isn't English); farm, research and explanation asks → LangGraph agent with the evidence already in its prompt and a hard timeout that falls back to the deterministic answer.
+- **Intent** (`ai/intent.py`): keyword rules (English, Hinglish, Gujlish and Indic scripts), refined by TypeSafe System One when configured. Labels: `greeting`, `unrelated`, `rain_probability`, `weather_current_or_forecast`, `weather_alerts`, `air_quality`, `farm_advice`, `research_query`, `weather_explanation`, `weather_conversation`.
+- **Place** (`ai/place.py`): "in Pune", "Ahmedabad ma", "दिल्ली में", "અમદાવાદમાં" → geocoded (Open-Meteo, Nominatim for Indic scripts); otherwise the device location.
+- **Tools** (`ai/tools.py`): `geocode_place`, `get_weather`, `get_hourly_forecast`, `get_official_alerts`, `get_farm_advisory`, `get_climate_history`, `get_imd_product` — each calls the same service as the REST API.
+- **LLM**: `GROQ_MODEL` (default `openai/gpt-oss-120b`) with `GROQ_FALLBACK_MODELS` (default `openai/gpt-oss-20b`).
 
 ---
 
-## 10. Multi-Source Ensemble Fusion Engine
+## 10. Provider Chain and Official Data
 
-### Production Policy (`services/forecast.py`)
+### Selection (`weather/service.py`)
 
-| Priority | Provider | Key | Role |
+| Priority | Provider | Needs | Supplies |
 | :--- | :--- | :--- | :--- |
-| 0 | IMD | IMD_API_KEY / IMD_JWT_TOKEN | Official India; key necessary but not sufficient (endpoints verified) |
-| 1 | WeatherNext | Google IAM | Primary NWP (WN3 0.1° default, WN2 optional); no sunrise/UV/AQI |
-| 2 | AccuWeather | ACCUWEATHER_KEY | Fallback |
-| 3 | Open-Meteo | None | Baseline + supplement (sunrise/sunset, UV, AQI, humidity) |
+| 1 | IMD | IMD_API_KEY + IMD_JWT_TOKEN, whitelisted IP; point in India; city station ≤ 35 km | Station observation (current), official 7-day max/min/text forecast, observed extremes, sunrise/sunset |
+| 2 | WeatherNext | WEATHERNEXT_ENABLED=1, BigQuery table, Google credentials | Hourly 64-member ensemble statistics, 15 days |
+| 3 | Open-Meteo | nothing | Global baseline: current, hourly, 16-day daily, UV, AQI |
 
-**Rules**: for `auto`, pick the highest-priority *fresh* eligible source (a stale high-priority run never outranks a fresh lower one); explicit pins bypass substitution and return that provider or an honest `unavailable`; bounded timeouts, retry/back-off, circuit breaker and a shared LRU cache (1000 entries, 30 min TTL).
+- `auto`: first provider with **fresh** data wins; a stale answer is kept and used only if nothing fresher answers (then `degraded`).
+- A pinned `requested_source` (`imd`, `weathernext`, `open_meteo`) returns that provider or `status: "unavailable"` — never another provider. `accuweather` is rejected (422).
+- `degraded` is true only for real failures; `not_configured`, `disabled`, `out_of_coverage` and `no_station_nearby` are reported in `fallback_reasons` but are normal.
+- Circuit breaker per provider: 5 transient failures → skipped for 2 minutes, then one trial request.
 
-**App side**:
-- `requested_source` is `auto`, or a developer pin (`weathernext`, `open_meteo`, `accuweather`, `imd`). Researcher mode pins `weathernext` unless a developer override says otherwise.
-- `provenance: {selected_source, requested_source, fallback_reasons[], tried_providers[], source, product, run_id, issued_at, degraded}` and `field_sources: {temperature_c: "weathernext", humidity: "open_meteo", uv_index: null, _supplement: {provider, enabled, attempted, filled[], errors[], cache_hit}}` are parsed into `WeatherSnapshot` (`src/core/models/dataProvenance.ts`, `fieldSources.ts`).
-- **What users see**: Home ends with a single "via &lt;selected source&gt;" caption. Endpoint / legacy-fallback / run details on Home, per-field "via …" rows, WMO codes and UTC timestamps in the detail sheets appear **only in developer mode**; the Debug screen is the canonical attribution surface.
-- `degraded` is true only when a configured provider failed or was stale — not when IMD is skipped for a missing key.
-- Enrichments (Everyone mode): `temperature_spread {p10_c, p90_c, source, run_id, valid_from, valid_to, members}` (rejected if inverted/one-sided) and `precip_next_24h {total_mm, start, end, complete}` (partial windows labelled).
+### IMD (`imd/`, `weather/providers/imd.py`)
 
-### WeatherNext Integration (Google DeepMind)
+- Gateway `https://api.imd.gov.in/api/v1`, headers `X-API-Key` **and** `Authorization: Bearer <JWT>`; access is IP-whitelisted. Errors are classified (`token_invalid_or_expired`, `api_key_rejected`, `forbidden_ip_not_whitelisted`, `rate_limited`, …) and reported, never hidden.
+- Forecast: `cityforecastloc` (all stations, cached 30 min) → nearest station → 7-day forecast; `current_wx` → that station's observation (older than 3 h is not shown as "now"). IMD present-weather codes (WMO 4677) and forecast text are mapped to the WMO interpretation codes the app uses.
+- IMD has no hourly series, rain probability or UV: those come from Open-Meteo, attributed per field.
+- All 21 APIs in the IMD account docs (verified live) are exposed at `/v2/imd/{endpoint}` (catalog at `/v2/imd`); raw data there needs `X-Admin-Token` because IMD prohibits redistribution. `/dev/imd/probe` tests them all.
+- Tokens: `POST /api/oauth/token.php {email, password}` → 1-hour JWT; with `IMD_EMAIL`/`IMD_PASSWORD` the backend renews it two minutes before expiry and once after an early rejection. The API key is bound to the server IP.
+- Observations: only ~440 of ~1,300 forecast stations report `current_wx`, so "now" comes from the nearest *reporting* station within 35 km (observations older than 4 h are not shown as now); `current.station` names it.
 
-WeatherNext is the priority-1 forecast source. It is an **ensemble** NWP model: every value the backend reads is a precomputed ensemble statistic (mean, p10, p25, p50, p75, p90) per lead time, not a single deterministic run. The code lives in `backend/backend/services/`:
+### In the app
 
-| Module | Responsibility |
-| :--- | :--- |
-| `providers/weathernext.py` | Provider adapter: eligibility, cache, surface fallback chain, structured `fallback_reason`s |
-| `weathernext_auth.py` | Credential chain + status reporting (never logs secrets) |
-| `weathernext_bigquery.py` | Bounded, partition-filtered point queries on the WN3/WN2 tables (the live path) |
-| `weathernext_gcs.py` | Zarr reader for GCS statistics and full ensembles (lazy `xarray`/`zarr`/`gcsfs`) |
-| `weathernext_ee.py` | Earth Engine map tiles (display only; never used for point forecasts) |
-| `weathernext_normalize.py` | Pure functions: raw extraction → `NormalizedForecast` (units, derived fields, `provenance.methods`) |
-| `weathernext_catalog.py` | Capability catalog + surface access manifest (`/v2/weather/catalog`) |
-| `weathernext_tools.py` | Allow-listed LangGraph tools (no arbitrary SQL/URLs) |
-| `forecast_aggregation.py` | `temperature_spread`, `precip_next_24h`, member-first daily maths |
-| `forecast_supplement.py` | Open-Meteo fill-in for fields WeatherNext does not carry |
+- `src/core/models/officialAlerts.ts` parses `alerts` (sorted red → orange → yellow; IMD "green" is dropped), `alerts_status` and the station behind `current` (`kind: "observation"`); both weather parsers attach them to `WeatherSnapshot` (`alerts`, `alertsStatus`, `observation`), and daily rows carry IMD's `forecastText`.
+- Home shows `OfficialAlertsCard` under the hero (two warnings, then "Show N more"); with no warnings it renders nothing, and with `alertsStatus: "unknown"` it says the status is unavailable. The hero adds "Observed at <station> · <local time>" for IMD observations; the day sheet quotes IMD's wording; the source caption uses `providerLabel` ("IMD", "Open-Meteo", "Google WeatherNext").
 
-#### Products and surfaces
+### Official warnings (`alerts/`)
 
-| Surface | WN3 (`weathernext_3_0_0`) | WN2 (`weathernext_2_0_0`) | Backend route | Used by the app |
-| :--- | :--- | :--- | :--- | :--- |
-| BigQuery point statistics | `weathernext_3_0_0_0p1deg` (0.1°, 19 surface variables × 6 statistics); `…_0p05deg` (0.05°, station-head 2 m temperature / dew point) | WN2 table (`WEATHERNEXT_TABLE_2`) | `/v2/weather` | **Yes** — Home forecast |
-| GCS statistics Zarr | `weathernext3_statistics_spatial` bucket | `weathernext2_statistics_spatial` | `/v2/weather` (fallback), `/series` | Indirectly (fallback surface) |
-| GCS full ensemble Zarr (64 members) | `weathernext3_spatial` bucket | `weathernext2_spatial` | `/v2/weather/ensemble` | No (researcher API only) |
-| Earth Engine map collections | `projects/gcp-public-data-weathernext/assets/weathernext_3_0_0_0p1deg` | WN2 collection | `/v2/weather/tiles/...` | No (map uses Windy; Weather Lab opens in browser) |
-| Cyclone tracks | Weather Lab product | — | `/v2/weather/cyclones` (researcher only) | No — catalog blocker: no programmatic delivery contract confirmed |
+- **IMD**: point → district (OSM Nominatim) → fuzzy match to IMD's district list (IMD spells "AHMADABAD") → `districtwarning` (5 days) + `districtnowcast`. Colour scales differ: warnings 1 = red … 4 = green, nowcast 1 = green … 4 = red.
+- **NDMA SACHET** (keyless CAP feed, IMD regional centres + state authorities): active alerts matched by exact polygon, centroid radius as fallback.
+- `status: "unknown"` when no channel answers — never reported as "no alerts". Red/orange warnings downgrade that day's farm advisory.
 
-The catalog lists nine granted surfaces. Each one is reported as `implemented` and only becomes `verified` after an operator's live probe (`WEATHERNEXT_VERIFY_*`). Other catalog states are `unverified`, `not_granted`, `blocked_by_terms`, `unsupported` and `planned`.
+### Supplement (`weather/supplement.py`)
 
-#### Request path (`/v2/weather` → WeatherNext)
+Only fields the selected provider left `null` are filled from Open-Meteo (current fields, hourly series, daily rain chance/UV/sun times, air quality). `field_sources` names the provider of every field; daily rows carry their own `field_sources`. `supplement=false` disables it per request.
 
-```mermaid
-graph TD
-    REQ["ForecastService picks WeatherNext (auto policy or pin)"] --> MOCK{"WEATHERNEXT_MOCK_DATA=1?"}
-    MOCK -->|yes| FAKE["Synthetic forecast stamped weathernext_3_0_0_mock"]
-    MOCK -->|no| ELIG{"Eligible? enabled, valid lat/lon, credentials, forecast product"}
-    ELIG -->|no| FB["fallback_reason → next provider (AccuWeather, Open-Meteo)"]
-    ELIG -->|yes| CACHE{"Cache hit for model/table/profile/grid cell/horizon?"}
-    CACHE -->|fresh| OUT["NormalizedForecast"]
-    CACHE -->|miss / stale| CHAIN["Surface chain for the requested model"]
-    CHAIN --> BQ["1. BigQuery point query"]
-    BQ -->|fail| GCS["2. GCS statistics Zarr"]
-    GCS -->|fail| FB
-    BQ -->|ok| NORM["weathernext_normalize"]
-    GCS -->|ok| NORM
-    NORM --> OUT
-    OUT --> SUP["forecast_supplement: Open-Meteo fills only null fields"]
-    SUP --> AGG["temperature_spread + precip_next_24h"]
-```
+### WeatherNext (`weathernext/`)
 
-- **Model choice**: WN3 by default. WN2 is queried only when explicitly pinned (`model=weathernext_2`, the app's developer "WeatherNext 2" option). The backend never silently swaps WN3 for WN2, because the two use different schemas.
-- **Run selection**: WN3 starts a new run every hour, but only the 00/06/12/18 UTC runs forecast 15 days ahead, and a run reaches BigQuery about 7 h after it starts. The adapter tries the newest expected run first, then steps back through up to 3 older runs (a missing partition costs nothing). It never queries partitions past the expiry horizon. Each payload comes from a single run, identified by `init_time` and reported as `run_id`.
-- **Freshness**: a run up to 24 h old counts as fresh, up to 48 h as stale, older as expired. Cached results are shared per grid cell for 1 h and returned only while fresh (stale only if `allow_stale` is set). Pinning a specific `run_id` bypasses the cache.
-- **Point lookup**: nearest grid cell within 9 km, using the clustered `geography` column (`ST_DWITHIN`).
+- **BigQuery only** (the GCS/Earth Engine scaffolding was removed). Exact `init_time` partition filter, explicit leaf columns (`minimal` / `standard` / `extended` profiles), `ST_DWITHIN` on the clustered geography column, `maximum_bytes_billed` on every job, bounded wait with cancellation.
+- Run selection: newest 00/06/12/18 UTC run expected on BigQuery (~7 h latency), stepping back up to 3 runs, never past the 2× freshness expiry.
+- Normalisation: K→°C, m→mm, m/s→km/h, Pa→hPa; humidity via Magnus; condition from mean precipitation rate + cloud cover; rain probability is a lower bound from quantiles; only means are summed. Days are bucketed in IST for Indian points.
+- WN2 is queried only when pinned (`model=weathernext_2`) — different schema.
+- Credentials: `GOOGLE_APPLICATION_CREDENTIALS_JSON` → credentials file / ADC → OAuth refresh token.
 
-#### BigQuery cost controls (`weathernext_bigquery.py`)
+### Enrichments
 
-- Every query filters on an exact `init_time` partition, so the backend never scans the whole table.
-- Queries read only explicit leaf columns of the repeated `forecast` record (never `SELECT *`). There are three column profiles:
-  - `minimal`: temperature mean/p10/p90, precipitation mean/p90, wind speed mean.
-  - `standard` (default): `minimal` plus dew point, precipitation p50, cloud cover and mean sea-level pressure.
-  - `extended`: `standard` plus the full temperature and precipitation quantiles, wind p90 and U/V wind.
-- Every job sets `maximum_bytes_billed` (default 100 GiB, which blocks a full-table scan but allows one partition). A job over budget fails without being charged.
-- Waits are bounded (25 s), and a job that times out is cancelled. The adapter tracks per-process statistics (bytes billed/processed, cache hits, job IDs), which `/dev/weathernext` reports.
-
-#### Scientific normalisation (`weathernext_normalize.py`)
-
-- **Units**: native units stay on the wire and are converted once, here: K → °C, m → mm, m/s → km/h, Pa → hPa, cloud fraction → %.
-- **Humidity**: derived from the 2 m temperature and dew-point means with the Magnus formula. It is `null` when dew point was not selected, e.g. in the `minimal` profile.
-- **Condition / WMO code**: derived from the ensemble-mean precipitation rate and cloud cover:
-  - ≥ 10 mm/h → 65, heavy rain
-  - ≥ 2.5 mm/h → 63
-  - ≥ 0.5 mm/h → 61
-  - ≥ 0.1 mm/h → 51, drizzle
-  - otherwise by cloud cover: 0 (clear), 1 (mainly clear), 2 (partly cloudy), 3 (overcast)
-
-  WeatherNext carries no precipitation type or convective flags, so thunder and snow are never derived.
-- **Rain probability**: an explicit **lower bound** from the precipitation quantiles at a 0.1 mm/h threshold. The daily value is the maximum of the hourly bounds.
-- **Aggregation**: quantiles are never summed; only the mean, which is linear, is. Runs are never mixed. Wind speed is computed from U/V before averaging.
-- **Current conditions**: taken from the lead time nearest to now. This is a forecast ensemble mean, not an observation: the app flags it with `currentIsEnsembleMean` and says so in the detail sheets.
-- **Labelling**: every derived field is named in `provenance.methods`. Values that can't be derived are `null` with a reason, never made up.
-
-#### What WeatherNext does not provide, and how gaps are filled
-
-WeatherNext has no sunrise/sunset, UV index or air quality. A `minimal` profile also leaves humidity, pressure and cloud cover (and therefore the sky condition) unset. `forecast_supplement.py` makes one bounded Open-Meteo forecast call plus one air-quality call (6 s timeout each). It fills **only the `null` fields** and lists them in `field_sources._supplement.filled`. Temperature, precipitation, wind and run provenance are never overwritten. The app can turn this off with `supplement=false`; the backend with `WEATHER_SUPPLEMENT_ENABLED=0`.
-
-#### Everyone-mode enrichments (`forecast_aggregation.py`)
-
-- **`temperature_spread`**: the p10–p90 envelope over the next window, from the lowest p10 to the highest p90. It carries `source`, `run_id`, `valid_from`/`valid_to` and `members`. The app rejects inverted or one-sided spreads.
-- **`precip_next_24h`**: the sum of hourly ensemble-mean amounts. It is marked `complete: false` when the horizon doesn't cover the full 24 h.
-
-#### Credentials (`weathernext_auth.py`)
-
-The first source that works wins:
-
-1. `GOOGLE_APPLICATION_CREDENTIALS_JSON`: service-account JSON in an env var. This is the production (Vercel) path.
-2. `GOOGLE_APPLICATION_CREDENTIALS` (a file path) or ambient ADC.
-3. `GOOGLE_OAUTH_CLIENT_ID` + `_SECRET` + `_REFRESH_TOKEN`: owner-authorised OAuth. The refresh token is required; client ID and secret alone are not enough.
-
-If every source fails, the provider reports `credentials_missing_credentials` and the chain falls through to the next provider. Health output shows only presence flags, redacted prefixes and error types. Credentials are cached per process.
-
-#### Agent tools and diagnostics
-
-- **LangGraph tools** (`weathernext_tools.py`), permission-checked and allow-listed:
-  - `list_weathernext_capabilities`, `list_weathernext_runs`, `query_weathernext_data`
-  - `get_weathernext_profile`, `analyze_weathernext_ensemble`, `compare_weathernext_products`
-  - `get_weathernext_map_layer`, `get_weathernext_cyclone_tracks`
-  - job prepare / submit / get / cancel
-
-  Each tool returns an envelope: status, capability, model, run, effective query, sources, units, freshness, member/coverage counts, evidence ID, a summary and warnings. Chat intents `ensemble_query`, `profile_query`, `run_query`, `cyclone_query`, `export_query`, `inference_query` and `catalog_query` are routed to these tools.
-- **`GET /dev/weathernext`**:
-  - by default: offline config and credential presence, BigQuery adapter statistics, catalog coverage and provider priority
-  - with `?probe=1`: also resolves the credential chain and dry-runs the point query (nothing billed), so the estimated bytes can be compared with the budget.
-- **`GET /v2/weather/health`** and **`/dev/forecast`**: provider selection traces.
-- **In the app**: the Debug screen's Providers tab shows `tried_providers` and `fallback_reasons` (e.g. `credentials_missing_credentials`, `surface_chain_exhausted`, `missing_dependency_gcs`). The Requests tab shows `source=weathernext · run=…` for each call.
-- **Map**: the Explore tab's "Weather Lab" button opens Google DeepMind Weather Lab (WeatherNext 3, hourly precipitation layer) at the map centre in the system browser.
-
-### Legacy Weighted Fusion (diagnostic `GET /fusion`, `services/fusion.py`)
-
-| Provider | Weight | Key |
-| :--- | :--- | :--- |
-| Open-Meteo ECMWF/IMD | 2.0× | None |
-| AccuWeather | 1.5× | ACCUWEATHER_KEY |
-| WeatherAPI | 1.2× | WEATHERAPI_KEY |
-| Tomorrow.io | 1.2× | TOMORROW_KEY |
-| OpenWeatherMap | 1.1× | OPENWEATHER_KEY |
-
-Formula: `M = Σ(M_i · W_i) / Σ W_i` · Outlier guard: `|T_i − T_OpenMeteo| > 7 °C` → excluded · Confidence: High ≤ 1.5 °C spread, Medium 1.5–3.5 °C, Low > 3.5 °C, Single-Source. Not used by the app's Home screen.
+`temperature_spread` (min p10 … max p90 over 24 h; ensemble sources only) and `precip_next_24h` (exactly 24 hourly buckets starting with the one containing now; `complete: false` when short).
 
 ---
 
@@ -725,11 +589,11 @@ Response:
 }
 ```
 
-`ChatResponse` (`schemas.py`) also declares optional `weather_evidence`, `forecast_evidence`, `decision_evidence`, `provenance` and `mode` for future structured clients, but `routers/chat.py` currently fills only `response` and `meta`.
+The response is `{response, meta, card}`. `meta` carries `path` (greeting / guarded / clarify / fast / agent / fallback / pinned), `intent`, `language`, `mode`, resolved `location`/`lat`/`lon`, `selected_source`, `requested_source`, `degraded`, `alerts_status` and `fallback_reasons`. `card` (null for greetings) is built from the live evidence: `{label, verdict, explanation, source, stats[{label, value, tone}], forecast[{day, date, temperature, rainfall, rain_chance, condition}], alerts[]}`.
 
 ### GET /v2/weather (primary)
 
-Query: `lat, lon, mode=everyone|farmer|researcher, requested_source=auto|weathernext|open_meteo|accuweather|imd, forecast_days (default 7), hourly_hours (default 48), supplement (sent only as false), model (sent only for weathernext_2)`
+Query: `lat, lon, mode=everyone|farmer|researcher, requested_source=auto|imd|weathernext|open_meteo, forecast_days (default 7), hourly_hours (default 48), supplement (sent only as false), model (sent only for weathernext_2)`
 
 Response: `current, hourly, daily, provenance, field_sources, temperature_spread, precip_next_24h, degraded` — or `{status: "unavailable", error}`.
 
@@ -764,11 +628,9 @@ Every AI surface (chat bubbles, voice results) renders through one `RichText` co
 
 For speech, `MarkdownUtils.forSpeech()` (`src/core/utils/markdownUtils.ts`) strips code/widget blocks, markdown, emojis, URLs and LaTeX delimiters and flattens tables to prose; `spokenSummary()` prefers the body after the heading block and trims to ~320 characters at a sentence boundary.
 
-### Structured Cards (`card`) — client ready, backend not yet sending
+### Structured Cards (`card`)
 
-> **Gap**: the app accepts an optional `card` object on `/chat` responses, but the backend's `ChatResponse` has no `card` field, so in practice every answer renders as prose only. The shape below is the contract the client parses (`src/features/voice/models/voiceCard.ts`, `InsightCard.tsx`); wiring it on the backend (e.g. from `decision_evidence`) is open work.
-
-Expected shape:
+The backend attaches a `card` to every weather answer, built by `weathergpt/ai/evidence.py` from the same live evidence as the prose (never canned numbers); greetings and off-topic replies carry `card: null`. The client parses it in `src/features/voice/models/voiceCard.ts` / `InsightCard.tsx`. Illustrative shape:
 
 ```json
 {
@@ -861,7 +723,7 @@ sequenceDiagram
 
 Hazard handling is **backend-driven**, not an in-app RED/YELLOW/GREEN threshold engine.
 
-- **Sources**: severe-weather alert tool in the agent, advisory suitability `good | caution | avoid | neutral`, System One decisions (warning floor, conservative merge, safety monotonicity policies), chat markdown warnings
+- **Sources**: official IMD district warnings/nowcasts and NDMA SACHET alerts (`/v2/alerts`, included in `/v2/weather` and chat), advisory suitability `good | caution | poor | neutral` downgraded by red/orange warnings, chat cards list active warnings
 - **Rendering**: status tokens `danger #F87171`, `caution #FBBF24`, `good #4ADE80` in `SuitabilityTrack`, `InlineBanner`, `InsightCard` tones and metric-tile interpretations
 - **No hardcoded 44 °C / 50 mm / 50 km/h thresholds in `src/`** — thresholds are evaluated server-side
 - **Future**: direct IMD APIs for structured district warnings and cyclone tracks
@@ -872,7 +734,7 @@ Hazard handling is **backend-driven**, not an in-app RED/YELLOW/GREEN threshold 
 
 ### TypeSafe System One (Jev)
 
-- **Server**: `backend/backend/services/typesafe.py` (httpx client), `advisory.py` hourly bands, `chat.py` intent routing + reply check, `decisions/` platform, `routers/dev.py` `ai_decisions`
+- **Server**: `weathergpt/ai/typesafe.py`, `farm/advisory.py` (hourly bands + overlay), `ai/intent.py` routing
 - **Per-day decision**: each day reads its own `windows[i].ai.overall = {choice, confidence}`; only the 7-day overview uses the aggregate verdict and mean confidence
 - **Badge**: `System One · NN% confident` only when that day carries a decision; otherwise rule-based thresholds (`AdvisorySource.Thresholds`)
 - **No bundled offline advisory**: backend unreachable → explicit unavailable state, never demo bars. Cache keyed on `mode|lat,lon|crop|stage|soil|irrig|UTCdate`, discarded on move, profile edit or midnight (`unavailableActionWindows`, `contextKeyOf` in `src/features/farm/farmStores.ts`)
@@ -906,7 +768,7 @@ Enable via **Settings → Developer → Developer mode**. The section then shows
 
 - **Show provenance on Home** — endpoint, legacy-fallback flag and run ID under the Home attribution line
 - **Disable video sky** — gradient-only background
-- **Source** pin chips — `DevSourcePin` auto / weathernext / open_meteo / accuweather / imd (surfaces honest failures instead of substituting)
+- **Source** pin chips — `DevSourcePin` auto / imd / weathernext / open_meteo (a stored stale pin falls back to auto) (surfaces honest failures instead of substituting)
 - **Debug & state** → `/debug`
 
 Detail sheets also gain per-field "via …" sources, WMO codes and UTC times in developer mode.
@@ -965,10 +827,10 @@ graph LR
 
 | Requirement | Implementation | Status | Source |
 | :--- | :--- | :--- | :--- |
-| Real-time telemetry | Temp, humidity, pressure, wind, UV, AQI via provider selection + supplementation | Live | `weatherV2Parser.ts`, `services/forecast.py` |
+| Real-time telemetry | Temp, humidity, pressure, wind, UV, AQI via provider selection + supplementation | Live | `weatherV2Parser.ts`, `weathergpt/weather/service.py` |
 | Natural language querying | Routed chat: deterministic fast path + LangGraph/Groq agent | Live | `chatStore.ts`, `services/chat.py`, `agent.py` |
 | NWP integration | WeatherNext (WN3/WN2), ECMWF/GFS/ICON via Open-Meteo and Windy | Live | `providers/weathernext.py`, `explore.tsx` |
-| Extreme weather warnings | Severe-alert tool, advisory suitability, System One safety policies | Live | `tools.py`, `decisions/policy.py` |
+| Extreme weather warnings | IMD district warnings/nowcast, NDMA SACHET CAP alerts, advisory downgrades | Live | `weathergpt/alerts/`, `farm/advisory.py` |
 | Agricultural advisories | Farm profile (form or voice) + System One action windows | Live | `features/farm/`, `services/advisory.py` |
 | Multilingual support | 9 languages, Accept-Language, Bhashini TTS/ASR | Live | `src/i18n`, `speechService.ts`, `services/bhashini.py` |
 | Historical trends | Multi-year archive, anomaly bars, multi-location comparison | Live | `app/(tabs)/lab.tsx`, `researchStores.ts` |

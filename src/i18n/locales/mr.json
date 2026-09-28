@@ -310,5 +310,15 @@
   "map.zoom_out": "झूम आउट",
   "notfound.title": "हे पेज अस्तित्वात नाही",
   "notfound.body": "लिंक तुटलेली असू शकते किंवा पेज हलवले गेले असू शकते.",
-  "location.popular": "लोकप्रिय ठिकाणे"
+  "location.popular": "लोकप्रिय ठिकाणे",
+  "alerts.title": "अधिकृत इशारे",
+  "alerts.unknown": "अधिकृत इशाऱ्यांची स्थिती सध्या उपलब्ध नाही",
+  "alerts.red": "रेड इशारा",
+  "alerts.orange": "ऑरेंज इशारा",
+  "alerts.yellow": "यलो इशारा",
+  "alerts.more": "आणखी {n} दाखवा",
+  "alerts.show_less": "कमी दाखवा",
+  "alerts.until": "{time} पर्यंत",
+  "home.observed_at": "{station} येथे नोंद · {time}",
+  "home.imd_forecast": "IMD अंदाज"
 }

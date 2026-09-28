@@ -5,14 +5,14 @@ sends and renders.
 Endpoint inventory lives in [`web_app_api_contract.md`](web_app_api_contract.md).
 
 The app **renders and requests**; the backend owns provider selection
-(IMD → WeatherNext → AccuWeather → Open-Meteo), authentication, normalization,
+(IMD → WeatherNext → Open-Meteo), authentication, normalization,
 scientific calculation, Jev/TypeSafe evaluation and authorization.
 
 ## Configuration boundary
 
 - The app's env template (`.env.example` / `env.example`) is **not** a secret
   store. Only `EXPO_PUBLIC_BACKEND_URL` belongs there.
-- Google/OAuth, IMD, AccuWeather, Groq and `TYPESAFE_API_KEY` credentials are
+- Google/OAuth, IMD, Bhashini, Groq and `TYPESAFE_API_KEY` credentials are
   server-side only. Never add them to the app env.
 - A user selecting Researcher mode is a UI preference, not an entitlement. It
   grants no Google/IAM access and no redistribution right.
@@ -212,11 +212,22 @@ not a bundled city list.
 - `anomalyPercent` is a deviation from the mean of the *returned* window. It is
   not a climate-normal calculation and is labelled accordingly.
 
-## What is deliberately not implemented
+## Official warnings and IMD products
 
-Proposed `/v2/...` WeatherNext contracts, capability/catalog/series/profile/
-ensemble/job endpoints, structured farmer window decisions from the backend, and
-licensed exports remain **unwired**: the backend's WeatherNext/Jev expansion plans
-are design targets in the backend repository, not existing services. New screens
-must not be wired to them until the backend implements and versions them. The
-withdrawn Weather Lab auto-login/custom-map proposal stays withdrawn.
+`/v2/weather` (and `/weather`) include `alerts` (official IMD district warnings /
+nowcasts and NDMA SACHET CAP alerts for the point), `alerts_status`
+(`ok | unknown | not_covered | not_requested`) and `alerts_summary`. `unknown` means
+no official channel answered — it must never be shown as "no alerts". The same data
+is at `GET /v2/alerts`. When IMD is the selected source, `current.kind` is
+`observation` (a real station reading, with `current.station`) and `observed` carries
+the station's reported extremes and 24 h rainfall; daily rows carry IMD's own
+`forecast_text`.
+
+Every IMD gateway API is available through the backend at `GET /v2/imd/{endpoint}`
+(catalog: `GET /v2/imd`); the app never holds IMD credentials.
+
+## Chat cards
+
+`/chat` now returns `card` for every weather answer, built from the same live
+evidence as the prose (see "Voice and chat cards" above). Greetings and off-topic
+replies return `card: null`.

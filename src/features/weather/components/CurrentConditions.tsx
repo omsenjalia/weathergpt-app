@@ -6,6 +6,7 @@ import { useTranslation } from "../../../i18n/useTranslation";
 import { WeatherSnapshot } from "../models/weather";
 import { useWeatherStore } from "../weatherStore";
 import { formatDegrees } from "../format";
+import { localClockLabel } from "../../../core/models/officialAlerts";
 
 interface CurrentConditionsProps {
   snapshot: WeatherSnapshot;
@@ -69,6 +70,16 @@ export function CurrentConditions({ snapshot, locationName, units, onPressLocati
           </>
         )}
       </View>
+      {snapshot.observation != null && (
+        <AppText variant="caption" tone="secondary" style={[styles.updated, textStyles.shadow]} numberOfLines={1}>
+          {t("home.observed_at", {
+            station: snapshot.observation.stationName,
+            time: snapshot.observation.observedAtUtc
+              ? localClockLabel(snapshot.observation.observedAtUtc, snapshot.utcOffsetSeconds)
+              : "—",
+          })}
+        </AppText>
+      )}
       {updated !== null && (
         <AppText variant="caption" tone="tertiary" style={styles.updated}>
           {t("home.updated", { time: updated.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) })}

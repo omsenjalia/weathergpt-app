@@ -310,5 +310,15 @@
   "map.zoom_out": "സൂം ഔട്ട്",
   "notfound.title": "ഈ പേജ് നിലവിലില്ല",
   "notfound.body": "ലിങ്ക് തകരാറിലായിരിക്കാം അല്ലെങ്കിൽ പേജ് മാറ്റിയിരിക്കാം.",
-  "location.popular": "ജനപ്രിയ സ്ഥലങ്ങൾ"
+  "location.popular": "ജനപ്രിയ സ്ഥലങ്ങൾ",
+  "alerts.title": "ഔദ്യോഗിക മുന്നറിയിപ്പുകൾ",
+  "alerts.unknown": "ഔദ്യോഗിക മുന്നറിയിപ്പിന്റെ നില ഇപ്പോൾ ലഭ്യമല്ല",
+  "alerts.red": "റെഡ് മുന്നറിയിപ്പ്",
+  "alerts.orange": "ഓറഞ്ച് മുന്നറിയിപ്പ്",
+  "alerts.yellow": "യെല്ലോ മുന്നറിയിപ്പ്",
+  "alerts.more": "{n} കൂടി കാണിക്കുക",
+  "alerts.show_less": "കുറച്ച് കാണിക്കുക",
+  "alerts.until": "{time} വരെ",
+  "home.observed_at": "{station} ൽ രേഖപ്പെടുത്തിയത് · {time}",
+  "home.imd_forecast": "IMD പ്രവചനം"
 }

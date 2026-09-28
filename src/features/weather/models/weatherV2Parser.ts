@@ -14,6 +14,7 @@ import {
 } from "../../../core/models/jsonValues";
 import { weatherProvenanceFromJson } from "../../../core/models/dataProvenance";
 import { fieldSourcesFromJson, precipitationIntervalFromJson, temperatureSpreadFromJson } from "../../../core/models/fieldSources";
+import { alertsStatusFromJson, officialAlertsFromJson, stationObservationFromJson } from "../../../core/models/officialAlerts";
 import { DayForecast, HourlyPoint, WeatherSnapshot } from "./weather";
 
 /// Parses the backend's location timezone into a UTC offset in seconds.
@@ -135,6 +136,7 @@ export function parseWeatherSnapshotV2(
       source: jsonString(row["source"]),
       statistic: jsonString(row["statistic"]),
       fieldSources: fieldSourceMap(row["field_sources"]),
+      forecastText: jsonString(row["forecast_text"]),
     });
   }
 
@@ -246,5 +248,8 @@ export function parseWeatherSnapshotV2(
     endpoint: "/v2/weather",
     fetchedAtUtc: jsonDate(data["fetched_at"]),
     rawPayload: data,
+    alerts: officialAlertsFromJson(data["alerts"]),
+    alertsStatus: alertsStatusFromJson(data["alerts_status"]),
+    observation: stationObservationFromJson(current),
   };
 }

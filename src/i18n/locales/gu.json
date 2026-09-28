@@ -310,5 +310,15 @@
   "map.zoom_out": "ઝૂમ આઉટ",
   "notfound.title": "આ પેજ અસ્તિત્વમાં નથી",
   "notfound.body": "લિંક તૂટેલી હોઈ શકે અથવા પેજ ખસેડાયું હોઈ શકે.",
-  "location.popular": "લોકપ્રિય સ્થળો"
+  "location.popular": "લોકપ્રિય સ્થળો",
+  "alerts.title": "સત્તાવાર ચેતવણીઓ",
+  "alerts.unknown": "સત્તાવાર ચેતવણીની સ્થિતિ હાલ ઉપલબ્ધ નથી",
+  "alerts.red": "રેડ ચેતવણી",
+  "alerts.orange": "ઓરેન્જ ચેતવણી",
+  "alerts.yellow": "યલો ચેતવણી",
+  "alerts.more": "વધુ {n} બતાવો",
+  "alerts.show_less": "ઓછું બતાવો",
+  "alerts.until": "{time} સુધી",
+  "home.observed_at": "{station} પર નોંધાયું · {time}",
+  "home.imd_forecast": "IMD આગાહી"
 }
