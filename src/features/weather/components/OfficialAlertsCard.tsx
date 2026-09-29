@@ -63,7 +63,7 @@ export function OfficialAlertsCard({ alerts, status }: { alerts: OfficialAlert[]
   );
 }
 
-function AlertRow({ alert }: { alert: OfficialAlert }): React.ReactElement {
+export function AlertRow({ alert }: { alert: OfficialAlert }): React.ReactElement {
   const t = useTranslation();
   const color = SEVERITY_COLOR[alert.severity];
   const when = alert.date ?? (alert.validUntilIst ? t("alerts.until", { time: formatHhmm(alert.validUntilIst) }) : null);
