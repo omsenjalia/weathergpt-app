@@ -28,6 +28,9 @@ jobs:
   android-debug-apk:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # Shared secret for the backend's X-Backend-Secret check (empty = none); inlined into the JS bundle.
+      EXPO_PUBLIC_BACKEND_SECRET: ${{ secrets.BACKEND_SECRET }}
     steps:
       - uses: actions/checkout@v4
 
