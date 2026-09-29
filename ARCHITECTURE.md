@@ -302,6 +302,7 @@ tests/                  offline pytest suites
 | :--- | :--- |
 | WEATHER_PROVIDER_PRIORITY | Chain order (default `imd,weathernext,open_meteo`); providers left out are not used |
 | IMD_API_KEY, IMD_EMAIL, IMD_PASSWORD (or IMD_JWT_TOKEN) | IMD gateway — key bound to the server IP; the backend mints/renews 1-hour JWTs. Absent = skipped, not "degraded" |
+| IMD_RELAY_TOKEN (+ IMD_BASE_URL) | Relay mode: IMD calls go through `relay/imd_relay.py` on a fixed-IP host, which holds the key/account and mints JWTs; the backend sends only `X-Relay-Token` |
 | IMD_MAX_STATION_KM (35), IMD_OBSERVATION_MAX_AGE_HOURS (4), IMD_TIMEOUT_SECONDS (8), IMD_BASE_URL, IMD_PUBLIC_PROXY | Station distance, observation freshness, gateway, raw-proxy exposure |
 | IMD_ENDPOINT_&lt;KEY&gt; | Override an IMD API path without a code change |
 | WEATHERNEXT_ENABLED (0), WEATHERNEXT_MOCK_DATA | Turn WeatherNext on; mock = labelled synthetic data |
@@ -516,6 +517,7 @@ A failed refresh while a snapshot is on screen keeps the data and shows an `Inli
 - IMD has no hourly series, rain probability or UV: those come from Open-Meteo, attributed per field.
 - All 21 APIs in the IMD account docs (verified live) are exposed at `/v2/imd/{endpoint}` (catalog at `/v2/imd`); raw data there needs `X-Admin-Token` because IMD prohibits redistribution. `/dev/imd/probe` tests them all.
 - Tokens: `POST /api/oauth/token.php {email, password}` → 1-hour JWT; with `IMD_EMAIL`/`IMD_PASSWORD` the backend renews it two minutes before expiry and once after an early rejection. The API key is bound to the server IP.
+- Production (Vercel, no fixed egress IP) reaches IMD through the relay in `backend/relay/imd_relay.py`, run on a host whose IP is registered with IMD. With `IMD_RELAY_TOKEN` set the backend sends only that shared secret to `IMD_BASE_URL`; the relay adds `X-API-KEY` and a JWT it mints and renews itself, and forwards only `GET /api/v1/<endpoint>`.
 - Observations: only ~440 of ~1,300 forecast stations report `current_wx`, so "now" comes from the nearest *reporting* station within 35 km (observations older than 4 h are not shown as now); `current.station` names it.
 
 ### In the app
