@@ -50,7 +50,7 @@ export default function FarmScreen(): React.ReactElement {
       refreshControl={completed ? <RefreshControl refreshing={false} onRefresh={refresh} tintColor={Colors.text} colors={[Colors.accent]} /> : undefined}
     >
       {!completed ? (
-        <Card>
+        <Card style={styles.gap}>
           <StateView
             icon="sprout"
             title={t("farmer.complete_profile")}
@@ -62,30 +62,33 @@ export default function FarmScreen(): React.ReactElement {
         <>
           <ProfileSummary />
 
-          <SegmentedControl
-            accessibilityLabel={t("home.action_windows")}
-            value={advisory.selectedTab}
-            onChange={(tab) => useActionWindowsStore.getState().selectTab(tab)}
-            segments={[
-              { value: ActionWindowTab.Today, label: t("common.today") },
-              { value: ActionWindowTab.Tomorrow, label: t("common.tomorrow") },
-              { value: ActionWindowTab.SevenDay, label: t("common.days_7") },
-            ]}
-          />
+          {/* Same shape as the Lab cards: header, then the switcher, then the body. */}
+          <Card style={styles.gap}>
+            <CardHeader icon="calendar-clock" title={t("home.action_windows")} />
+            <SegmentedControl
+              accessibilityLabel={t("home.action_windows")}
+              value={advisory.selectedTab}
+              onChange={(tab) => useActionWindowsStore.getState().selectTab(tab)}
+              segments={[
+                { value: ActionWindowTab.Today, label: t("common.today") },
+                { value: ActionWindowTab.Tomorrow, label: t("common.tomorrow") },
+                { value: ActionWindowTab.SevenDay, label: t("common.days_7") },
+              ]}
+            />
 
-          {loading ? (
-            <Card style={styles.gap}>
-              <Skeleton width="60%" height={22} />
-              {[0, 1, 2].map((i) => (
-                <View key={i} style={styles.gapSm}>
-                  <Skeleton width={120} height={14} />
-                  <Skeleton height={12} />
-                </View>
-              ))}
-            </Card>
-          ) : advisory.status === AdvisoryStatus.Unavailable || !actionWindowsHasData(advisory) ? (
-            <Card>
+            {loading ? (
+              <>
+                <Skeleton width="60%" height={22} />
+                {[0, 1, 2].map((i) => (
+                  <View key={i} style={styles.gapSm}>
+                    <Skeleton width={120} height={14} />
+                    <Skeleton height={12} />
+                  </View>
+                ))}
+              </>
+            ) : advisory.status === AdvisoryStatus.Unavailable || !actionWindowsHasData(advisory) ? (
               <StateView
+                compact
                 icon="cloud-off-outline"
                 tone="caution"
                 title={t("farmer.advisory_unavailable")}
@@ -93,55 +96,56 @@ export default function FarmScreen(): React.ReactElement {
                 actionLabel={t("chat.retry")}
                 onAction={refresh}
               />
-            </Card>
-          ) : (
-            <Card style={styles.gap}>
-              <View style={styles.verdictRow}>
-                <AppText variant="title" style={styles.flex}>
-                  {advisory.summaryVerdict}
-                </AppText>
-              </View>
-              {advisory.source === AdvisorySource.SystemOne && advisory.aiConfidence !== null && (
-                <View style={styles.confidence}>
-                  <AppText variant="caption" color={Colors.farmer}>
-                    System One · {Math.round(advisory.aiConfidence * 100)}%
+            ) : (
+              <>
+                <AppText variant="title">{advisory.summaryVerdict}</AppText>
+                {advisory.source === AdvisorySource.SystemOne && advisory.aiConfidence !== null && (
+                  <View style={styles.confidence}>
+                    <AppText variant="caption" color={Colors.farmer}>
+                      System One · {Math.round(advisory.aiConfidence * 100)}%
+                    </AppText>
+                  </View>
+                )}
+                {/* The backend often repeats the verdict as the explanation. */}
+                {advisory.summaryExplanation !== "" && normalise(advisory.summaryExplanation) !== normalise(advisory.summaryVerdict) && (
+                  <AppText variant="subhead" tone="secondary">
+                    {advisory.summaryExplanation}
                   </AppText>
-                </View>
-              )}
-              {advisory.summaryExplanation !== "" && (
-                <AppText variant="subhead" tone="secondary">
-                  {advisory.summaryExplanation}
-                </AppText>
-              )}
-              <Divider />
-              {weekly ? (
-                <SuitabilityTrack title={t("home.action_windows")} icon="calendar-week" cells={advisory.fieldWorkWindows} ticks={dayTicks} />
-              ) : (
-                <>
-                  <SuitabilityTrack title={t("farmer.irrigation")} icon="water-outline" cells={advisory.irrigationWindows} ticks={HOUR_TICKS} />
-                  <SuitabilityTrack title={t("farmer.spraying")} icon="spray" cells={advisory.sprayingWindows} ticks={HOUR_TICKS} />
-                  <SuitabilityTrack title={t("farmer.field_work")} icon="tractor-variant" cells={advisory.fieldWorkWindows} ticks={HOUR_TICKS} />
-                </>
-              )}
-              <SuitabilityLegend />
-              {advisory.fieldWorkStatus !== "" && !weekly && (
-                <View style={styles.best}>
-                  <AppText variant="footnote" tone="accent">
-                    {advisory.fieldWorkStatus}
+                )}
+                <Divider />
+                {weekly ? (
+                  <SuitabilityTrack title={t("farmer.field_work")} icon="calendar-week" cells={advisory.fieldWorkWindows} ticks={dayTicks} />
+                ) : (
+                  <>
+                    <SuitabilityTrack title={t("farmer.irrigation")} icon="water-outline" cells={advisory.irrigationWindows} ticks={HOUR_TICKS} />
+                    <SuitabilityTrack title={t("farmer.spraying")} icon="spray" cells={advisory.sprayingWindows} ticks={HOUR_TICKS} />
+                    <SuitabilityTrack title={t("farmer.field_work")} icon="tractor-variant" cells={advisory.fieldWorkWindows} ticks={HOUR_TICKS} />
+                  </>
+                )}
+                <SuitabilityLegend />
+                {advisory.fieldWorkStatus !== "" && !weekly && (
+                  <View style={styles.best}>
+                    <AppText variant="footnote" tone="accent">
+                      {advisory.fieldWorkStatus}
+                    </AppText>
+                  </View>
+                )}
+                {advisory.asOfUtc !== null && (
+                  <AppText variant="caption" tone="tertiary">
+                    {t("farmer.last_verified", { time: advisory.asOfUtc.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) })}
                   </AppText>
-                </View>
-              )}
-              {advisory.asOfUtc !== null && (
-                <AppText variant="caption" tone="tertiary">
-                  {t("farmer.last_verified", { time: advisory.asOfUtc.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) })}
-                </AppText>
-              )}
-            </Card>
-          )}
+                )}
+              </>
+            )}
+          </Card>
         </>
       )}
     </Screen>
   );
+}
+
+function normalise(text: string): string {
+  return text.trim().replace(/[.!]+$/, "").toLowerCase();
 }
 
 function ProfileSummary(): React.ReactElement {
@@ -155,7 +159,7 @@ function ProfileSummary(): React.ReactElement {
     [t("farmer.farm_size"), `${profile.farmSizeAcres} ${t("farmer.acres")}`],
   ];
   return (
-    <Card>
+    <Card style={styles.gap}>
       <CardHeader icon="sprout-outline" title={t("farmer.farm_profile")} />
       <View style={styles.facts}>
         {facts.map(([label, value]) => (
@@ -174,18 +178,11 @@ function ProfileSummary(): React.ReactElement {
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
   gap: {
-    gap: Space.lg,
+    gap: Space.md,
   },
   gapSm: {
     gap: Space.sm,
-  },
-  verdictRow: {
-    flexDirection: "row",
-    alignItems: "center",
   },
   confidence: {
     alignSelf: "flex-start",

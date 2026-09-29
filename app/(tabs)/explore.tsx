@@ -115,12 +115,6 @@ export default function ExploreScreen(): React.ReactElement {
             </View>
           </Touchable>
           <View style={styles.sources}>
-            <View style={[styles.source, styles.sourceActive]}>
-              <Icon name="weather-windy" size={15} color={Colors.onAccent} />
-              <AppText variant="footnote" color={Colors.onAccent}>
-                Windy
-              </AppText>
-            </View>
             <Touchable onPress={openWeatherLab} accessibilityLabel="Weather Lab" accessibilityHint="Opens Google DeepMind Weather Lab in the browser" style={styles.source}>
               <Icon name="creation" size={15} color={Colors.textSecondary} />
               <AppText variant="footnote" tone="secondary">
@@ -267,9 +261,6 @@ const styles = StyleSheet.create({
     minHeight: 34,
     paddingHorizontal: Space.md,
     borderRadius: Radius.pill,
-  },
-  sourceActive: {
-    backgroundColor: Colors.accent,
   },
   toast: {
     alignSelf: "center",
