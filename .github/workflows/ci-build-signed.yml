@@ -77,44 +77,21 @@ jobs:
             echo "has_keystore=false" >> "$GITHUB_OUTPUT"
             echo "No KEYSTORE_BASE64 secret — will sign with the Expo debug keystore (dev fallback)."
           else
-            echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+            umask 077
+            printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
             echo "has_keystore=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # Same helper as the nightly: adds signingConfigs.release (env-driven, no
+      # passwords in Gradle files) and points the release build type at it.
       - name: Point release signing at the decoded keystore
         if: steps.keystore.outputs.has_keystore == 'true'
-        working-directory: android
-        run: |
-          python3 - <<'PY'
-          p = 'app/build.gradle'
-          src = open(p).read()
-          props = [
-              "storeFile file('release.keystore')",
-              'storePassword System.getenv("KEYSTORE_PASSWORD")',
-              'keyAlias System.getenv("KEY_ALIAS")',
-              'keyPassword System.getenv("KEY_PASSWORD")',
-          ]
-          block = ''.join('            ' + l + '\n' for l in props)
-          out, in_release, done = [], False, False
-          for line in src.splitlines(keepends=True):
-              s = line.strip()
-              if s == 'release {' and line.startswith('        '):
-                  in_release = True
-                  out.append(line)
-                  out.append(block)
-                  done = True
-                  continue
-              if in_release:
-                  if s == 'signingConfig signingConfigs.debug' or s.startswith('// Caution') or s.startswith('// see https://reactnative.dev/docs/signed-apk-android'):
-                      continue
-                  if s == '}':
-                      in_release = False
-              out.append(line)
-          if not done:
-              raise SystemExit('release buildType block not found in app/build.gradle')
-          open(p, 'w').write(''.join(out))
-          print('Release buildType now signs with release.keystore')
-          PY
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: node scripts/configure-android-release.cjs
 
       - name: Build signed release APK
         working-directory: android
