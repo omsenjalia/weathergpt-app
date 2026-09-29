@@ -16,7 +16,8 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Includes up to 12 minutes waiting for the VirusTotal verdict.
+    timeout-minutes: 75
     env:
       CI: '1'
       EXPO_PUBLIC_BACKEND_URL: ${{ vars.EXPO_PUBLIC_BACKEND_URL || secrets.BACKEND_URL || 'https://weathergpt-backend.vercel.app' }}
@@ -91,13 +92,78 @@ jobs:
             release.apk.sha256
           if-no-files-found: error
           retention-days: 14
+      - name: Scan with VirusTotal
+        id: vt
+        env:
+          VT_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: |
+          sha=$(sha256sum release.apk | cut -d' ' -f1)
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          # Best effort: without a key, or if VirusTotal is down, the release still ships.
+          if [ -z "$VT_API_KEY" ]; then echo "::warning::VIRUSTOTAL_API_KEY is not set; skipping the scan."; exit 0; fi
+          vt() { curl -fsS --retry 3 -H "x-apikey: $VT_API_KEY" "$@"; }
+          # Files over 32 MB must go through a one-off upload URL.
+          if ! upload_url=$(vt https://www.virustotal.com/api/v3/files/upload_url | jq -er .data) || \
+             ! analysis=$(vt -F "file=@release.apk" "$upload_url" | jq -er .data.id); then
+            echo "::warning::VirusTotal upload failed; publishing without a report."; exit 0
+          fi
+          echo "report=https://www.virustotal.com/gui/file/$sha" >> "$GITHUB_OUTPUT"
+          for _ in $(seq 1 36); do
+            result=$(vt "https://www.virustotal.com/api/v3/analyses/$analysis" || true)
+            if [ "$(jq -r '.data.attributes.status // empty' <<<"$result")" = completed ]; then
+              jq -r '.data.attributes.stats | "malicious=\(.malicious)\nsuspicious=\(.suspicious)\nengines=\(.malicious + .suspicious + .undetected + .harmless)"' <<<"$result" >> "$GITHUB_OUTPUT"
+              jq -c '.data.attributes.stats' <<<"$result"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::warning::VirusTotal scan still running; the report link will show the result when it finishes."
       - name: Publish nightly GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          SHA256: ${{ steps.vt.outputs.sha256 }}
+          REPORT: ${{ steps.vt.outputs.report }}
+          MALICIOUS: ${{ steps.vt.outputs.malicious }}
+          SUSPICIOUS: ${{ steps.vt.outputs.suspicious }}
+          ENGINES: ${{ steps.vt.outputs.engines }}
         run: |
+          {
+            echo "**Install:** download \`release.apk\` on your Android phone (7.0+), open it, allow \"Install unknown apps\" for your browser, then tap Install. Signed with the release key; no Metro server is needed."
+            echo
+            if [ -n "$REPORT" ] && [ -n "$ENGINES" ]; then
+              echo "**VirusTotal report:** $REPORT — $((MALICIOUS + SUSPICIOUS)) of $ENGINES antivirus engines flagged it ($MALICIOUS malicious, $SUSPICIOUS suspicious)"
+            elif [ -n "$REPORT" ]; then
+              echo "**VirusTotal report:** $REPORT"
+            else
+              echo "**VirusTotal:** upload \`release.apk\` at https://www.virustotal.com to scan it."
+            fi
+            echo
+            echo "**SHA-256:** \`$SHA256\` (also in \`release.apk.sha256\`)"
+            echo
+            echo "Standalone Android nightly from commit $GITHUB_SHA."
+          } > "$RUNNER_TEMP/notes.md"
           gh release create "$RELEASE_TAG" release.apk release.apk.sha256 \
             --target "$GITHUB_SHA" --title "WeatherGPT $APP_VERSION" --latest \
-            --notes "Standalone Android nightly from commit $GITHUB_SHA. Download release.apk directly on your phone and install it. Signed with the configured release key; no Metro server is needed. SHA-256 checksum is included."
+            --notes-file "$RUNNER_TEMP/notes.md"
+      - name: Point the README's judges section at this build
+        env:
+          SHA256: ${{ steps.vt.outputs.sha256 }}
+          REPORT: ${{ steps.vt.outputs.report }}
+          MALICIOUS: ${{ steps.vt.outputs.malicious }}
+          SUSPICIOUS: ${{ steps.vt.outputs.suspicious }}
+          ENGINES: ${{ steps.vt.outputs.engines }}
+        run: |
+          args=(README.md --repo "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG" --sha256 "$SHA256")
+          [ -n "$REPORT" ] && args+=(--report "$REPORT")
+          [ -n "$ENGINES" ] && args+=(--malicious "$MALICIOUS" --suspicious "$SUSPICIOUS" --engines "$ENGINES")
+          python3 scripts/update_judges_readme.py "${args[@]}"
+          if git diff --quiet -- README.md; then echo "README already up to date."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "README: judges' download -> $RELEASE_TAG" -- README.md
+          # The release is already out; a push race only leaves the README one build behind.
+          git push origin "HEAD:${{ github.event.repository.default_branch }}" || \
+            echo "::warning::Could not push the README update; the release notes still carry the report."
       - name: Remove signing material
         if: always()
         run: rm -f "$KEYSTORE_PATH"
