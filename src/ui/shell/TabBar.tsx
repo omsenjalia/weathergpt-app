@@ -35,6 +35,8 @@ export function FloatingTabBar({ state, navigation, specs, visible, voiceLabel }
 
   const activeName = state.routes[state.index]?.name;
   const middle = Math.ceil(visible.length / 2);
+  // Six tabs (Researcher) leave ~45dp per item on a 360dp phone.
+  const dense = visible.length >= 6;
 
   const renderTab = (name: string): React.ReactElement | null => {
     const route = state.routes.find((r) => r.name === name);
@@ -59,7 +61,7 @@ export function FloatingTabBar({ state, navigation, specs, visible, voiceLabel }
         <View style={[styles.iconPill, focused && styles.iconPillActive]}>
           <Icon name={focused ? spec.activeIcon : spec.icon} size={22} color={focused ? Colors.onAccent : Colors.textSecondary} />
         </View>
-        <AppText variant="caption" tone={focused ? "primary" : "tertiary"} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.label}>
+        <AppText variant="caption" tone={focused ? "primary" : "tertiary"} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.label, dense && styles.labelDense]}>
           {spec.label}
         </AppText>
       </Touchable>
@@ -69,7 +71,7 @@ export function FloatingTabBar({ state, navigation, specs, visible, voiceLabel }
   // Two equal-width groups keep the voice orb centred even when the persona
   // adds a fifth tab (Farm / Lab), and items shrink instead of overlapping it.
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, Space.md) }]}>
+    <View pointerEvents="box-none" style={[styles.wrap, dense && styles.wrapDense, { paddingBottom: Math.max(insets.bottom, Space.md) }]}>
       <View style={styles.bar} accessibilityRole="tablist">
         <View style={styles.group}>{visible.slice(0, middle).map(renderTab)}</View>
         {/* Voice-first: the assistant is one tap away from every tab. */}
@@ -92,6 +94,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: "center",
     paddingHorizontal: Space.lg,
+  },
+  wrapDense: {
+    paddingHorizontal: Space.sm,
   },
   bar: {
     flexDirection: "row",
@@ -143,6 +148,11 @@ const styles = StyleSheet.create({
   label: {
     maxWidth: "100%",
     paddingHorizontal: 2,
+  },
+  labelDense: {
+    fontSize: 10,
+    letterSpacing: 0,
+    paddingHorizontal: 0,
   },
   iconPillActive: {
     backgroundColor: Colors.accent,

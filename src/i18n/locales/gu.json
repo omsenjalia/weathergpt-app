@@ -320,5 +320,14 @@
   "alerts.show_less": "ઓછું બતાવો",
   "alerts.until": "{time} સુધી",
   "home.observed_at": "{station} પર નોંધાયું · {time}",
-  "home.imd_forecast": "IMD આગાહી"
+  "home.imd_forecast": "IMD આગાહી",
+  "nav.models": "મોડેલ",
+  "models.forecast_series": "આગાહી શ્રેણી",
+  "models.providers": "ડેટા પ્રદાતાઓ",
+  "models.spread": "એન્સેમ્બલ ફેલાવો (p10–p90)",
+  "models.source": "સ્રોત",
+  "models.members": "સભ્યો",
+  "models.run": "મોડેલ રન",
+  "models.hourly": "કલાકદીઠ",
+  "models.ensemble": "એન્સેમ્બલ"
 }

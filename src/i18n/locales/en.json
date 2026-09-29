@@ -320,5 +320,14 @@
   "alerts.show_less": "Show less",
   "alerts.until": "until {time}",
   "home.observed_at": "Observed at {station} · {time}",
-  "home.imd_forecast": "IMD forecast"
+  "home.imd_forecast": "IMD forecast",
+  "nav.models": "Models",
+  "models.forecast_series": "Forecast series",
+  "models.providers": "Data providers",
+  "models.spread": "Ensemble spread (p10–p90)",
+  "models.source": "Source",
+  "models.members": "Members",
+  "models.run": "Model run",
+  "models.hourly": "Hourly",
+  "models.ensemble": "Ensemble"
 }

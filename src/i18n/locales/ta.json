@@ -320,5 +320,14 @@
   "alerts.show_less": "குறைவாகக் காட்டு",
   "alerts.until": "{time} வரை",
   "home.observed_at": "{station} இல் பதிவு · {time}",
-  "home.imd_forecast": "IMD முன்னறிவிப்பு"
+  "home.imd_forecast": "IMD முன்னறிவிப்பு",
+  "nav.models": "மாதிரிகள்",
+  "models.forecast_series": "முன்னறிவிப்புத் தொடர்",
+  "models.providers": "தரவு வழங்குநர்கள்",
+  "models.spread": "குழும பரவல் (p10–p90)",
+  "models.source": "மூலம்",
+  "models.members": "உறுப்பினர்கள்",
+  "models.run": "மாதிரி ஓட்டம்",
+  "models.hourly": "மணிநேர",
+  "models.ensemble": "குழுமம்"
 }

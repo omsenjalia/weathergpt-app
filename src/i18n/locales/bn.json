@@ -320,5 +320,14 @@
   "alerts.show_less": "কম দেখান",
   "alerts.until": "{time} পর্যন্ত",
   "home.observed_at": "{station}-এ পর্যবেক্ষণ · {time}",
-  "home.imd_forecast": "IMD পূর্বাভাস"
+  "home.imd_forecast": "IMD পূর্বাভাস",
+  "nav.models": "মডেল",
+  "models.forecast_series": "পূর্বাভাস সিরিজ",
+  "models.providers": "ডেটা সরবরাহকারী",
+  "models.spread": "এনসেম্বল বিস্তার (p10–p90)",
+  "models.source": "উৎস",
+  "models.members": "সদস্য",
+  "models.run": "মডেল রান",
+  "models.hourly": "ঘণ্টাভিত্তিক",
+  "models.ensemble": "এনসেম্বল"
 }
