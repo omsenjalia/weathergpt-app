@@ -293,6 +293,7 @@ tests/                  offline pytest suites
 | Variable | Required | Value | Purpose |
 | :--- | :--- | :--- | :--- |
 | EXPO_PUBLIC_BACKEND_URL | No | `https://weathergpt-backend.vercel.app` (prod) <br> `http://localhost:8888` (local web) <br> `http://10.0.2.2:8888` (Android emulator) | FastAPI base URL. Resolution: `process.env.EXPO_PUBLIC_BACKEND_URL` (inlined by Metro) → `expoConfig.extra.BACKEND_URL` → production URL. `resolveBackendUrl()` trims quotes and trailing slashes. |
+| EXPO_PUBLIC_BACKEND_SECRET | When the backend sets `BACKEND_SECRET` | *(empty)* | Sent as `X-Backend-Secret` on every backend call. Must equal the server's `BACKEND_SECRET` or every request gets 401 `backend_secret_mismatch` (shown as "please update the app"). CI fills it from the `BACKEND_SECRET` repository secret. It is compiled into the APK, so it deters casual/scripted use rather than a determined attacker. |
 
 > **Credential isolation**: the app holds no provider, LLM, TypeSafe or Bhashini keys — only the backend URL. It calls two keyless services directly: Open-Meteo geocoding (place search) and BigDataCloud's client reverse-geocode (GPS place names). Everything else goes through the backend.
 
@@ -817,6 +818,7 @@ graph LR
 - CI Test and Android Compile Check gate PRs. Debug APKs need Metro and are **not** standalone downloads; judges should use the nightly Release or the per-commit signed artifact.
 - Nightly runs at **18:30 UTC / 00:00 IST** every day (plus manual dispatch). Missing signing secrets fail closed. The keystore lives in runner temp and is cleaned up even on failure; passwords are read from the environment.
 - Backend URL for builds: `EXPO_PUBLIC_BACKEND_URL` repository variable → legacy `BACKEND_URL` secret → production URL.
+- Backend secret for builds: `BACKEND_SECRET` repository secret → `EXPO_PUBLIC_BACKEND_SECRET` (signed, debug and nightly APKs). Ship builds with the secret before setting it on the server.
 - `app.config.js` validates `ANDROID_VERSION_CODE` (1–2,100,000,000) and takes `APP_VERSION`. Nightly: version code = Unix epoch minute, version name `1.0.0-nightly.YYYYMMDD` (IST); tags include run ID and attempt and point at the built SHA.
 - Android identity stays **`com.weathergpt.weathergpt_mobile`** (Flutter's application ID) for same-certificate upgrades; permissions: coarse/fine location, `RECORD_AUDIO`. iOS bundle ID `com.visionariesbvm.weathergpt`. Hive data is not migrated.
 - **Backend**: deployed to Vercel from the submodule (`api/index.py`, 60 s max duration); locally `uvicorn main:app --port 8888`.
