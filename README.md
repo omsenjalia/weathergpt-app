@@ -1,5 +1,30 @@
 # 🌤️ WeatherGPT Mobile — AI-Powered Weather Intelligence
 
+> ## 📥 For judges — install the app on your phone (about 2 minutes)
+>
+> <!-- judges-download:start -->
+> **Download:** [**release.apk**](https://github.com/omsenjalia/weathergpt-app/releases/download/nightly-20260929-36579542608-1/release.apk) (signed build `nightly-20260929-36579542608-1`)  ·  SHA-256 below; scan it at [virustotal.com](https://www.virustotal.com)
+> <!-- judges-download:end -->
+>
+> 1. **On your Android phone** (Android 7.0 or newer), open the **Download** link above in Chrome.
+>    If Chrome warns that the file might be harmful, tap **Download anyway** — it warns about every app installed from outside the Play Store.
+> 2. **Open the downloaded `release.apk`** from the notification or the **Files → Downloads** folder.
+> 3. **Allow the install.** When Android asks, tap **Settings → Allow from this source** (“Install unknown apps”) for Chrome, then go back and tap **Install**.
+> 4. **If Google Play Protect shows a prompt**, tap **More details → Install anyway**. This appears because the app is not from the Play Store, not because anything was detected.
+> 5. **Open WeatherGPT**, choose your language and role (Everyone, Farmer or Researcher), and allow location access for local weather. An internet connection is required.
+>
+> <!-- judges-safety:start -->
+> **Is it safe?** You can upload this APK to [VirusTotal](https://www.virustotal.com) to scan it with 70+ antivirus engines.
+> To confirm the file you downloaded is the same one, compare its SHA-256 with
+> `f159af67d5295d608415cb319f91e129cebf6ebc4c27a02bec817d6db4e5bf60`
+> (Windows: `certutil -hashfile release.apk SHA256` · macOS/Linux: `shasum -a 256 release.apk`).
+> <!-- judges-safety:end -->
+>
+> This section is updated automatically by each nightly release: the link above is always the newest signed build,
+> and its VirusTotal report is also in that release's notes on the [Releases page](https://github.com/omsenjalia/weathergpt-app/releases).
+>
+> Updating: download and install the newer `release.apk` over the old one — your settings are kept.
+
 [![SIH 2026](https://img.shields.io/badge/SIH-2026-orange.svg?style=for-the-badge&logo=target)](https://www.sih.gov.in/)
 [![Problem Statement](https://img.shields.io/badge/Problem%20Statement-SIH26068-blue.svg?style=for-the-badge)](https://www.sih.gov.in/)
 [![Theme](https://img.shields.io/badge/Theme-Disaster%20Management-red.svg?style=for-the-badge)](https://www.sih.gov.in/)
@@ -20,15 +45,12 @@
 
 ### ⚡ Method 1: Download a Built APK (Recommended)
 
-A **Nightly Release APK** workflow builds a standalone, signed APK every day at
-**00:00 IST (18:30 UTC)**, including days without new commits.
+See **[For judges](#-for-judges--install-the-app-on-your-phone-about-2-minutes)** at the top: the newest
+signed `release.apk`, its VirusTotal report and SHA-256.
 
-1. Open [Releases](https://github.com/omsenjalia/weathergpt-app/releases).
-2. Download **release.apk** directly to your Android phone; no extraction needed.
-3. Enable “Install unknown apps” for your browser if prompted, then install.
-
-The workflow must be merged onto the default branch and the original signing
-secrets configured before automatic releases start. See
+A **Nightly Release APK** workflow builds a standalone, signed APK every day at **00:00 IST (18:30 UTC)**,
+including days without new commits. It scans each APK with VirusTotal (`VIRUSTOTAL_API_KEY` secret), puts the
+report in the release notes and points the section above at the new build. Signing setup:
 [Android release setup](docs/ANDROID_RELEASES.md).
 
 **Android Compile Check** still produces debug APK artifacts for PRs and pushes

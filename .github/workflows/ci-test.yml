@@ -39,6 +39,9 @@ jobs:
         # aliases in vitest.config.ts); `bun test` would bypass them.
         run: bun run test
 
+      - name: Release script tests (README updater)
+        run: python3 -m unittest discover -s scripts/tests -v
+
       - name: Export production bundles (catch native dependency and Metro regressions)
         run: bunx expo export --platform all
 
