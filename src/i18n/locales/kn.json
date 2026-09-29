@@ -320,5 +320,14 @@
   "alerts.show_less": "ಕಡಿಮೆ ತೋರಿಸಿ",
   "alerts.until": "{time} ವರೆಗೆ",
   "home.observed_at": "{station} ನಲ್ಲಿ ದಾಖಲು · {time}",
-  "home.imd_forecast": "IMD ಮುನ್ಸೂಚನೆ"
+  "home.imd_forecast": "IMD ಮುನ್ಸೂಚನೆ",
+  "nav.models": "ಮಾದರಿಗಳು",
+  "models.forecast_series": "ಮುನ್ಸೂಚನೆ ಸರಣಿ",
+  "models.providers": "ದತ್ತಾಂಶ ಪೂರೈಕೆದಾರರು",
+  "models.spread": "ಎನ್ಸೆಂಬಲ್ ಹರಡುವಿಕೆ (p10–p90)",
+  "models.source": "ಮೂಲ",
+  "models.members": "ಸದಸ್ಯರು",
+  "models.run": "ಮಾದರಿ ರನ್",
+  "models.hourly": "ಗಂಟೆವಾರು",
+  "models.ensemble": "ಎನ್ಸೆಂಬಲ್"
 }

@@ -320,5 +320,14 @@
   "alerts.show_less": "తక్కువ చూపించు",
   "alerts.until": "{time} వరకు",
   "home.observed_at": "{station} వద్ద నమోదు · {time}",
-  "home.imd_forecast": "IMD సూచన"
+  "home.imd_forecast": "IMD సూచన",
+  "nav.models": "మోడల్స్",
+  "models.forecast_series": "అంచనా శ్రేణి",
+  "models.providers": "డేటా ప్రదాతలు",
+  "models.spread": "ఎన్సెంబుల్ వ్యాప్తి (p10–p90)",
+  "models.source": "మూలం",
+  "models.members": "సభ్యులు",
+  "models.run": "మోడల్ రన్",
+  "models.hourly": "గంటవారీ",
+  "models.ensemble": "ఎన్సెంబుల్"
 }

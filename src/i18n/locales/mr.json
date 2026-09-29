@@ -320,5 +320,14 @@
   "alerts.show_less": "कमी दाखवा",
   "alerts.until": "{time} पर्यंत",
   "home.observed_at": "{station} येथे नोंद · {time}",
-  "home.imd_forecast": "IMD अंदाज"
+  "home.imd_forecast": "IMD अंदाज",
+  "nav.models": "मॉडेल",
+  "models.forecast_series": "अंदाज मालिका",
+  "models.providers": "डेटा प्रदाते",
+  "models.spread": "एन्सेम्बल प्रसार (p10–p90)",
+  "models.source": "स्रोत",
+  "models.members": "सदस्य",
+  "models.run": "मॉडेल रन",
+  "models.hourly": "तासागणिक",
+  "models.ensemble": "एन्सेम्बल"
 }

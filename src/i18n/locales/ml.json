@@ -320,5 +320,14 @@
   "alerts.show_less": "കുറച്ച് കാണിക്കുക",
   "alerts.until": "{time} വരെ",
   "home.observed_at": "{station} ൽ രേഖപ്പെടുത്തിയത് · {time}",
-  "home.imd_forecast": "IMD പ്രവചനം"
+  "home.imd_forecast": "IMD പ്രവചനം",
+  "nav.models": "മോഡലുകൾ",
+  "models.forecast_series": "പ്രവചന ശ്രേണി",
+  "models.providers": "ഡാറ്റ ദാതാക്കൾ",
+  "models.spread": "എൻസെംബിൾ വ്യാപനം (p10–p90)",
+  "models.source": "ഉറവിടം",
+  "models.members": "അംഗങ്ങൾ",
+  "models.run": "മോഡൽ റൺ",
+  "models.hourly": "മണിക്കൂർ തോറും",
+  "models.ensemble": "എൻസെംബിൾ"
 }

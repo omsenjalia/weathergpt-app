@@ -320,5 +320,14 @@
   "alerts.show_less": "कम दिखाएँ",
   "alerts.until": "{time} तक",
   "home.observed_at": "{station} पर दर्ज · {time}",
-  "home.imd_forecast": "IMD पूर्वानुमान"
+  "home.imd_forecast": "IMD पूर्वानुमान",
+  "nav.models": "मॉडल",
+  "models.forecast_series": "पूर्वानुमान श्रृंखला",
+  "models.providers": "डेटा प्रदाता",
+  "models.spread": "एन्सेम्बल फैलाव (p10–p90)",
+  "models.source": "स्रोत",
+  "models.members": "सदस्य",
+  "models.run": "मॉडल रन",
+  "models.hourly": "प्रति घंटा",
+  "models.ensemble": "एन्सेम्बल"
 }
