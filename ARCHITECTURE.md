@@ -513,6 +513,7 @@ A failed refresh while a snapshot is on screen keeps the data and shows an `Inli
 ### IMD (`imd/`, `weather/providers/imd.py`)
 
 - Gateway `https://api.imd.gov.in/api/v1`, headers `X-API-Key` **and** `Authorization: Bearer <JWT>`; access is IP-whitelisted. Errors are classified (`token_invalid_or_expired`, `api_key_rejected`, `forbidden_ip_not_whitelisted`, `rate_limited`, …) and reported, never hidden.
+- **Production relay**: Vercel has no fixed egress IP, so production calls IMD through `relay/imd_relay.py` (backend repo) on a host with a fixed, whitelisted IP. Currently `http://dono-03.danbot.host:4890`, egress IP `82.38.134.56`, live since 2026-09-29. The relay holds `IMD_API_KEY` / `IMD_EMAIL` / `IMD_PASSWORD` and mints JWTs; Vercel sets only `IMD_BASE_URL=http://dono-03.danbot.host:4890/api/v1` and the shared `IMD_RELAY_TOKEN`. If the relay host's IP changes, IMD drops out and the chain falls back to WeatherNext / Open-Meteo.
 - Forecast: `cityforecastloc` (all stations, cached 30 min) → nearest station → 7-day forecast; `current_wx` → that station's observation (older than 3 h is not shown as "now"). IMD present-weather codes (WMO 4677) and forecast text are mapped to the WMO interpretation codes the app uses.
 - IMD has no hourly series, rain probability or UV: those come from Open-Meteo, attributed per field.
 - All 21 APIs in the IMD account docs (verified live) are exposed at `/v2/imd/{endpoint}` (catalog at `/v2/imd`); raw data there needs `X-Admin-Token` because IMD prohibits redistribution. `/dev/imd/probe` tests them all.
