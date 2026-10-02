@@ -3,7 +3,7 @@
 > ## 📥 For judges — install the app on your phone (about 2 minutes)
 >
 > <!-- judges-download:start -->
-> **Download:** [**release.apk**](https://github.com/omsenjalia/weathergpt-app/releases/download/nightly-20261002-36937450649-1/release.apk) (signed build `nightly-20261002-36937450649-1`)  ·  **[VirusTotal report: 0 of 68 antivirus engines flagged it](https://www.virustotal.com/gui/file/ced3ed31c597db76d6cd4dd2abf885a74141713245f38138eeb3d10eef62a9fa)**
+> **Download:** [**release.apk**](https://github.com/omsenjalia/weathergpt-app/releases/download/nightly-20261003-37072622004-1/release.apk) (signed build `nightly-20261003-37072622004-1`)  ·  **[VirusTotal report: 0 of 67 antivirus engines flagged it](https://www.virustotal.com/gui/file/98fb79e7b760e8df09b45f19014a7155b754881380aa101ebdcd2a4f4ae376aa)**
 > <!-- judges-download:end -->
 >
 > 1. **On your Android phone** (Android 7.0 or newer), open the **Download** link above in Chrome.
@@ -14,9 +14,9 @@
 > 5. **Open WeatherGPT**, choose your language and role (Everyone, Farmer or Researcher), and allow location access for local weather. An internet connection is required.
 >
 > <!-- judges-safety:start -->
-> **Is it safe?** This exact APK was scanned by [VirusTotal](https://www.virustotal.com/gui/file/ced3ed31c597db76d6cd4dd2abf885a74141713245f38138eeb3d10eef62a9fa) — **0 of 68 antivirus engines flagged it** (0 malicious, 0 suspicious).
+> **Is it safe?** This exact APK was scanned by [VirusTotal](https://www.virustotal.com/gui/file/98fb79e7b760e8df09b45f19014a7155b754881380aa101ebdcd2a4f4ae376aa) — **0 of 67 antivirus engines flagged it** (0 malicious, 0 suspicious).
 > To confirm the file you downloaded is the same one, compare its SHA-256 with
-> `ced3ed31c597db76d6cd4dd2abf885a74141713245f38138eeb3d10eef62a9fa`
+> `98fb79e7b760e8df09b45f19014a7155b754881380aa101ebdcd2a4f4ae376aa`
 > (Windows: `certutil -hashfile release.apk SHA256` · macOS/Linux: `shasum -a 256 release.apk`).
 > <!-- judges-safety:end -->
 >
