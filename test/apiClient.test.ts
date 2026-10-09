@@ -46,3 +46,13 @@ it("explains a backend secret mismatch instead of a generic failure", async () =
   )));
   await expect(ApiClient.get("/v2/weather")).rejects.toThrow(BACKEND_SECRET_MISMATCH);
 });
+it.each([
+  ['{"detail":{"code":"unknown_endpoint","message":"No such IMD endpoint"}}', 404, "No such IMD endpoint"],
+  ['{"detail":[{"loc":["query","lat"],"msg":"Field required"}]}', 422, "Field required"],
+  ['{"detail":{"code":"x"}}', 403, "temporarily unavailable"],
+])("never shows a structured error detail as [object Object] (%s)", async (body, status, message) => {
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(body, { status })));
+  const error = await ApiClient.get("/v2/weather").catch((e: Error) => e);
+  expect(error.message).toContain(message);
+  expect(error.message).not.toContain("[object Object]");
+});

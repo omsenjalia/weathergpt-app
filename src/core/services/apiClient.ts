@@ -58,6 +58,22 @@ function summarizeBody(body: Record<string, unknown> | null): string | null {
   return parts.length === 0 ? null : parts.join(" · ");
 }
 
+/// FastAPI `detail` may be a string, a structured object ({code, message, ...}) or a
+/// 422 validation list ([{msg, ...}]); never let an object reach the UI as "[object Object]".
+function readableDetail(value: unknown): string | null {
+  if (typeof value === "string") return value.trim() === "" ? null : value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    const parts = value.map(readableDetail).filter((part): part is string => part !== null);
+    return parts.length === 0 ? null : parts.join("; ");
+  }
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return readableDetail(record["message"]) ?? readableDetail(record["msg"]) ?? readableDetail(record["reason"]);
+  }
+  return null;
+}
+
 function mapFetchError(error: unknown, status: number, bodyText: string | null): Error {
   if (error instanceof NetworkError || error instanceof ServerError || error instanceof ValidationError) {
     return error;
@@ -68,9 +84,7 @@ function mapFetchError(error: unknown, status: number, bodyText: string | null):
   const detail = (() => {
     if (!bodyText) return null;
     const data = decodeJsonObject(bodyText);
-    if (data["detail"] !== null && data["detail"] !== undefined) return String(data["detail"]);
-    if (data["message"] !== null && data["message"] !== undefined) return String(data["message"]);
-    return null;
+    return readableDetail(data["detail"]) ?? readableDetail(data["message"]);
   })();
 
   if (error instanceof Error && error.name === "AbortError") {
